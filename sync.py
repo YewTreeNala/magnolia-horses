@@ -1,5 +1,12 @@
 import requests
 import os
+from datetime import datetime
+from models import db, Meeting, Race, Runner, ColourOverride
+
+BASE_URL = "https://api.theracingapi.com/v1"
+
+def get_auth():
+    return (os.getenv("RACING_API_USER"), os.getenv("RACING_API_KEY"))
 
 def expand_colour(code):
     mapping = {
@@ -12,15 +19,10 @@ def expand_colour(code):
         "b/br": "Dark bay/brown",
         "gr/b": "Grey",
         "b/bl": "Black",
+        "gr/ro": "Roan",
+        "b/ro": "Roan",
     }
-    return mapping.get(code.lower().strip(), code)
-
-from models import db, Meeting, Race, Runner
-
-BASE_URL = "https://api.theracingapi.com/v1"
-
-def get_auth():
-    return (os.getenv("RACING_API_USER"), os.getenv("RACING_API_KEY"))
+    return mapping.get(code.lower().strip(), code.capitalize() if code else "")
 
 def sync_todays_races(app):
     with app.app_context():
@@ -34,13 +36,19 @@ def sync_todays_races(app):
 
         data = response.json()
 
-        # Clear existing data
+        # Clear existing race data
         Runner.query.delete()
         Race.query.delete()
         Meeting.query.delete()
         db.session.commit()
 
-        # Free tier returns one flat entry per race — group by course+date
+        # Load all colour overrides into a dict for fast lookup
+        overrides = {
+            o.horse_name.lower(): o.colour
+            for o in ColourOverride.query.all()
+        }
+
+        # Free tier returns one flat entry per race — group by course + date
         meetings = {}
         for racecard in data.get("racecards", []):
             course = racecard.get("course", "")
@@ -71,11 +79,19 @@ def sync_todays_races(app):
             db.session.flush()
 
             for r in racecard.get("runners", []):
+                horse_name = r.get("horse", "")
+
+                # Use manual override if one exists, otherwise expand API code
+                if horse_name.lower() in overrides:
+                    colour = overrides[horse_name.lower()]
+                else:
+                    colour = expand_colour(r.get("colour", ""))
+
                 runner = Runner(
                     race_id=race.id,
-                    horse_name=r.get("horse", ""),
-                    number=r.get("number", 0),
-                    colour=expand_colour(r.get("colour", "")),
+                    horse_name=horse_name,
+                    number=str(r.get("number", "")),
+                    colour=colour,
                     age=str(r.get("age", "")),
                     sex=r.get("sex", ""),
                     trainer=r.get("trainer", ""),
@@ -89,4 +105,4 @@ def sync_todays_races(app):
                 db.session.add(runner)
 
         db.session.commit()
-        print("Sync complete")
+        print(f"Sync complete — {len(meetings)} meetings loaded")
