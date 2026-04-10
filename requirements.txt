@@ -1,0 +1,9 @@
+flask
+flask-sqlalchemy
+apscheduler
+requests
+python-dotenv
+rapidfuzz
+jellyfish
+gunicorn
+psycopg2-binary
