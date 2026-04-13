@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Horses &mdash; Magnolia Horses</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --surface: #fff; --surface2: #f5f1eb;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --green: #3b6d11; --green-bg: #eaf3de;
+      --red: #a32d2d; --red-bg: #fcebeb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 15px; padding: 0 1rem 3rem; }
+    .page { max-width: 900px; margin: 0 auto; }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; margin-bottom: 0.5rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
+    .nav-links a { color: var(--brand); text-decoration: none; }
+    .nav-links a:hover { text-decoration: underline; }
+    .page-title { font-size: 20px; font-weight: 500; margin: 1.5rem 0 0.25rem; }
+    .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+    .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
+    .panel-title { font-size: 15px; font-weight: 500; color: var(--brand); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+    .running-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--green-bg); color: var(--green); font-weight: 500; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); }
+    td { padding: 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--brand-light); }
+    .btn-untag { background: transparent; color: var(--red); border: 0.5px solid var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .btn-untag:hover { background: var(--red-bg); }
+    .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
+    .form-str { font-family: "Courier New", monospace; font-size: 12px; color: var(--text2); }
+    .form-win { color: var(--green); font-weight: 500; }
+    .colour-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface2); color: var(--text2); }
+    .colour-swatch { width: 9px; height: 9px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.15); }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-header">
+    <div class="brand-name">Magnolia Horses</div>
+    <div class="nav-links">
+      <a href="/">Search</a>
+      <a href="/account">Account</a>
+      <a href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <div class="page-title">My horses</div>
+  <div class="page-sub">Welcome back, {{ current_user.name }}. You have {{ tagged|length }} horse{{ 's' if tagged|length != 1 else '' }} tagged.</div>
+
+  {% if running_today %}
+  <div class="panel">
+    <div class="panel-title">
+      Running today
+      <span class="running-badge">{{ running_today|length }} today</span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Horse</th>
+          <th>Meeting</th>
+          <th>Time</th>
+          <th>Race</th>
+          <th>Jockey</th>
+          <th>Form</th>
+          <th>Colour</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in running_today %}
+        <tr>
+          <td style="font-weight:500">{{ r.horse_name }}</td>
+          <td style="color:var(--text2)">{{ r.meeting }}</td>
+          <td style="color:var(--brand);font-weight:500">{{ r.time }}</td>
+          <td style="color:var(--text2);font-size:12px">{{ r.race_name }}</td>
+          <td style="color:var(--text2);font-size:12px">{{ r.jockey }}</td>
+          <td>
+            <span class="form-str">
+              {% for c in r.form %}
+                {% if c == '1' %}<span class="form-win">{{ c }}</span>{% else %}{{ c }}{% endif %}
+              {% endfor %}
+            </span>
+          </td>
+          <td>
+            {% if r.colour %}
+              <span class="colour-chip">
+                <span class="colour-swatch" style="background:
+                  {% if r.colour.lower() == 'bay' %}#8B4513
+                  {% elif 'dark bay' in r.colour.lower() %}#3B1F0A
+                  {% elif r.colour.lower() == 'chestnut' %}#C4622D
+                  {% elif r.colour.lower() == 'grey' %}#A8A8A8
+                  {% elif r.colour.lower() == 'black' %}#2A2A2A
+                  {% elif r.colour.lower() == 'roan' %}#9E6B55
+                  {% else %}#888{% endif %}
+                "></span>
+                {{ r.colour }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="panel">
+    <div class="panel-title">All tagged horses</div>
+    {% if tagged %}
+    <table>
+      <thead>
+        <tr>
+          <th>Horse name</th>
+          <th>Tagged on</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tagged %}
+        <tr id="row-{{ loop.index }}">
+          <td style="font-weight:500">{{ t.horse_name }}</td>
+          <td style="color:var(--text2);font-size:12px">{{ t.tagged_at or '—' }}</td>
+          <td>
+            <button class="btn-untag" onclick="untag('{{ t.horse_name }}', 'row-{{ loop.index }}')">
+              Remove
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      You haven't tagged any horses yet. Use the search to find horses and click the bookmark icon to tag them.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  function untag(horseName, rowId) {
+    fetch('/api/untag', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ horse_name: horseName })
+    }).then(function() {
+      var row = document.getElementById(rowId);
+      if (row) row.remove();
+    });
+  }
+</script>
+</body>
+</html>
