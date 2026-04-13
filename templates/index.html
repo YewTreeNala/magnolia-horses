@@ -372,15 +372,14 @@
       });
   }
 
-  function tagBtn(horseName, isTagged) {
-    var esc = escHtml(horseName).replace(/'/g, '&#39;');
-    return '<button class="tag-btn' + (isTagged ? ' tagged' : '') + '" ' +
-      'data-horse="' + esc + '" ' +
-      'title="' + (isTagged ? 'Remove tag' : 'Tag this horse') + '" ' +
-      'onclick="window._toggleTag(\\''+ esc +'\\')">' +
-      (isTagged ? '&#9829;' : '&#9825;') + '</button>';
-  }
-  window._toggleTag = toggleTag;
+function tagBtn(horseName, isTagged) {
+  var esc = escHtml(horseName);
+  return '<button class="tag-btn' + (isTagged ? ' tagged' : '') + '" '
+    + 'data-horse="' + esc + '" '
+    + 'title="' + (isTagged ? 'Remove tag' : 'Tag this horse') + '">'
+    + (isTagged ? '&#9829;' : '&#9825;')
+    + '</button>';
+}
 
   // ── Dropdowns ──────────────────────────────────────────────────────────────
   var dropdownData   = {jockey:[],trainer:[],owner:[]};
@@ -539,6 +538,10 @@
   });
   document.querySelectorAll('.tab').forEach(function(tab){ tab.addEventListener('click',function(){ setTab(tab.dataset.tab); }); });
   document.getElementById('modal-close').addEventListener('click', function(){ document.getElementById('login-modal').classList.remove('open'); });
+	document.getElementById('results-area').addEventListener('click', function(e) {
+	  var btn = e.target.closest('.tag-btn');
+	  if (btn) toggleTag(btn.dataset.horse);
+	});
   document.getElementById('login-modal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
 
   loadOptions().then(function(){ return loadTags(); }).then(function(){ runSearch(); });
