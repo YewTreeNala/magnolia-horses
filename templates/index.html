@@ -704,10 +704,11 @@
   document.getElementById('tag-modal').addEventListener('click', function(e){ if(e.target===this) closeTagModal(); });
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  var hadSaved = restoreFilters();
-  if (!hadSaved) {
-    document.getElementById('f-date').value = formatDate(new Date());
-  }
+var hadSaved = restoreFilters();
+// Always ensure date is set — never allow empty date on load
+if (!document.getElementById('f-date').value) {
+  document.getElementById('f-date').value = formatDate(new Date());
+}
 
   loadOptions().then(function(){ return loadTags(); }).then(function(){ runSearch(); });
 
