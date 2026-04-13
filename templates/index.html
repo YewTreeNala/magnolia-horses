@@ -15,56 +15,36 @@
       --blue: #185fa5; --blue-bg: rgba(230,241,251,0.9);
       --radius: 8px; --radius-lg: 12px;
     }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh;
-    }
-    body::before {
-      content: ""; position: fixed; inset: 0;
-      background-image: url("/static/bg.jpg");
-      background-size: cover; background-position: center;
-      opacity: 0.22; z-index: -1;
-    }
-    body::after {
-      content: ""; position: fixed; inset: 0;
-      background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%);
-      z-index: -1;
-    }
-
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; }
+    body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
+    body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
     .page { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
 
-    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; margin-bottom: 0.25rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
+    /* Nav */
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 0.25rem; }
     .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .brand-logo svg { width: 22px; height: 22px; }
     .brand-name { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--brand); font-family: Georgia, serif; }
     .brand-tagline { font-size: 11px; color: var(--text2); }
+    .nav-links { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+    .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
+    .nav-links a:hover { text-decoration: underline; }
+    .nav-user { font-size: 13px; color: var(--text2); white-space: nowrap; }
 
+    /* Search panel */
     .search-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin: 0.75rem 0 1rem; backdrop-filter: blur(4px); }
     .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 1rem; }
     .filter-group label { display: block; font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-    .filter-group input, .filter-group select {
-      width: 100%; padding: 9px 10px; font-size: 15px; font-family: inherit;
-      background: var(--surface2); color: var(--text);
-      border: 0.5px solid var(--border2); border-radius: var(--radius);
-      outline: none; appearance: none; -webkit-appearance: none;
-    }
+    .filter-group input, .filter-group select { width: 100%; padding: 9px 10px; font-size: 15px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; appearance: none; -webkit-appearance: none; }
     .filter-group input:focus, .filter-group select:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(139,58,58,0.1); }
-
     .select-search-wrap { position: relative; }
     .select-search-wrap input { padding-right: 28px; }
     .select-search-wrap .arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--text3); }
-    .select-search-wrap .dropdown {
-      display: none; position: absolute; top: calc(100% + 3px); left: 0; right: 0;
-      background: var(--surface); border: 0.5px solid var(--border2);
-      border-radius: var(--radius); z-index: 200; max-height: 200px; overflow-y: auto;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    }
+    .select-search-wrap .dropdown { display: none; position: absolute; top: calc(100% + 3px); left: 0; right: 0; background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius); z-index: 200; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
     .select-search-wrap .dropdown.open { display: block; }
     .select-search-wrap .dropdown-item { padding: 10px; font-size: 14px; cursor: pointer; color: var(--text); }
-    .select-search-wrap .dropdown-item:hover,
-    .select-search-wrap .dropdown-item.active { background: var(--brand-light); }
+    .select-search-wrap .dropdown-item:hover, .select-search-wrap .dropdown-item.active { background: var(--brand-light); }
     .select-search-wrap .dropdown-empty { padding: 10px; font-size: 13px; color: var(--text3); }
-
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-primary:hover { opacity: 0.88; }
@@ -73,9 +53,9 @@
     .btn-sync { background: transparent; color: var(--blue); border: 0.5px solid var(--blue); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: inherit; margin-left: auto; min-height: 44px; }
     .btn-sync:hover { background: var(--blue-bg); }
     .btn-sync.syncing { opacity: 0.6; pointer-events: none; }
-
     .info-note { font-size: 12px; color: var(--text2); background: var(--brand-light); border: 0.5px solid rgba(139,58,58,0.15); border-radius: var(--radius); padding: 7px 10px; margin-bottom: 10px; display: flex; gap: 6px; align-items: flex-start; }
 
+    /* Tabs */
     .tab-row { display: flex; margin-bottom: 1rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .tab { padding: 10px 14px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text2); margin-bottom: -0.5px; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; white-space: nowrap; min-height: 44px; }
     .tab:hover { color: var(--brand); }
@@ -87,11 +67,11 @@
     .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
     .empty-state .empty-icon { font-size: 32px; margin-bottom: 0.5rem; opacity: 0.5; }
 
+    /* Meeting & race */
     .meeting-block { margin-bottom: 1.5rem; }
     .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .meeting-name { font-size: 15px; font-weight: 500; color: var(--brand); }
     .meeting-meta { font-size: 12px; color: var(--text2); }
-
     .race-block { border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 0.75rem; overflow: hidden; background: var(--surface); }
     .race-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; border-bottom: 0.5px solid var(--border); }
     .race-time { font-size: 15px; font-weight: 500; color: var(--brand); min-width: 44px; flex-shrink: 0; }
@@ -119,6 +99,11 @@
     .jt-cell { font-size: 12px; color: var(--text2); line-height: 1.5; }
     .jt-cell strong { color: var(--text); font-weight: 500; }
 
+    /* Tag button */
+    .tag-btn { background: none; border: none; cursor: pointer; padding: 4px; color: var(--text3); font-size: 16px; line-height: 1; border-radius: 4px; transition: color 0.15s; }
+    .tag-btn:hover { color: var(--brand); }
+    .tag-btn.tagged { color: var(--brand); }
+
     /* Mobile cards */
     .runner-cards { display: none; }
     .runner-card { padding: 12px 14px; border-bottom: 0.5px solid var(--border); }
@@ -136,6 +121,18 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner.active { display: inline-block; }
     .footer { text-align: center; padding: 2rem 0 1rem; font-size: 12px; color: var(--text3); }
+
+    /* Login prompt modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 340px; width: 90%; border: 0.5px solid var(--border); text-align: center; }
+    .modal h3 { font-size: 17px; font-weight: 500; margin-bottom: 0.5rem; color: var(--brand); }
+    .modal p { font-size: 13px; color: var(--text2); margin-bottom: 1.25rem; line-height: 1.5; }
+    .modal-btns { display: flex; gap: 8px; justify-content: center; }
+    .modal-btns a { padding: 9px 20px; border-radius: var(--radius); font-size: 14px; font-weight: 500; text-decoration: none; }
+    .modal-btn-primary { background: var(--brand); color: #fff; }
+    .modal-btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); }
+    .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text3); }
 
     @media (max-width: 700px) {
       .table-wrap { display: none; }
@@ -166,12 +163,28 @@
       <div class="brand-name">Magnolia Horses</div>
       <div class="brand-tagline">Race card search &amp; runner database</div>
     </div>
+    <div class="nav-links">
+      {% if current_user.is_authenticated %}
+        <span class="nav-user">{{ current_user.name }}</span>
+        <a href="/my-horses">My horses</a>
+        <a href="/logout">Sign out</a>
+      {% else %}
+        <a href="/login">Sign in</a>
+        <a href="/register">Register</a>
+      {% endif %}
+    </div>
   </div>
 
   <div class="search-panel">
     <div class="info-note">
       <span>&#9432;</span>
-      <span>Colour data from <strong>Weatherbys</strong>. Horse name uses fuzzy matching &mdash; typos still find results.</span>
+      <span>Colour data from <strong>Weatherbys</strong>. Horse name uses fuzzy matching &mdash; typos still find results.
+      {% if current_user.is_authenticated %}
+        Click &#9825; on any horse to tag it and receive morning alerts.
+      {% else %}
+        <a href="/register" style="color:var(--brand)">Sign up free</a> to tag horses and get morning alerts.
+      {% endif %}
+      </span>
     </div>
     <div class="filter-grid">
       <div class="filter-group">
@@ -281,377 +294,254 @@
   <div class="footer">Magnolia Horses &nbsp;&middot;&nbsp; Race card data via The Racing API &nbsp;&middot;&nbsp; Colour data sourced from Weatherbys</div>
 </div>
 
+<!-- Login prompt modal -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" id="modal-close">&#215;</button>
+    <h3>Sign in to tag horses</h3>
+    <p>Create a free account to tag horses you like and receive a morning email alert whenever they are running.</p>
+    <div class="modal-btns">
+      <a href="/register" class="modal-btn-primary">Create account</a>
+      <a href="/login" class="modal-btn-secondary">Sign in</a>
+    </div>
+  </div>
+</div>
+
 <script>
 (function() {
   'use strict';
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  var IS_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
 
   function formatDate(d) {
-    var y  = d.getFullYear();
-    var m  = String(d.getMonth() + 1).padStart(2, '0');
-    var dy = String(d.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + dy;
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
-
   function escHtml(s) {
-    return String(s)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  // ── Colour map ────────────────────────────────────────────────────────────────
 
   var COLOUR_META = {
-    'bay':            '#8B4513',
-    'dark bay':       '#3B1F0A',
-    'dark bay/brown': '#3B1F0A',
-    'chestnut':       '#C4622D',
-    'grey':           '#A8A8A8',
-    'black':          '#2A2A2A',
-    'roan':           '#9E6B55'
+    'bay':'#8B4513','dark bay':'#3B1F0A','dark bay/brown':'#3B1F0A',
+    'chestnut':'#C4622D','grey':'#A8A8A8','black':'#2A2A2A','roan':'#9E6B55'
   };
 
   function silkSvg(colour, num) {
-    var c = COLOUR_META[(colour || '').toLowerCase()] || '#888888';
-    return '<svg class="silk" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">'
-      + '<rect width="20" height="20" fill="' + c + '"/>'
-      + '<text x="10" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="sans-serif">' + escHtml(String(num)) + '</text>'
-      + '</svg>';
+    var c = COLOUR_META[(colour||''). toLowerCase()] || '#888';
+    return '<svg class="silk" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20" fill="' + c + '"/><text x="10" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="sans-serif">' + escHtml(String(num)) + '</text></svg>';
   }
-
   function colourChip(colour) {
     if (!colour) return '<span style="font-size:11px;color:var(--text3)">&#8212;</span>';
     var hex = COLOUR_META[colour.toLowerCase()];
     var sw  = hex ? '<span class="colour-swatch" style="background:' + hex + '"></span>' : '';
     return '<span class="colour-chip">' + sw + escHtml(colour) + '</span>';
   }
-
   function formHtml(form) {
     if (!form) return '&#8212;';
-    var result = '';
-    for (var i = 0; i < form.length; i++) {
-      var c = form[i];
-      result += c === '1'
-        ? '<span class="form-win">' + c + '</span>'
-        : '<span>' + c + '</span>';
-    }
-    return result;
+    var r = '';
+    for (var i=0; i<form.length; i++) { var c=form[i]; r += c==='1' ? '<span class="form-win">'+c+'</span>' : '<span>'+c+'</span>'; }
+    return r;
   }
 
-  // ── Searchable dropdowns ──────────────────────────────────────────────────────
+  // ── Tagging ────────────────────────────────────────────────────────────────
+  var taggedSet = {};
 
-  var dropdownData   = { jockey: [], trainer: [], owner: [] };
-  var selectedValues = { jockey: '', trainer: '', owner: '' };
+  function loadTags() {
+    if (!IS_LOGGED_IN) return Promise.resolve();
+    return fetch('/api/my-tags').then(function(r){return r.json();}).then(function(tags){
+      taggedSet = {};
+      tags.forEach(function(n){ taggedSet[n.toLowerCase()] = true; });
+    }).catch(function(){});
+  }
+
+  function toggleTag(horseName) {
+    if (!IS_LOGGED_IN) {
+      document.getElementById('login-modal').classList.add('open');
+      return;
+    }
+    var key    = horseName.toLowerCase();
+    var is_tagged = taggedSet[key];
+    var endpoint  = is_tagged ? '/api/untag' : '/api/tag';
+    fetch(endpoint, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({horse_name: horseName}) })
+      .then(function() {
+        if (is_tagged) { delete taggedSet[key]; } else { taggedSet[key] = true; }
+        document.querySelectorAll('.tag-btn[data-horse="' + escHtml(horseName) + '"]').forEach(function(btn){
+          btn.classList.toggle('tagged', !!taggedSet[key]);
+          btn.title = taggedSet[key] ? 'Remove tag' : 'Tag this horse';
+          btn.textContent = taggedSet[key] ? '\u2665' : '\u2661';
+        });
+      });
+  }
+
+  function tagBtn(horseName, isTagged) {
+    var esc = escHtml(horseName).replace(/'/g, '&#39;');
+    return '<button class="tag-btn' + (isTagged ? ' tagged' : '') + '" ' +
+      'data-horse="' + esc + '" ' +
+      'title="' + (isTagged ? 'Remove tag' : 'Tag this horse') + '" ' +
+      'onclick="window._toggleTag(\\''+ esc +'\\')">' +
+      (isTagged ? '&#9829;' : '&#9825;') + '</button>';
+  }
+  window._toggleTag = toggleTag;
+
+  // ── Dropdowns ──────────────────────────────────────────────────────────────
+  var dropdownData   = {jockey:[],trainer:[],owner:[]};
+  var selectedValues = {jockey:'',trainer:'',owner:''};
 
   function initDropdown(field) {
-    var input = document.getElementById('f-' + field);
-    var dd    = document.getElementById('dd-' + field);
-    var wrap  = document.getElementById('wrap-' + field);
-
-    function renderItems(filter) {
-      var q     = (filter || '').toLowerCase();
-      var items = dropdownData[field].filter(function(v) {
-        return !q || v.toLowerCase().indexOf(q) !== -1;
-      });
-      if (items.length === 0) {
-        dd.innerHTML = '<div class="dropdown-empty">No matches</div>';
-      } else {
-        var html = '<div class="dropdown-item" data-value="">&#8212; Any ' + field + ' &#8212;</div>';
-        items.forEach(function(v) {
-          var active = v === selectedValues[field] ? ' active' : '';
-          html += '<div class="dropdown-item' + active + '" data-value="' + escHtml(v) + '">' + escHtml(v) + '</div>';
-        });
-        dd.innerHTML = html;
-      }
+    var input = document.getElementById('f-'+field);
+    var dd    = document.getElementById('dd-'+field);
+    var wrap  = document.getElementById('wrap-'+field);
+    function render(filter) {
+      var q = (filter||'').toLowerCase();
+      var items = dropdownData[field].filter(function(v){ return !q || v.toLowerCase().indexOf(q)!==-1; });
+      if (items.length===0) { dd.innerHTML='<div class="dropdown-empty">No matches</div>'; return; }
+      var h = '<div class="dropdown-item" data-value="">&#8212; Any '+field+' &#8212;</div>';
+      items.forEach(function(v){ h += '<div class="dropdown-item'+(v===selectedValues[field]?' active':'')+'" data-value="'+escHtml(v)+'">'+escHtml(v)+'</div>'; });
+      dd.innerHTML = h;
     }
-
-    input.addEventListener('focus', function() {
-      renderItems(input.value);
-      dd.classList.add('open');
-    });
-
-    input.addEventListener('input', function() {
-      selectedValues[field] = '';
-      renderItems(input.value);
-      dd.classList.add('open');
-    });
-
-    dd.addEventListener('mousedown', function(e) {
-      var item = e.target.closest('.dropdown-item');
-      if (!item) return;
-      selectedValues[field] = item.dataset.value;
-      input.value = item.dataset.value;
-      dd.classList.remove('open');
-    });
-
-    document.addEventListener('click', function(e) {
-      if (!wrap.contains(e.target)) {
-        dd.classList.remove('open');
-        if (input.value !== selectedValues[field]) {
-          input.value = selectedValues[field];
-        }
-      }
-    });
+    input.addEventListener('focus', function(){ render(input.value); dd.classList.add('open'); });
+    input.addEventListener('input', function(){ selectedValues[field]=''; render(input.value); dd.classList.add('open'); });
+    dd.addEventListener('mousedown', function(e){ var item=e.target.closest('.dropdown-item'); if(!item)return; selectedValues[field]=item.dataset.value; input.value=item.dataset.value; dd.classList.remove('open'); });
+    document.addEventListener('click', function(e){ if(!wrap.contains(e.target)){ dd.classList.remove('open'); if(input.value!==selectedValues[field]) input.value=selectedValues[field]; } });
   }
 
   function loadOptions() {
-    return fetch('/api/options')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        dropdownData.jockey  = data.jockeys  || [];
-        dropdownData.trainer = data.trainers || [];
-        dropdownData.owner   = data.owners   || [];
-      })
-      .catch(function(e) { console.warn('Could not load options', e); });
+    return fetch('/api/options').then(function(r){return r.json();}).then(function(data){
+      dropdownData.jockey=data.jockeys||[]; dropdownData.trainer=data.trainers||[]; dropdownData.owner=data.owners||[];
+    }).catch(function(){});
   }
 
-  // ── Tabs ──────────────────────────────────────────────────────────────────────
-
+  // ── Tabs ───────────────────────────────────────────────────────────────────
   function setTab(tab) {
-    document.querySelectorAll('.tab').forEach(function(t) {
-      t.classList.toggle('active', t.dataset.tab === tab);
-    });
-    var di    = document.getElementById('f-date');
-    var today = new Date();
-    if (tab === 'today') {
-      di.value = formatDate(today);
-      runSearch();
-    } else if (tab === 'tomorrow') {
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab===tab); });
+    var di=document.getElementById('f-date'), today=new Date();
+    if (tab==='today') { di.value=formatDate(today); runSearch(); }
+    else if (tab==='tomorrow') {
       document.getElementById('spinner').classList.remove('active');
-      document.getElementById('results-area').innerHTML =
-        '<div class="empty-state">'
-        + '<div class="empty-icon">&#128197;</div>'
-        + '<div>Tomorrow\'s racecards require a Standard plan subscription.<br>'
-        + '<a href="https://www.theracingapi.com" target="_blank" style="color:var(--brand)">Upgrade at theracingapi.com</a></div>'
-        + '</div>';
-    } else if (tab === 'entries') {
-      di.value = '';
-      runSearch();
-    } else if (tab === 'live') {
-      di.value = formatDate(today);
-      runSearch();
+      document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128197;</div><div>Tomorrow\'s racecards require a Standard plan subscription.<br><a href="https://www.theracingapi.com" target="_blank" style="color:var(--brand)">Upgrade at theracingapi.com</a></div></div>';
     }
+    else if (tab==='entries') { di.value=''; runSearch(); }
+    else if (tab==='live')    { di.value=formatDate(today); runSearch(); }
   }
 
-  // ── Build race block ──────────────────────────────────────────────────────────
-
+  // ── Build race block ───────────────────────────────────────────────────────
   function buildRaceBlock(race, meetingLabel) {
-    var meetingTag = meetingLabel
-      ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">' + escHtml(meetingLabel) + '</span>'
-      : '';
-
-    // Desktop table rows
-    var tableRows = '';
+    var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
+    var tableRows = '', mobileCards = '';
     race.runners.forEach(function(r) {
+      var isTagged = taggedSet[r.name.toLowerCase()];
+      var tb = tagBtn(r.name, isTagged);
       tableRows += '<tr>'
-        + '<td><span class="horse-num">' + escHtml(String(r.number || '&#8212;')) + '</span></td>'
-        + '<td><div class="horse-name-cell">' + silkSvg(r.colour, r.number || '')
-        + '<div style="min-width:0"><div class="horse-name">' + escHtml(r.name || '&#8212;') + '</div>'
-        + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
-        + '<td>' + colourChip(r.colour) + '</td>'
-        + '<td><span class="form-str">' + formHtml(r.form) + '</span></td>'
-        + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.age || '&#8212;')) + 'yo ' + escHtml(r.sex || '') + '</td>'
-        + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.weight || '&#8212;')) + '</td>'
-        + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.or || '&#8212;')) + '</td>'
-        + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '&#8212;') + '</strong><br>T: ' + escHtml(r.trainer || '&#8212;') + '</div></td>'
+        + '<td><span class="horse-num">'+escHtml(String(r.number||'&#8212;'))+'</span></td>'
+        + '<td><div class="horse-name-cell">'+silkSvg(r.colour,r.number||'')+'<div style="min-width:0"><div class="horse-name">'+escHtml(r.name||'&#8212;')+'</div><div class="horse-owner">'+escHtml(r.owner||'')+'</div></div></div></td>'
+        + '<td>'+colourChip(r.colour)+'</td>'
+        + '<td><span class="form-str">'+formHtml(r.form)+'</span></td>'
+        + '<td style="font-size:12px;color:var(--text2)">'+escHtml(String(r.age||'&#8212;'))+'yo '+escHtml(r.sex||'')+'</td>'
+        + '<td style="font-size:12px;color:var(--text2)">'+escHtml(String(r.weight||'&#8212;'))+'</td>'
+        + '<td style="font-size:12px;color:var(--text2)">'+escHtml(String(r.or||'&#8212;'))+'</td>'
+        + '<td><div class="jt-cell"><strong>'+escHtml(r.jockey||'&#8212;')+'</strong><br>T: '+escHtml(r.trainer||'&#8212;')+'</div></td>'
+        + '<td style="width:36px;text-align:center">'+tb+'</td>'
         + '</tr>';
-    });
-
-    // Mobile cards
-    var mobileCards = '';
-    race.runners.forEach(function(r) {
       mobileCards += '<div class="runner-card">'
-        + '<div class="runner-card-top">'
-        + silkSvg(r.colour, r.number || '')
-        + '<span class="runner-card-num">' + escHtml(String(r.number || '&#8212;')) + '</span>'
-        + '<span class="runner-card-name">' + escHtml(r.name || '&#8212;') + '</span>'
-        + '<span class="runner-card-form">' + formHtml(r.form) + '</span>'
-        + '</div>'
+        + '<div class="runner-card-top">'+silkSvg(r.colour,r.number||'')+'<span class="runner-card-num">'+escHtml(String(r.number||'&#8212;'))+'</span><span class="runner-card-name">'+escHtml(r.name||'&#8212;')+'</span><span class="runner-card-form">'+formHtml(r.form)+'</span>'+tb+'</div>'
         + '<div class="runner-card-grid">'
-        + '<div class="runner-card-field"><span class="label">Jockey</span><span class="value">' + escHtml(r.jockey || '&#8212;') + '</span></div>'
-        + '<div class="runner-card-field"><span class="label">Trainer</span><span class="value muted">' + escHtml(r.trainer || '&#8212;') + '</span></div>'
-        + '<div class="runner-card-field"><span class="label">Colour</span><span class="value">' + colourChip(r.colour) + '</span></div>'
-        + '<div class="runner-card-field"><span class="label">Age / sex</span><span class="value muted">' + escHtml(String(r.age || '&#8212;')) + 'yo ' + escHtml(r.sex || '') + '</span></div>'
-        + '<div class="runner-card-field"><span class="label">Weight</span><span class="value muted">' + escHtml(String(r.weight || '&#8212;')) + '</span></div>'
-        + '<div class="runner-card-field"><span class="label">OR</span><span class="value muted">' + escHtml(String(r.or || '&#8212;')) + '</span></div>'
-        + '<div class="runner-card-field" style="grid-column:1/-1"><span class="label">Owner</span><span class="value muted">' + escHtml(r.owner || '&#8212;') + '</span></div>'
+        + '<div class="runner-card-field"><span class="label">Jockey</span><span class="value">'+escHtml(r.jockey||'&#8212;')+'</span></div>'
+        + '<div class="runner-card-field"><span class="label">Trainer</span><span class="value muted">'+escHtml(r.trainer||'&#8212;')+'</span></div>'
+        + '<div class="runner-card-field"><span class="label">Colour</span><span class="value">'+colourChip(r.colour)+'</span></div>'
+        + '<div class="runner-card-field"><span class="label">Age / sex</span><span class="value muted">'+escHtml(String(r.age||'&#8212;'))+'yo '+escHtml(r.sex||'')+'</span></div>'
+        + '<div class="runner-card-field"><span class="label">Weight</span><span class="value muted">'+escHtml(String(r.weight||'&#8212;'))+'</span></div>'
+        + '<div class="runner-card-field"><span class="label">OR</span><span class="value muted">'+escHtml(String(r.or||'&#8212;'))+'</span></div>'
+        + '<div class="runner-card-field" style="grid-column:1/-1"><span class="label">Owner</span><span class="value muted">'+escHtml(r.owner||'&#8212;')+'</span></div>'
         + '</div></div>';
     });
-
     return '<div class="race-block">'
-      + '<div class="race-header">'
-      + '<span class="race-time">' + escHtml(race.time || '') + '</span>'
-      + '<div class="race-info">'
-      + '<div class="race-name">' + escHtml(race.name || '') + '</div>'
-      + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &nbsp;&middot;&nbsp; ' + escHtml(race.class || '') + '</div>'
-      + '</div>'
-      + meetingTag
-      + '<span class="race-badge">' + race.runners.length + ' runner' + (race.runners.length !== 1 ? 's' : '') + '</span>'
-      + '</div>'
-      + '<div class="table-wrap"><table>'
-      + '<thead><tr>'
-      + '<th style="width:40px">#</th>'
-      + '<th style="width:22%">Horse</th>'
-      + '<th style="width:105px">Colour</th>'
-      + '<th style="width:75px">Form</th>'
-      + '<th style="width:65px">Age/sex</th>'
-      + '<th style="width:50px">Wgt</th>'
-      + '<th style="width:40px">OR</th>'
-      + '<th style="width:20%">Jockey / trainer</th>'
-      + '</tr></thead>'
-      + '<tbody>' + tableRows + '</tbody>'
-      + '</table></div>'
-      + '<div class="runner-cards">' + mobileCards + '</div>'
+      + '<div class="race-header"><span class="race-time">'+escHtml(race.time||'')+'</span><div class="race-info"><div class="race-name">'+escHtml(race.name||'')+'</div><div class="race-details">'+escHtml(String(race.distance||'')+' &middot; '+race.class||'')+'</div></div>'+meetingTag+'<span class="race-badge">'+race.runners.length+' runner'+(race.runners.length!==1?'s':'')+'</span></div>'
+      + '<div class="table-wrap"><table><thead><tr>'
+      + '<th style="width:40px">#</th><th style="width:21%">Horse</th><th style="width:100px">Colour</th><th style="width:70px">Form</th><th style="width:62px">Age/sex</th><th style="width:48px">Wgt</th><th style="width:38px">OR</th><th style="width:19%">Jockey / trainer</th><th style="width:36px"></th>'
+      + '</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
+      + '<div class="runner-cards">'+mobileCards+'</div>'
       + '</div>';
   }
 
-  // ── Render results ────────────────────────────────────────────────────────────
-
+  // ── Render ────────────────────────────────────────────────────────────────
   function renderResults(data) {
-    var area = document.getElementById('results-area');
-    if (!data || data.length === 0) {
-      area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>';
-      return;
-    }
-
-    var totalRunners  = data.reduce(function(s, m) { return s + m.races.reduce(function(r, rc) { return r + rc.runners.length; }, 0); }, 0);
-    var totalRaces    = data.reduce(function(s, m) { return s + m.races.length; }, 0);
-    var meetingSet    = {};
-    data.forEach(function(m) { meetingSet[m.meeting] = 1; });
-    var totalMeetings = Object.keys(meetingSet).length;
-    var sortMode      = document.getElementById('f-sort').value;
-
-    var html = '<div class="results-header"><span>'
-      + totalRunners + ' runner' + (totalRunners !== 1 ? 's' : '')
-      + ' across ' + totalRaces + ' race' + (totalRaces !== 1 ? 's' : '')
-      + ' at ' + totalMeetings + ' meeting' + (totalMeetings !== 1 ? 's' : '')
-      + '</span></div>';
-
-    if (sortMode === 'time') {
-      data.forEach(function(block) {
-        block.races.forEach(function(race) {
-          html += '<div class="meeting-block">' + buildRaceBlock(race, block.meeting) + '</div>';
-        });
-      });
+    var area=document.getElementById('results-area');
+    if (!data||data.length===0) { area.innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>'; return; }
+    var totalRunners=data.reduce(function(s,m){return s+m.races.reduce(function(r,rc){return r+rc.runners.length;},0);},0);
+    var totalRaces=data.reduce(function(s,m){return s+m.races.length;},0);
+    var ms={}; data.forEach(function(m){ms[m.meeting]=1;}); var totalMeetings=Object.keys(ms).length;
+    var sortMode=document.getElementById('f-sort').value;
+    var html='<div class="results-header"><span>'+totalRunners+' runner'+(totalRunners!==1?'s':'')+' across '+totalRaces+' race'+(totalRaces!==1?'s':'')+' at '+totalMeetings+' meeting'+(totalMeetings!==1?'s':'')+'</span></div>';
+    if (sortMode==='time') {
+      data.forEach(function(block){ block.races.forEach(function(race){ html+='<div class="meeting-block">'+buildRaceBlock(race,block.meeting)+'</div>'; }); });
     } else {
-      data.forEach(function(block) {
-        html += '<div class="meeting-block">'
-          + '<div class="meeting-header"><div>'
-          + '<div class="meeting-name">' + escHtml(block.meeting) + '</div>'
-          + '<div class="meeting-meta">' + escHtml(block.date || '') + '</div>'
-          + '</div></div>';
-        block.races.forEach(function(race) {
-          html += buildRaceBlock(race, null);
-        });
-        html += '</div>';
+      data.forEach(function(block){
+        html+='<div class="meeting-block"><div class="meeting-header"><div><div class="meeting-name">'+escHtml(block.meeting)+'</div><div class="meeting-meta">'+escHtml(block.date||'')+'</div></div></div>';
+        block.races.forEach(function(race){ html+=buildRaceBlock(race,null); });
+        html+='</div>';
       });
     }
-
-    area.innerHTML = html;
+    area.innerHTML=html;
   }
 
-  // ── Search ────────────────────────────────────────────────────────────────────
-
+  // ── Search ────────────────────────────────────────────────────────────────
   function populateMeetingDropdown(data) {
-    var sel      = document.getElementById('f-meeting');
-    var current  = sel.value;
-    var seen     = {};
-    var meetings = [];
-    data.forEach(function(m) { if (!seen[m.meeting]) { seen[m.meeting] = 1; meetings.push(m.meeting); } });
+    var sel=document.getElementById('f-meeting'), current=sel.value, seen={}, meetings=[];
+    data.forEach(function(m){ if(!seen[m.meeting]){seen[m.meeting]=1;meetings.push(m.meeting);} });
     meetings.sort();
-    sel.innerHTML = '<option value="">All meetings</option>';
-    meetings.forEach(function(m) {
-      var opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      if (m === current) opt.selected = true;
-      sel.appendChild(opt);
-    });
+    sel.innerHTML='<option value="">All meetings</option>';
+    meetings.forEach(function(m){ var opt=document.createElement('option'); opt.value=m; opt.textContent=m; if(m===current) opt.selected=true; sel.appendChild(opt); });
   }
 
   function runSearch() {
-    var spinner = document.getElementById('spinner');
+    var spinner=document.getElementById('spinner');
     spinner.classList.add('active');
-
-    var params  = new URLSearchParams();
-    var horse   = document.getElementById('f-horse').value.trim();
-    var meeting = document.getElementById('f-meeting').value;
-    var colour  = document.getElementById('f-colour').value;
-    var date    = document.getElementById('f-date').value;
-    var sort    = document.getElementById('f-sort').value;
-
-    if (horse)                  params.append('horse',   horse);
-    if (selectedValues.jockey)  params.append('jockey',  selectedValues.jockey);
-    if (selectedValues.trainer) params.append('trainer', selectedValues.trainer);
-    if (selectedValues.owner)   params.append('owner',   selectedValues.owner);
-    if (meeting)                params.append('meeting', meeting);
-    if (colour)                 params.append('colour',  colour);
-    if (date)                   params.append('date',    date);
-    params.append('sort', sort);
-
-    fetch('/api/search?' + params.toString())
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        renderResults(data);
-        populateMeetingDropdown(data);
-      })
-      .catch(function() {
-        document.getElementById('results-area').innerHTML =
-          '<div class="empty-state"><div>Could not connect to the server.</div></div>';
-      })
-      .finally(function() {
-        spinner.classList.remove('active');
-      });
+    var params=new URLSearchParams();
+    var horse=document.getElementById('f-horse').value.trim();
+    var meeting=document.getElementById('f-meeting').value;
+    var colour=document.getElementById('f-colour').value;
+    var date=document.getElementById('f-date').value;
+    var sort=document.getElementById('f-sort').value;
+    if(horse) params.append('horse',horse);
+    if(selectedValues.jockey)  params.append('jockey', selectedValues.jockey);
+    if(selectedValues.trainer) params.append('trainer',selectedValues.trainer);
+    if(selectedValues.owner)   params.append('owner',  selectedValues.owner);
+    if(meeting) params.append('meeting',meeting);
+    if(colour)  params.append('colour', colour);
+    if(date)    params.append('date',   date);
+    params.append('sort',sort);
+    fetch('/api/search?'+params.toString()).then(function(r){return r.json();}).then(function(data){
+      renderResults(data); populateMeetingDropdown(data);
+    }).catch(function(){ document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not connect to the server.</div></div>'; })
+    .finally(function(){ spinner.classList.remove('active'); });
   }
 
   function clearFilters() {
-    document.getElementById('f-horse').value = '';
-    document.getElementById('f-date').value  = formatDate(new Date());
-    ['f-meeting', 'f-colour', 'f-type', 'f-class'].forEach(function(id) {
-      document.getElementById(id).value = '';
-    });
-    document.getElementById('f-sort').value = 'meeting';
-    ['jockey', 'trainer', 'owner'].forEach(function(field) {
-      selectedValues[field] = '';
-      document.getElementById('f-' + field).value = '';
-    });
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.getElementById('f-horse').value='';
+    document.getElementById('f-date').value=formatDate(new Date());
+    ['f-meeting','f-colour','f-type','f-class'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('f-sort').value='meeting';
+    ['jockey','trainer','owner'].forEach(function(field){ selectedValues[field]=''; document.getElementById('f-'+field).value=''; });
+    document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
     document.querySelector('.tab').classList.add('active');
     runSearch();
   }
 
-  // ── Init ──────────────────────────────────────────────────────────────────────
-
-  ['jockey', 'trainer', 'owner'].forEach(initDropdown);
-
+  // ── Init ──────────────────────────────────────────────────────────────────
+  ['jockey','trainer','owner'].forEach(initDropdown);
   document.getElementById('f-date').value = formatDate(new Date());
-
   document.getElementById('btn-search').addEventListener('click', runSearch);
   document.getElementById('btn-clear').addEventListener('click', clearFilters);
-  document.getElementById('sync-btn').addEventListener('click', function() {
-    var btn = document.getElementById('sync-btn');
-    btn.textContent = 'Syncing\u2026';
-    btn.classList.add('syncing');
-    fetch('/api/sync', { method: 'POST' })
-      .then(function() { return loadOptions(); })
-      .then(function() { return runSearch(); })
-      .catch(function() {})
-      .finally(function() {
-        btn.innerHTML = '&#8635; Sync now';
-        btn.classList.remove('syncing');
-      });
+  document.getElementById('sync-btn').addEventListener('click', function(){
+    var btn=document.getElementById('sync-btn');
+    btn.textContent='Syncing\u2026'; btn.classList.add('syncing');
+    fetch('/api/sync',{method:'POST'}).then(function(){return loadOptions();}).then(function(){return runSearch();}).catch(function(){})
+    .finally(function(){ btn.innerHTML='&#8635; Sync now'; btn.classList.remove('syncing'); });
   });
+  document.querySelectorAll('.tab').forEach(function(tab){ tab.addEventListener('click',function(){ setTab(tab.dataset.tab); }); });
+  document.getElementById('modal-close').addEventListener('click', function(){ document.getElementById('login-modal').classList.remove('open'); });
+  document.getElementById('login-modal').addEventListener('click', function(e){ if(e.target===this) this.classList.remove('open'); });
 
-  document.querySelectorAll('.tab').forEach(function(tab) {
-    tab.addEventListener('click', function() {
-      setTab(tab.dataset.tab);
-    });
-  });
-
-  loadOptions().then(function() { runSearch(); });
-
+  loadOptions().then(function(){ return loadTags(); }).then(function(){ runSearch(); });
 })();
 </script>
 </body>
