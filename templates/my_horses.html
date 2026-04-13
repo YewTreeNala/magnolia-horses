@@ -17,7 +17,7 @@
     }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 15px; padding: 0 1rem 3rem; }
     .page { max-width: 900px; margin: 0 auto; }
-    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; margin-bottom: 0.5rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
     .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
     .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
     .nav-links a { color: var(--brand); text-decoration: none; }
@@ -26,19 +26,39 @@
     .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
     .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
     .panel-title { font-size: 15px; font-weight: 500; color: var(--brand); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
-    .running-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--green-bg); color: var(--green); font-weight: 500; }
+    .running-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--green-bg); color: var(--green); font-weight: 500; border: 0.5px solid rgba(59,109,17,0.2); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); }
-    td { padding: 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
+    td { padding: 10px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--brand-light); }
-    .btn-untag { background: transparent; color: var(--red); border: 0.5px solid var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .btn-edit { background: transparent; color: var(--brand); border: 0.5px solid rgba(139,58,58,0.3); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .btn-edit:hover { background: var(--brand-light); }
+    .btn-untag { background: transparent; color: var(--red); border: 0.5px solid var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; margin-left: 4px; }
     .btn-untag:hover { background: var(--red-bg); }
     .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
     .form-str { font-family: "Courier New", monospace; font-size: 12px; color: var(--text2); }
     .form-win { color: var(--green); font-weight: 500; }
     .colour-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface2); color: var(--text2); }
     .colour-swatch { width: 9px; height: 9px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.15); }
+    .notes-text { font-size: 12px; color: var(--text2); font-style: italic; margin-top: 3px; }
+
+    /* Edit notes modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: var(--radius-lg); padding: 1.5rem; max-width: 380px; width: 100%; border: 0.5px solid var(--border); position: relative; }
+    .modal h3 { font-size: 17px; font-weight: 500; color: var(--brand); margin-bottom: 0.5rem; }
+    .modal label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; margin-top: 0.75rem; }
+    .modal textarea { width: 100%; padding: 9px 10px; font-size: 14px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; resize: vertical; min-height: 80px; }
+    .modal textarea:focus { border-color: var(--brand); }
+    .modal-btns { display: flex; gap: 8px; margin-top: 1rem; }
+    .modal-btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; flex: 1; }
+    .modal-btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 9px 14px; font-size: 14px; cursor: pointer; font-family: inherit; }
+    .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); }
+
+    @media (max-width: 600px) {
+      .col-race, .col-trainer { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -67,7 +87,7 @@
           <th>Horse</th>
           <th>Meeting</th>
           <th>Time</th>
-          <th>Race</th>
+          <th class="col-race">Race</th>
           <th>Jockey</th>
           <th>Form</th>
           <th>Colour</th>
@@ -76,16 +96,17 @@
       <tbody>
         {% for r in running_today %}
         <tr>
-          <td style="font-weight:500">{{ r.horse_name }}</td>
+          <td>
+            <div style="font-weight:500">{{ r.horse_name }}</div>
+            {% if r.notes %}<div class="notes-text">{{ r.notes }}</div>{% endif %}
+          </td>
           <td style="color:var(--text2)">{{ r.meeting }}</td>
           <td style="color:var(--brand);font-weight:500">{{ r.time }}</td>
-          <td style="color:var(--text2);font-size:12px">{{ r.race_name }}</td>
+          <td class="col-race" style="color:var(--text2);font-size:12px">{{ r.race_name }}</td>
           <td style="color:var(--text2);font-size:12px">{{ r.jockey }}</td>
           <td>
             <span class="form-str">
-              {% for c in r.form %}
-                {% if c == '1' %}<span class="form-win">{{ c }}</span>{% else %}{{ c }}{% endif %}
-              {% endfor %}
+              {% for c in r.form %}{% if c == '1' %}<span class="form-win">{{ c }}</span>{% else %}{{ c }}{% endif %}{% endfor %}
             </span>
           </td>
           <td>
@@ -99,8 +120,7 @@
                   {% elif r.colour.lower() == 'black' %}#2A2A2A
                   {% elif r.colour.lower() == 'roan' %}#9E6B55
                   {% else %}#888{% endif %}
-                "></span>
-                {{ r.colour }}
+                "></span>{{ r.colour }}
               </span>
             {% else %}—{% endif %}
           </td>
@@ -117,7 +137,8 @@
     <table>
       <thead>
         <tr>
-          <th>Horse name</th>
+          <th>Horse</th>
+          <th>Notes</th>
           <th>Tagged on</th>
           <th></th>
         </tr>
@@ -126,11 +147,11 @@
         {% for t in tagged %}
         <tr id="row-{{ loop.index }}">
           <td style="font-weight:500">{{ t.horse_name }}</td>
+          <td style="color:var(--text2);font-size:13px;font-style:italic">{{ t.notes or '—' }}</td>
           <td style="color:var(--text2);font-size:12px">{{ t.tagged_at or '—' }}</td>
-          <td>
-            <button class="btn-untag" onclick="untag('{{ t.horse_name }}', 'row-{{ loop.index }}')">
-              Remove
-            </button>
+          <td style="white-space:nowrap">
+            <button class="btn-edit" onclick="openEdit('{{ t.horse_name|e }}', '{{ (t.notes or '')|e }}', 'row-{{ loop.index }}')">Edit notes</button>
+            <button class="btn-untag" onclick="untag('{{ t.horse_name|e }}', 'row-{{ loop.index }}')">Remove</button>
           </td>
         </tr>
         {% endfor %}
@@ -138,23 +159,77 @@
     </table>
     {% else %}
     <div class="empty">
-      You haven't tagged any horses yet. Use the search to find horses and click the bookmark icon to tag them.
+      You haven't tagged any horses yet. Use the search to find horses and click the &#9825; icon to tag them.
     </div>
     {% endif %}
   </div>
 </div>
 
+<!-- Edit notes modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeEdit()">&#215;</button>
+    <h3 id="edit-horse-name"></h3>
+    <label for="edit-notes">Notes</label>
+    <textarea id="edit-notes" placeholder="e.g. Good on soft ground, watch for Cheltenham..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-btn-primary" onclick="saveNotes()">Save notes</button>
+      <button class="modal-btn-secondary" onclick="closeEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  var editingHorse = null;
+  var editingRow   = null;
+
+  function openEdit(horseName, notes, rowId) {
+    editingHorse = horseName;
+    editingRow   = rowId;
+    document.getElementById('edit-horse-name').textContent = horseName;
+    document.getElementById('edit-notes').value = notes;
+    document.getElementById('edit-modal').classList.add('open');
+    setTimeout(function(){ document.getElementById('edit-notes').focus(); }, 50);
+  }
+
+  function closeEdit() {
+    document.getElementById('edit-modal').classList.remove('open');
+    editingHorse = null; editingRow = null;
+  }
+
+  function saveNotes() {
+    if (!editingHorse) return;
+    var notes = document.getElementById('edit-notes').value.trim();
+    fetch('/api/tag-notes', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({horse_name: editingHorse, notes: notes})
+    }).then(function() {
+      var row = document.getElementById(editingRow);
+      if (row) {
+        var notesCell = row.cells[1];
+        notesCell.textContent = notes || '—';
+        notesCell.style.fontStyle = notes ? 'italic' : 'normal';
+      }
+      closeEdit();
+    });
+  }
+
   function untag(horseName, rowId) {
+    if (!confirm('Remove ' + horseName + ' from your tagged horses?')) return;
     fetch('/api/untag', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ horse_name: horseName })
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({horse_name: horseName})
     }).then(function() {
       var row = document.getElementById(rowId);
       if (row) row.remove();
     });
   }
+
+  document.getElementById('edit-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEdit();
+  });
 </script>
 </body>
 </html>

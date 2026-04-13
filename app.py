@@ -16,7 +16,6 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'change-this-in-production')
 
-# Database
 database_url = os.getenv('DATABASE_URL', 'sqlite:///racing.db')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
@@ -25,7 +24,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
-# Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -37,19 +35,9 @@ def load_user(user_id):
 with app.app_context():
     db.create_all()
 
-# Scheduler — hourly sync + morning alerts at 7am
 scheduler = BackgroundScheduler()
-scheduler.add_job(
-    func=lambda: sync_todays_races(app),
-    trigger='interval',
-    hours=1
-)
-scheduler.add_job(
-    func=lambda: send_morning_alerts(app),
-    trigger='cron',
-    hour=7,
-    minute=0
-)
+scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', hours=1)
+scheduler.add_job(func=lambda: send_morning_alerts(app), trigger='cron', hour=7, minute=0)
 scheduler.start()
 
 
@@ -69,7 +57,6 @@ def register():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         confirm  = request.form.get('confirm', '')
-
         if not name or not email or not password:
             flash('All fields are required.', 'error')
             return render_template('register.html')
@@ -82,19 +69,13 @@ def register():
         if User.query.filter_by(email=email).first():
             flash('An account with that email already exists.', 'error')
             return render_template('register.html')
-
-        user = User(
-            name=name,
-            email=email,
-            created_at=datetime.now().strftime('%Y-%m-%d %H:%M')
-        )
+        user = User(name=name, email=email, created_at=datetime.now().strftime('%Y-%m-%d %H:%M'))
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
         login_user(user)
         flash(f'Welcome to Magnolia Horses, {name}!', 'success')
         return redirect(url_for('index'))
-
     return render_template('register.html')
 
 
@@ -106,14 +87,11 @@ def login():
         email    = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
         remember = request.form.get('remember') == 'on'
-
-        user = User.query.filter_by(email=email).first()
+        user     = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user, remember=remember)
-            next_page = request.args.get('next')
-            return redirect(next_page or url_for('index'))
+            return redirect(request.args.get('next') or url_for('index'))
         flash('Incorrect email or password.', 'error')
-
     return render_template('login.html')
 
 
@@ -130,10 +108,10 @@ def my_horses():
     tagged = TaggedHorse.query.filter_by(user_id=current_user.id)\
         .order_by(TaggedHorse.horse_name).all()
 
-    # Check which tagged horses are running today
     from datetime import date
-    today = date.today().strftime('%Y-%m-%d')
+    today        = date.today().strftime('%Y-%m-%d')
     tagged_names = [t.horse_name.lower() for t in tagged]
+    tagged_notes = {t.horse_name.lower(): t.notes for t in tagged}
 
     running_today = []
     if tagged_names:
@@ -150,6 +128,7 @@ def my_horses():
                     'trainer':    r.trainer or '—',
                     'form':       r.form or '',
                     'colour':     r.colour or '',
+                    'notes':      tagged_notes.get(r.horse_name.lower(), ''),
                 })
 
     return render_template('my_horses.html', tagged=tagged, running_today=running_today)
@@ -161,13 +140,14 @@ def account():
     return render_template('account.html')
 
 
-# ── Auth API ──────────────────────────────────────────────────────────────────
+# ── Tag API ───────────────────────────────────────────────────────────────────
 
 @app.route('/api/tag', methods=['POST'])
 @login_required
 def tag_horse():
     data       = request.get_json()
     horse_name = (data or {}).get('horse_name', '').strip()
+    notes      = (data or {}).get('notes', '').strip()
     if not horse_name:
         return jsonify({'error': 'horse_name required'}), 400
 
@@ -175,11 +155,15 @@ def tag_horse():
         user_id=current_user.id, horse_name=horse_name
     ).first()
     if existing:
-        return jsonify({'status': 'already_tagged'})
+        # Update notes if already tagged
+        existing.notes = notes
+        db.session.commit()
+        return jsonify({'status': 'updated', 'horse_name': horse_name})
 
     tag = TaggedHorse(
         user_id=current_user.id,
         horse_name=horse_name,
+        notes=notes,
         tagged_at=datetime.now().strftime('%Y-%m-%d %H:%M')
     )
     db.session.add(tag)
@@ -192,7 +176,7 @@ def tag_horse():
 def untag_horse():
     data       = request.get_json()
     horse_name = (data or {}).get('horse_name', '').strip()
-    tag = TaggedHorse.query.filter_by(
+    tag        = TaggedHorse.query.filter_by(
         user_id=current_user.id, horse_name=horse_name
     ).first()
     if tag:
@@ -205,22 +189,35 @@ def untag_horse():
 @login_required
 def my_tags():
     tags = TaggedHorse.query.filter_by(user_id=current_user.id).all()
-    return jsonify([t.horse_name for t in tags])
+    return jsonify([{
+        'horse_name': t.horse_name,
+        'notes':      t.notes or ''
+    } for t in tags])
+
+
+@app.route('/api/tag-notes', methods=['POST'])
+@login_required
+def update_tag_notes():
+    data       = request.get_json()
+    horse_name = (data or {}).get('horse_name', '').strip()
+    notes      = (data or {}).get('notes', '').strip()
+    tag        = TaggedHorse.query.filter_by(
+        user_id=current_user.id, horse_name=horse_name
+    ).first()
+    if tag:
+        tag.notes = notes
+        db.session.commit()
+        return jsonify({'status': 'ok'})
+    return jsonify({'error': 'not found'}), 404
 
 
 # ── Data API ──────────────────────────────────────────────────────────────────
 
 @app.route('/api/options')
 def options():
-    jockeys = db.session.query(Runner.jockey)\
-        .filter(Runner.jockey != '', Runner.jockey != None)\
-        .distinct().order_by(Runner.jockey).all()
-    trainers = db.session.query(Runner.trainer)\
-        .filter(Runner.trainer != '', Runner.trainer != None)\
-        .distinct().order_by(Runner.trainer).all()
-    owners = db.session.query(Runner.owner)\
-        .filter(Runner.owner != '', Runner.owner != None)\
-        .distinct().order_by(Runner.owner).all()
+    jockeys  = db.session.query(Runner.jockey).filter(Runner.jockey != '', Runner.jockey != None).distinct().order_by(Runner.jockey).all()
+    trainers = db.session.query(Runner.trainer).filter(Runner.trainer != '', Runner.trainer != None).distinct().order_by(Runner.trainer).all()
+    owners   = db.session.query(Runner.owner).filter(Runner.owner != '', Runner.owner != None).distinct().order_by(Runner.owner).all()
     return jsonify({
         'jockeys':  [r[0] for r in jockeys],
         'trainers': [r[0] for r in trainers],
@@ -262,21 +259,18 @@ def search():
             return False
         runners = [r for r in runners if is_match(r.horse_name, horse)]
 
-    # Include tagged status for logged-in users
-    tagged_names = set()
+    tagged_map = {}
     if current_user.is_authenticated:
-        tagged_names = {
-            t.horse_name.lower()
-            for t in TaggedHorse.query.filter_by(user_id=current_user.id).all()
-        }
+        for t in TaggedHorse.query.filter_by(user_id=current_user.id).all():
+            tagged_map[t.horse_name.lower()] = t.notes or ''
 
     if sort == 'time':
-        return jsonify(sort_by_time(runners, tagged_names))
+        return jsonify(sort_by_time(runners, tagged_map))
     else:
-        return jsonify(sort_by_meeting(runners, tagged_names))
+        return jsonify(sort_by_meeting(runners, tagged_map))
 
 
-def build_race_obj(r_data, tagged_names):
+def build_race_obj(r_data, tagged_map):
     return {
         'time':     r_data['race'].time,
         'name':     r_data['race'].name,
@@ -295,12 +289,13 @@ def build_race_obj(r_data, tagged_names):
             'weight':  r.weight,
             'or':      r.official_rating,
             'odds':    r.odds,
-            'tagged':  r.horse_name.lower() in tagged_names,
+            'tagged':  r.horse_name.lower() in tagged_map,
+            'notes':   tagged_map.get(r.horse_name.lower(), ''),
         } for r in r_data['runners']]
     }
 
 
-def sort_by_meeting(runners, tagged_names):
+def sort_by_meeting(runners, tagged_map):
     grouped = {}
     for r in runners:
         m_key = r.race.meeting.name
@@ -314,13 +309,13 @@ def sort_by_meeting(runners, tagged_names):
     for m_name, m_data in grouped.items():
         meeting_obj = {'meeting': m_data['meeting'].name, 'date': m_data['meeting'].date, 'races': []}
         for r_id, r_data in m_data['races'].items():
-            meeting_obj['races'].append(build_race_obj(r_data, tagged_names))
+            meeting_obj['races'].append(build_race_obj(r_data, tagged_map))
         meeting_obj['races'].sort(key=lambda x: x['time'])
         result.append(meeting_obj)
     return result
 
 
-def sort_by_time(runners, tagged_names):
+def sort_by_time(runners, tagged_map):
     races = {}
     for r in runners:
         r_key = r.race.id
@@ -336,11 +331,7 @@ def sort_by_time(runners, tagged_names):
     for time_slot in sorted(time_groups.keys()):
         for r_data in time_groups[time_slot]:
             race = r_data['race']
-            result.append({
-                'meeting': race.meeting.name,
-                'date':    race.meeting.date,
-                'races':   [build_race_obj(r_data, tagged_names)]
-            })
+            result.append({'meeting': race.meeting.name, 'date': race.meeting.date, 'races': [build_race_obj(r_data, tagged_map)]})
     return result
 
 
@@ -357,46 +348,34 @@ def admin_colours():
 
 @app.route('/api/colours/runners')
 def colour_runners():
-    search = request.args.get('q', '').strip().lower()
-    query  = db.session.query(Runner).join(Race).join(Meeting)
-    if search:
-        query = query.filter(Runner.horse_name.ilike(f'%{search}%'))
+    search    = request.args.get('q', '').strip().lower()
+    query     = db.session.query(Runner).join(Race).join(Meeting)
+    if search: query = query.filter(Runner.horse_name.ilike(f'%{search}%'))
     runners   = query.order_by(Runner.horse_name).limit(100).all()
     overrides = {o.horse_name.lower(): o.colour for o in ColourOverride.query.all()}
-    return jsonify([{
-        'horse_name':   r.horse_name,
-        'colour':       r.colour,
-        'has_override': r.horse_name.lower() in overrides,
-        'meeting':      r.race.meeting.name,
-        'race':         r.race.name,
-    } for r in runners])
+    return jsonify([{'horse_name': r.horse_name, 'colour': r.colour, 'has_override': r.horse_name.lower() in overrides, 'meeting': r.race.meeting.name, 'race': r.race.name} for r in runners])
 
 
 @app.route('/api/colours/override', methods=['POST'])
 def set_colour_override():
-    data       = request.get_json()
+    data = request.get_json()
     horse_name = data.get('horse_name', '').strip()
     colour     = data.get('colour', '').strip()
     if not horse_name or not colour:
-        return jsonify({'error': 'horse_name and colour required'}), 400
+        return jsonify({'error': 'required'}), 400
     override = ColourOverride.query.filter_by(horse_name=horse_name).first()
     if override:
-        override.colour     = colour
-        override.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M')
+        override.colour = colour; override.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M')
     else:
-        override = ColourOverride(horse_name=horse_name, colour=colour,
-                                  updated_at=datetime.now().strftime('%Y-%m-%d %H:%M'))
-        db.session.add(override)
-    runners = Runner.query.filter(Runner.horse_name.ilike(horse_name)).all()
-    for r in runners: r.colour = colour
+        db.session.add(ColourOverride(horse_name=horse_name, colour=colour, updated_at=datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for r in Runner.query.filter(Runner.horse_name.ilike(horse_name)).all(): r.colour = colour
     db.session.commit()
     return jsonify({'status': 'ok'})
 
 
 @app.route('/api/colours/overrides')
 def list_overrides():
-    overrides = ColourOverride.query.order_by(ColourOverride.horse_name).all()
-    return jsonify([{'horse_name': o.horse_name, 'colour': o.colour, 'updated_at': o.updated_at} for o in overrides])
+    return jsonify([{'horse_name': o.horse_name, 'colour': o.colour, 'updated_at': o.updated_at} for o in ColourOverride.query.order_by(ColourOverride.horse_name).all()])
 
 
 @app.route('/api/colours/override/<horse_name>', methods=['DELETE'])
