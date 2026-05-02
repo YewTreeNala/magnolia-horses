@@ -1,0 +1,10 @@
+.env
+*.db
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+instance/
+test_*.py
+mt5_tray.py
