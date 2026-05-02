@@ -3,13 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, Meeting, Race, Runner, ColourOverride
+from models import db, User, TaggedHorse, SavedSearch, Meeting, Race, Runner, ColourOverride
 from sync import sync_todays_races
 from email_service import send_morning_alerts
 from rapidfuzz import fuzz
 import jellyfish
+import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 load_dotenv()
 
@@ -36,12 +37,19 @@ with app.app_context():
     db.create_all()
 
 scheduler = BackgroundScheduler()
+# Hourly sync
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', hours=1)
-scheduler.add_job(func=lambda: send_morning_alerts(app), trigger='cron', hour=7, minute=0)
+# 5am daily sync + alerts
+scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.start()
 
 
-# ── Pages ─────────────────────────────────────────────────────────────────────
+def sync_and_alert(app):
+    sync_todays_races(app)
+    send_morning_alerts(app)
+
+
+# ── Pages ──────────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
@@ -105,10 +113,9 @@ def logout():
 @app.route('/my-horses')
 @login_required
 def my_horses():
-    tagged = TaggedHorse.query.filter_by(user_id=current_user.id)\
-        .order_by(TaggedHorse.horse_name).all()
+    tagged  = TaggedHorse.query.filter_by(user_id=current_user.id).order_by(TaggedHorse.horse_name).all()
+    searches = SavedSearch.query.filter_by(user_id=current_user.id).order_by(SavedSearch.name).all()
 
-    from datetime import date
     today        = date.today().strftime('%Y-%m-%d')
     tagged_names = [t.horse_name.lower() for t in tagged]
     tagged_notes = {t.horse_name.lower(): t.notes for t in tagged}
@@ -131,16 +138,35 @@ def my_horses():
                     'notes':      tagged_notes.get(r.horse_name.lower(), ''),
                 })
 
-    return render_template('my_horses.html', tagged=tagged, running_today=running_today)
+    # Parse saved search filters for display
+    searches_display = []
+    for s in searches:
+        try:
+            f = json.loads(s.filters)
+        except Exception:
+            f = {}
+        parts = []
+        if f.get('horse'):   parts.append(f"Horse: {f['horse']}")
+        if f.get('jockey'):  parts.append(f"Jockey: {f['jockey']}")
+        if f.get('trainer'): parts.append(f"Trainer: {f['trainer']}")
+        if f.get('colour'):  parts.append(f"Colour: {f['colour']}")
+        if f.get('meeting'): parts.append(f"Meeting: {f['meeting']}")
+        if f.get('owner'):   parts.append(f"Owner: {f['owner']}")
+        searches_display.append({
+            'id':      s.id,
+            'name':    s.name,
+            'summary': ', '.join(parts) if parts else 'All runners',
+            'alert':   s.alert,
+            'filters': s.filters,
+        })
+
+    return render_template('my_horses.html',
+                           tagged=tagged,
+                           running_today=running_today,
+                           searches=searches_display)
 
 
-@app.route('/account')
-@login_required
-def account():
-    return render_template('account.html')
-
-
-# ── Tag API ───────────────────────────────────────────────────────────────────
+# ── Tag API ────────────────────────────────────────────────────────────────────
 
 @app.route('/api/tag', methods=['POST'])
 @login_required
@@ -150,22 +176,13 @@ def tag_horse():
     notes      = (data or {}).get('notes', '').strip()
     if not horse_name:
         return jsonify({'error': 'horse_name required'}), 400
-
-    existing = TaggedHorse.query.filter_by(
-        user_id=current_user.id, horse_name=horse_name
-    ).first()
+    existing = TaggedHorse.query.filter_by(user_id=current_user.id, horse_name=horse_name).first()
     if existing:
-        # Update notes if already tagged
         existing.notes = notes
         db.session.commit()
         return jsonify({'status': 'updated', 'horse_name': horse_name})
-
-    tag = TaggedHorse(
-        user_id=current_user.id,
-        horse_name=horse_name,
-        notes=notes,
-        tagged_at=datetime.now().strftime('%Y-%m-%d %H:%M')
-    )
+    tag = TaggedHorse(user_id=current_user.id, horse_name=horse_name, notes=notes,
+                      tagged_at=datetime.now().strftime('%Y-%m-%d %H:%M'))
     db.session.add(tag)
     db.session.commit()
     return jsonify({'status': 'tagged', 'horse_name': horse_name})
@@ -176,9 +193,7 @@ def tag_horse():
 def untag_horse():
     data       = request.get_json()
     horse_name = (data or {}).get('horse_name', '').strip()
-    tag        = TaggedHorse.query.filter_by(
-        user_id=current_user.id, horse_name=horse_name
-    ).first()
+    tag        = TaggedHorse.query.filter_by(user_id=current_user.id, horse_name=horse_name).first()
     if tag:
         db.session.delete(tag)
         db.session.commit()
@@ -189,10 +204,7 @@ def untag_horse():
 @login_required
 def my_tags():
     tags = TaggedHorse.query.filter_by(user_id=current_user.id).all()
-    return jsonify([{
-        'horse_name': t.horse_name,
-        'notes':      t.notes or ''
-    } for t in tags])
+    return jsonify([{'horse_name': t.horse_name, 'notes': t.notes or ''} for t in tags])
 
 
 @app.route('/api/tag-notes', methods=['POST'])
@@ -201,9 +213,7 @@ def update_tag_notes():
     data       = request.get_json()
     horse_name = (data or {}).get('horse_name', '').strip()
     notes      = (data or {}).get('notes', '').strip()
-    tag        = TaggedHorse.query.filter_by(
-        user_id=current_user.id, horse_name=horse_name
-    ).first()
+    tag        = TaggedHorse.query.filter_by(user_id=current_user.id, horse_name=horse_name).first()
     if tag:
         tag.notes = notes
         db.session.commit()
@@ -211,7 +221,75 @@ def update_tag_notes():
     return jsonify({'error': 'not found'}), 404
 
 
-# ── Data API ──────────────────────────────────────────────────────────────────
+# ── Saved Search API ───────────────────────────────────────────────────────────
+
+@app.route('/api/saved-searches', methods=['GET'])
+@login_required
+def get_saved_searches():
+    searches = SavedSearch.query.filter_by(user_id=current_user.id).order_by(SavedSearch.name).all()
+    return jsonify([{
+        'id':      s.id,
+        'name':    s.name,
+        'filters': json.loads(s.filters),
+        'alert':   s.alert,
+    } for s in searches])
+
+
+@app.route('/api/saved-searches', methods=['POST'])
+@login_required
+def save_search():
+    data    = request.get_json()
+    name    = (data or {}).get('name', '').strip()
+    filters = (data or {}).get('filters', {})
+    alert   = (data or {}).get('alert', False)
+    if not name:
+        return jsonify({'error': 'name required'}), 400
+    existing = SavedSearch.query.filter_by(user_id=current_user.id, name=name).first()
+    if existing:
+        existing.filters = json.dumps(filters)
+        existing.alert   = alert
+        db.session.commit()
+        return jsonify({'status': 'updated', 'id': existing.id})
+    s = SavedSearch(
+        user_id=current_user.id, name=name,
+        filters=json.dumps(filters), alert=alert,
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M')
+    )
+    db.session.add(s)
+    db.session.commit()
+    return jsonify({'status': 'saved', 'id': s.id})
+
+
+@app.route('/api/saved-searches/<int:search_id>', methods=['DELETE'])
+@login_required
+def delete_saved_search(search_id):
+    s = SavedSearch.query.filter_by(id=search_id, user_id=current_user.id).first()
+    if s:
+        db.session.delete(s)
+        db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/saved-searches/<int:search_id>/alert', methods=['POST'])
+@login_required
+def toggle_search_alert(search_id):
+    s = SavedSearch.query.filter_by(id=search_id, user_id=current_user.id).first()
+    if not s:
+        return jsonify({'error': 'not found'}), 404
+    s.alert = not s.alert
+    db.session.commit()
+    return jsonify({'status': 'ok', 'alert': s.alert})
+
+
+# ── Data API ───────────────────────────────────────────────────────────────────
+
+@app.route('/api/check-today')
+def check_today():
+    today = date.today().strftime('%Y-%m-%d')
+    count = db.session.query(Runner).join(Race).join(Meeting)\
+        .filter(Meeting.date == today).count()
+    return jsonify({'count': count, 'date': today})
+
 
 @app.route('/api/options')
 def options():
@@ -233,31 +311,37 @@ def search():
     colour  = request.args.get('colour', '').strip()
     meeting = request.args.get('meeting', '').strip()
     owner   = request.args.get('owner', '').strip()
-    date    = request.args.get('date', '').strip()
     sort    = request.args.get('sort', 'meeting').strip()
+    fuzzy   = request.args.get('fuzzy', 'true').strip().lower() != 'false'
 
-    query = db.session.query(Runner).join(Race).join(Meeting)
+    today = date.today().strftime('%Y-%m-%d')
+    query = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today)
+
     if trainer: query = query.filter(Runner.trainer == trainer)
     if jockey:  query = query.filter(Runner.jockey == jockey)
     if colour:  query = query.filter(Runner.colour.ilike(f'%{colour}%'))
     if meeting: query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
     if owner:   query = query.filter(Runner.owner == owner)
-    if date:    query = query.filter(Meeting.date == date)
 
     runners = query.order_by(Meeting.name, Race.time, Runner.number).all()
 
     if horse:
-        def is_match(name, search):
-            name_l = name.lower(); search_l = search.lower()
-            if search_l in name_l: return True
-            if fuzz.partial_ratio(search_l, name_l) >= 75: return True
+        def is_match(name, search_term, use_fuzzy):
+            name_l   = name.lower()
+            search_l = search_term.lower()
+            if search_l in name_l:
+                return True
+            if not use_fuzzy:
+                return False
+            if fuzz.partial_ratio(search_l, name_l) >= 75:
+                return True
             for word in name_l.split():
                 for sword in search_l.split():
                     if len(word) > 2 and len(sword) > 2:
                         if jellyfish.soundex(word) == jellyfish.soundex(sword):
                             return True
             return False
-        runners = [r for r in runners if is_match(r.horse_name, horse)]
+        runners = [r for r in runners if is_match(r.horse_name, horse, fuzzy)]
 
     tagged_map = {}
     if current_user.is_authenticated:
@@ -331,7 +415,8 @@ def sort_by_time(runners, tagged_map):
     for time_slot in sorted(time_groups.keys()):
         for r_data in time_groups[time_slot]:
             race = r_data['race']
-            result.append({'meeting': race.meeting.name, 'date': race.meeting.date, 'races': [build_race_obj(r_data, tagged_map)]})
+            result.append({'meeting': race.meeting.name, 'date': race.meeting.date,
+                           'races': [build_race_obj(r_data, tagged_map)]})
     return result
 
 
@@ -353,12 +438,14 @@ def colour_runners():
     if search: query = query.filter(Runner.horse_name.ilike(f'%{search}%'))
     runners   = query.order_by(Runner.horse_name).limit(100).all()
     overrides = {o.horse_name.lower(): o.colour for o in ColourOverride.query.all()}
-    return jsonify([{'horse_name': r.horse_name, 'colour': r.colour, 'has_override': r.horse_name.lower() in overrides, 'meeting': r.race.meeting.name, 'race': r.race.name} for r in runners])
+    return jsonify([{'horse_name': r.horse_name, 'colour': r.colour,
+                     'has_override': r.horse_name.lower() in overrides,
+                     'meeting': r.race.meeting.name, 'race': r.race.name} for r in runners])
 
 
 @app.route('/api/colours/override', methods=['POST'])
 def set_colour_override():
-    data = request.get_json()
+    data       = request.get_json()
     horse_name = data.get('horse_name', '').strip()
     colour     = data.get('colour', '').strip()
     if not horse_name or not colour:
@@ -367,15 +454,18 @@ def set_colour_override():
     if override:
         override.colour = colour; override.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M')
     else:
-        db.session.add(ColourOverride(horse_name=horse_name, colour=colour, updated_at=datetime.now().strftime('%Y-%m-%d %H:%M')))
-    for r in Runner.query.filter(Runner.horse_name.ilike(horse_name)).all(): r.colour = colour
+        db.session.add(ColourOverride(horse_name=horse_name, colour=colour,
+                                      updated_at=datetime.now().strftime('%Y-%m-%d %H:%M')))
+    for r in Runner.query.filter(Runner.horse_name.ilike(horse_name)).all():
+        r.colour = colour
     db.session.commit()
     return jsonify({'status': 'ok'})
 
 
 @app.route('/api/colours/overrides')
 def list_overrides():
-    return jsonify([{'horse_name': o.horse_name, 'colour': o.colour, 'updated_at': o.updated_at} for o in ColourOverride.query.order_by(ColourOverride.horse_name).all()])
+    return jsonify([{'horse_name': o.horse_name, 'colour': o.colour, 'updated_at': o.updated_at}
+                    for o in ColourOverride.query.order_by(ColourOverride.horse_name).all()])
 
 
 @app.route('/api/colours/override/<horse_name>', methods=['DELETE'])

@@ -12,6 +12,7 @@ class User(UserMixin, db.Model):
     password   = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.String(30))
     tagged     = db.relationship('TaggedHorse', backref='user', lazy=True)
+    searches   = db.relationship('SavedSearch', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
@@ -27,6 +28,15 @@ class TaggedHorse(db.Model):
     notes      = db.Column(db.Text, default='')
     tagged_at  = db.Column(db.String(30))
     __table_args__ = (db.UniqueConstraint('user_id', 'horse_name'),)
+
+
+class SavedSearch(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    name       = db.Column(db.String(100), nullable=False)
+    filters    = db.Column(db.Text, nullable=False)   # JSON string of filter values
+    alert      = db.Column(db.Boolean, default=False) # email alert after 5am sync
+    created_at = db.Column(db.String(30))
 
 
 class Meeting(db.Model):

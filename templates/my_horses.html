@@ -13,10 +13,11 @@
       --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
       --green: #3b6d11; --green-bg: #eaf3de;
       --red: #a32d2d; --red-bg: #fcebeb;
+      --blue: #185fa5; --blue-bg: #e6f1fb;
       --radius: 8px; --radius-lg: 12px;
     }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 15px; padding: 0 1rem 3rem; }
-    .page { max-width: 900px; margin: 0 auto; }
+    .page { max-width: 920px; margin: 0 auto; }
     .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
     .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
     .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
@@ -26,24 +27,30 @@
     .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
     .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
     .panel-title { font-size: 15px; font-weight: 500; color: var(--brand); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
-    .running-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--green-bg); color: var(--green); font-weight: 500; border: 0.5px solid rgba(59,109,17,0.2); }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 0.5px solid; }
+    .badge-green { background: var(--green-bg); color: var(--green); border-color: rgba(59,109,17,0.2); }
+    .badge-blue  { background: var(--blue-bg);  color: var(--blue);  border-color: rgba(24,95,165,0.2); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); }
     td { padding: 10px; border-bottom: 0.5px solid var(--border); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--brand-light); }
-    .btn-edit { background: transparent; color: var(--brand); border: 0.5px solid rgba(139,58,58,0.3); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; }
+    .btn-sm { border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; border: 0.5px solid; }
+    .btn-edit  { background: transparent; color: var(--brand); border-color: rgba(139,58,58,0.3); }
     .btn-edit:hover { background: var(--brand-light); }
-    .btn-untag { background: transparent; color: var(--red); border: 0.5px solid var(--red); border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; margin-left: 4px; }
-    .btn-untag:hover { background: var(--red-bg); }
+    .btn-del   { background: transparent; color: var(--red);   border-color: var(--red); margin-left: 4px; }
+    .btn-del:hover { background: var(--red-bg); }
+    .alert-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; color: var(--text2); background: var(--surface2); border: 0.5px solid var(--border2); border-radius: 6px; padding: 4px 10px; }
+    .alert-toggle input { accent-color: var(--green); cursor: pointer; width: 13px; height: 13px; }
+    .alert-toggle.on { background: var(--green-bg); color: var(--green); border-color: rgba(59,109,17,0.3); }
     .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
     .form-str { font-family: "Courier New", monospace; font-size: 12px; color: var(--text2); }
     .form-win { color: var(--green); font-weight: 500; }
     .colour-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface2); color: var(--text2); }
     .colour-swatch { width: 9px; height: 9px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.15); }
     .notes-text { font-size: 12px; color: var(--text2); font-style: italic; margin-top: 3px; }
+    .search-summary { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
-    /* Edit notes modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
     .modal-overlay.open { display: flex; }
     .modal { background: #fff; border-radius: var(--radius-lg); padding: 1.5rem; max-width: 380px; width: 100%; border: 0.5px solid var(--border); position: relative; }
@@ -67,19 +74,18 @@
     <div class="brand-name">Magnolia Horses</div>
     <div class="nav-links">
       <a href="/">Search</a>
-      <a href="/account">Account</a>
       <a href="/logout">Sign out</a>
     </div>
   </div>
 
   <div class="page-title">My horses</div>
-  <div class="page-sub">Welcome back, {{ current_user.name }}. You have {{ tagged|length }} horse{{ 's' if tagged|length != 1 else '' }} tagged.</div>
+  <div class="page-sub">Welcome back, {{ current_user.name }}.</div>
 
   {% if running_today %}
   <div class="panel">
     <div class="panel-title">
       Running today
-      <span class="running-badge">{{ running_today|length }} today</span>
+      <span class="badge badge-green">{{ running_today|length }} today</span>
     </div>
     <table>
       <thead>
@@ -105,9 +111,7 @@
           <td class="col-race" style="color:var(--text2);font-size:12px">{{ r.race_name }}</td>
           <td style="color:var(--text2);font-size:12px">{{ r.jockey }}</td>
           <td>
-            <span class="form-str">
-              {% for c in r.form %}{% if c == '1' %}<span class="form-win">{{ c }}</span>{% else %}{{ c }}{% endif %}{% endfor %}
-            </span>
+            <span class="form-str">{% for c in r.form %}{% if c == '1' %}<span class="form-win">{{ c }}</span>{% else %}{{ c }}{% endif %}{% endfor %}</span>
           </td>
           <td>
             {% if r.colour %}
@@ -122,7 +126,7 @@
                   {% else %}#888{% endif %}
                 "></span>{{ r.colour }}
               </span>
-            {% else %}—{% endif %}
+            {% else %}-{% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -131,8 +135,53 @@
   </div>
   {% endif %}
 
+  <!-- Saved searches panel -->
   <div class="panel">
-    <div class="panel-title">All tagged horses</div>
+    <div class="panel-title">
+      Saved searches
+      <span class="badge badge-blue">{{ searches|length }}</span>
+    </div>
+    {% if searches %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Filters</th>
+          <th>Morning alert</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in searches %}
+        <tr id="srow-{{ s.id }}">
+          <td style="font-weight:500">{{ s.name }}</td>
+          <td class="search-summary">{{ s.summary }}</td>
+          <td>
+            <label class="alert-toggle {% if s.alert %}on{% endif %}" id="alert-label-{{ s.id }}">
+              <input type="checkbox" {% if s.alert %}checked{% endif %} onchange="toggleAlert({{ s.id }}, this)"/>
+              {% if s.alert %}&#128276; On{% else %}Off{% endif %}
+            </label>
+          </td>
+          <td style="white-space:nowrap">
+            <button class="btn-sm btn-del" onclick="deleteSearch({{ s.id }}, 'srow-{{ s.id }}')">Remove</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty">
+      No saved searches yet. Use the search on the home page and click <strong>&#9733; Save search</strong> to save filters and set up alerts.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Tagged horses panel -->
+  <div class="panel">
+    <div class="panel-title">
+      Favourite horses
+      <span class="badge badge-green">{{ tagged|length }}</span>
+    </div>
     {% if tagged %}
     <table>
       <thead>
@@ -145,13 +194,13 @@
       </thead>
       <tbody>
         {% for t in tagged %}
-        <tr id="row-{{ loop.index }}">
+        <tr id="trow-{{ loop.index }}">
           <td style="font-weight:500">{{ t.horse_name }}</td>
-          <td style="color:var(--text2);font-size:13px;font-style:italic">{{ t.notes or '—' }}</td>
-          <td style="color:var(--text2);font-size:12px">{{ t.tagged_at or '—' }}</td>
+          <td style="color:var(--text2);font-size:13px;font-style:italic" id="tnotes-{{ loop.index }}">{{ t.notes or '-' }}</td>
+          <td style="color:var(--text2);font-size:12px">{{ t.tagged_at or '-' }}</td>
           <td style="white-space:nowrap">
-            <button class="btn-edit" onclick="openEdit('{{ t.horse_name|e }}', '{{ (t.notes or '')|e }}', 'row-{{ loop.index }}')">Edit notes</button>
-            <button class="btn-untag" onclick="untag('{{ t.horse_name|e }}', 'row-{{ loop.index }}')">Remove</button>
+            <button class="btn-sm btn-edit" onclick="openEdit('{{ t.horse_name|e }}', '{{ (t.notes or '')|e }}', '{{ loop.index }}')">Edit notes</button>
+            <button class="btn-sm btn-del"  onclick="untag('{{ t.horse_name|e }}', 'trow-{{ loop.index }}')">Remove</button>
           </td>
         </tr>
         {% endfor %}
@@ -159,7 +208,7 @@
     </table>
     {% else %}
     <div class="empty">
-      You haven't tagged any horses yet. Use the search to find horses and click the &#9825; icon to tag them.
+      No horses tagged yet. Use the search and click &#9825; on any horse to tag it as a favourite.
     </div>
     {% endif %}
   </div>
@@ -171,7 +220,7 @@
     <button class="modal-close" onclick="closeEdit()">&#215;</button>
     <h3 id="edit-horse-name"></h3>
     <label for="edit-notes">Notes</label>
-    <textarea id="edit-notes" placeholder="e.g. Good on soft ground, watch for Cheltenham..."></textarea>
+    <textarea id="edit-notes" placeholder="e.g. Good on soft ground..."></textarea>
     <div class="modal-btns">
       <button class="modal-btn-primary" onclick="saveNotes()">Save notes</button>
       <button class="modal-btn-secondary" onclick="closeEdit()">Cancel</button>
@@ -180,56 +229,72 @@
 </div>
 
 <script>
-  var editingHorse = null;
-  var editingRow   = null;
+var editingHorse = null;
+var editingRow   = null;
 
-  function openEdit(horseName, notes, rowId) {
-    editingHorse = horseName;
-    editingRow   = rowId;
-    document.getElementById('edit-horse-name').textContent = horseName;
-    document.getElementById('edit-notes').value = notes;
-    document.getElementById('edit-modal').classList.add('open');
-    setTimeout(function(){ document.getElementById('edit-notes').focus(); }, 50);
-  }
+function openEdit(horseName, notes, idx) {
+  editingHorse = horseName;
+  editingRow   = idx;
+  document.getElementById('edit-horse-name').textContent = horseName;
+  document.getElementById('edit-notes').value = notes === '-' ? '' : notes;
+  document.getElementById('edit-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('edit-notes').focus(); }, 50);
+}
 
-  function closeEdit() {
-    document.getElementById('edit-modal').classList.remove('open');
-    editingHorse = null; editingRow = null;
-  }
+function closeEdit() {
+  document.getElementById('edit-modal').classList.remove('open');
+  editingHorse = null; editingRow = null;
+}
 
-  function saveNotes() {
-    if (!editingHorse) return;
-    var notes = document.getElementById('edit-notes').value.trim();
-    fetch('/api/tag-notes', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({horse_name: editingHorse, notes: notes})
-    }).then(function() {
-      var row = document.getElementById(editingRow);
-      if (row) {
-        var notesCell = row.cells[1];
-        notesCell.textContent = notes || '—';
-        notesCell.style.fontStyle = notes ? 'italic' : 'normal';
+function saveNotes() {
+  if (!editingHorse) return;
+  var notes = document.getElementById('edit-notes').value.trim();
+  fetch('/api/tag-notes', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({horse_name: editingHorse, notes: notes})
+  }).then(function() {
+    var cell = document.getElementById('tnotes-' + editingRow);
+    if (cell) { cell.textContent = notes || '-'; cell.style.fontStyle = notes ? 'italic' : 'normal'; }
+    closeEdit();
+  });
+}
+
+function untag(horseName, rowId) {
+  if (!confirm('Remove ' + horseName + ' from your favourites?')) return;
+  fetch('/api/untag', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({horse_name: horseName})
+  }).then(function() {
+    var row = document.getElementById(rowId);
+    if (row) row.remove();
+  });
+}
+
+function toggleAlert(searchId, checkbox) {
+  fetch('/api/saved-searches/' + searchId + '/alert', {method: 'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var label = document.getElementById('alert-label-' + searchId);
+      if (label) {
+        label.classList.toggle('on', data.alert);
+        label.innerHTML = '<input type="checkbox"' + (data.alert ? ' checked' : '') + ' onchange="toggleAlert(' + searchId + ', this)"/>'
+          + (data.alert ? '&#128276; On' : 'Off');
       }
-      closeEdit();
     });
-  }
+}
 
-  function untag(horseName, rowId) {
-    if (!confirm('Remove ' + horseName + ' from your tagged horses?')) return;
-    fetch('/api/untag', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({horse_name: horseName})
-    }).then(function() {
+function deleteSearch(searchId, rowId) {
+  if (!confirm('Remove this saved search?')) return;
+  fetch('/api/saved-searches/' + searchId, {method: 'DELETE'})
+    .then(function() {
       var row = document.getElementById(rowId);
       if (row) row.remove();
     });
-  }
+}
 
-  document.getElementById('edit-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeEdit();
-  });
+document.getElementById('edit-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeEdit();
+});
 </script>
 </body>
 </html>
