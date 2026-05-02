@@ -11,7 +11,7 @@
       --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
       --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
       --brand: #8b3a3a; --brand-light: #f5ece8;
-      --green: #3b6d11; --red: #a32d2d;
+      --green: #3b6d11; --green-bg: #eaf3de; --red: #a32d2d;
       --blue: #185fa5; --blue-bg: rgba(230,241,251,0.9);
       --radius: 8px; --radius-lg: 12px;
     }
@@ -19,6 +19,7 @@
     body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
     body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
     .page { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+
     .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 0.25rem; }
     .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .brand-logo svg { width: 22px; height: 22px; }
@@ -28,11 +29,13 @@
     .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
     .nav-links a:hover { text-decoration: underline; }
     .nav-user { font-size: 13px; color: var(--text2); white-space: nowrap; }
+
     .search-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin: 0.75rem 0 1rem; backdrop-filter: blur(4px); }
     .filter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; margin-bottom: 1rem; }
     .filter-group label { display: block; font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
     .filter-group input, .filter-group select { width: 100%; padding: 9px 10px; font-size: 15px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; appearance: none; -webkit-appearance: none; }
     .filter-group input:focus, .filter-group select:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(139,58,58,0.1); }
+
     .select-search-wrap { position: relative; }
     .select-search-wrap input { padding-right: 28px; }
     .select-search-wrap .arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; font-size: 10px; color: var(--text3); }
@@ -41,24 +44,35 @@
     .select-search-wrap .dropdown-item { padding: 10px; font-size: 14px; cursor: pointer; color: var(--text); }
     .select-search-wrap .dropdown-item:hover, .select-search-wrap .dropdown-item.active { background: var(--brand-light); }
     .select-search-wrap .dropdown-empty { padding: 10px; font-size: 13px; color: var(--text3); }
+
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); cursor: pointer; user-select: none; }
+    .toggle-wrap label { font-size: 13px; color: var(--text2); cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+    .toggle-wrap input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--brand); cursor: pointer; }
+
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-primary:hover { opacity: 0.88; }
     .btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 10px 16px; font-size: 15px; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-secondary:hover { background: var(--surface2); }
+    .btn-save-search { background: transparent; color: var(--brand); border: 0.5px solid rgba(139,58,58,0.4); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; cursor: pointer; font-family: inherit; min-height: 44px; }
+    .btn-save-search:hover { background: var(--brand-light); }
     .btn-sync { background: transparent; color: var(--blue); border: 0.5px solid var(--blue); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: inherit; margin-left: auto; min-height: 44px; }
     .btn-sync:hover { background: var(--blue-bg); }
     .btn-sync.syncing { opacity: 0.6; pointer-events: none; }
-    .info-note { font-size: 12px; color: var(--text2); background: var(--brand-light); border: 0.5px solid rgba(139,58,58,0.15); border-radius: var(--radius); padding: 7px 10px; margin-bottom: 10px; display: flex; gap: 6px; align-items: flex-start; }
-    .tab-row { display: flex; margin-bottom: 1rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .tab { padding: 10px 14px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text2); margin-bottom: -0.5px; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; white-space: nowrap; min-height: 44px; }
-    .tab:hover { color: var(--brand); }
-    .tab.active { border-bottom-color: var(--brand); color: var(--brand); font-weight: 500; }
-    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #e24b4a; display: inline-block; margin-right: 4px; animation: pulse 1.4s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .saved-searches-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
+    .saved-search-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-light); border: 0.5px solid rgba(139,58,58,0.25); border-radius: 20px; padding: 4px 10px 4px 12px; font-size: 12px; color: var(--brand); cursor: pointer; }
+    .saved-search-chip:hover { background: #eedbd5; }
+    .saved-search-chip .chip-alert { font-size: 10px; color: var(--green); margin-left: 2px; }
+    .saved-search-chip .chip-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 0 0 0 4px; line-height: 1; }
+    .saved-search-chip .chip-del:hover { color: var(--red); }
+    .saved-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+
     .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 13px; color: var(--text2); }
     .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
     .empty-state .empty-icon { font-size: 32px; margin-bottom: 0.5rem; opacity: 0.5; }
+    .syncing-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
+
     .meeting-block { margin-bottom: 1.5rem; }
     .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
     .meeting-name { font-size: 15px; font-weight: 500; color: var(--brand); }
@@ -70,6 +84,7 @@
     .race-name { font-size: 13px; font-weight: 500; line-height: 1.4; }
     .race-details { font-size: 12px; color: var(--text2); margin-top: 2px; }
     .race-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--brand-light); color: var(--brand); font-weight: 500; white-space: nowrap; border: 0.5px solid rgba(139,58,58,0.2); align-self: flex-start; flex-shrink: 0; }
+
     .table-wrap { overflow-x: auto; width: 100%; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
     th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -91,6 +106,7 @@
     .tag-btn:hover { color: var(--brand); }
     .tag-btn.tagged { color: var(--brand); }
     .tag-notes-dot { font-size: 8px; color: var(--brand); vertical-align: super; margin-left: 1px; }
+
     .runner-cards { display: none; }
     .runner-card { padding: 12px 14px; border-bottom: 0.5px solid var(--border); }
     .runner-card:last-child { border-bottom: none; }
@@ -102,18 +118,25 @@
     .runner-card-field .label { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 1px; }
     .runner-card-field .value { font-size: 13px; color: var(--text); }
     .runner-card-field .value.muted { color: var(--text2); }
+
     .spinner { display: none; width: 16px; height: 16px; border: 2px solid var(--border2); border-top-color: var(--brand); border-radius: 50%; animation: spin 0.6s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner.active { display: inline-block; }
     .footer { text-align: center; padding: 2rem 0 1rem; font-size: 12px; color: var(--text3); }
+
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
     .modal-overlay.open { display: flex; }
     .modal { background: rgba(255,252,248,0.98); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 380px; width: 100%; border: 0.5px solid var(--border); position: relative; }
     .modal h3 { font-size: 17px; font-weight: 500; margin-bottom: 0.4rem; color: var(--brand); }
     .modal p { font-size: 13px; color: var(--text2); margin-bottom: 1rem; line-height: 1.5; }
-    .modal label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
-    .modal textarea { width: 100%; padding: 9px 10px; font-size: 14px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; resize: vertical; min-height: 80px; margin-bottom: 1rem; }
-    .modal textarea:focus { border-color: var(--brand); box-shadow: 0 0 0 2px rgba(139,58,58,0.1); }
+    .modal-field { margin-bottom: 0.75rem; }
+    .modal-field label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
+    .modal-field input[type="text"], .modal-field textarea { width: 100%; padding: 9px 10px; font-size: 14px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; }
+    .modal-field input[type="text"]:focus, .modal-field textarea:focus { border-color: var(--brand); }
+    .modal-field textarea { resize: vertical; min-height: 75px; }
+    .modal-check { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--green-bg); border: 0.5px solid rgba(59,109,17,0.2); border-radius: var(--radius); margin-bottom: 1rem; cursor: pointer; }
+    .modal-check label { font-size: 13px; color: var(--green); cursor: pointer; margin: 0; }
+    .modal-check input { width: 14px; height: 14px; accent-color: var(--green); cursor: pointer; }
     .modal-btns { display: flex; gap: 8px; }
     .modal-btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; flex: 1; }
     .modal-btn-primary:hover { opacity: 0.88; }
@@ -123,6 +146,7 @@
     .modal-btn-danger:hover { background: #fcebeb; }
     .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); line-height: 1; }
     .modal-close:hover { color: var(--text); }
+
     @media (max-width: 700px) {
       .table-wrap { display: none; }
       .runner-cards { display: block; }
@@ -164,15 +188,10 @@
   </div>
 
   <div class="search-panel">
-    <div class="info-note">
-      <span>&#9432;</span>
-      <span>Colour data from <strong>Weatherbys</strong>. Horse name uses fuzzy matching.
-      {% if current_user.is_authenticated %}
-        Click &#9825; on any horse to tag it and add notes.
-      {% else %}
-        <a href="/register" style="color:var(--brand)">Sign up free</a> to tag horses and get morning alerts.
-      {% endif %}
-      </span>
+    <div id="saved-searches-bar" style="display:none">
+      <div class="saved-searches-bar" id="saved-chips">
+        <span class="saved-label">Saved:</span>
+      </div>
     </div>
     <div class="filter-grid">
       <div class="filter-group">
@@ -246,35 +265,34 @@
         </select>
       </div>
       <div class="filter-group">
-        <label>Date</label>
-        <input type="date" id="f-date"/>
+        <label>Sort by</label>
+        <select id="f-sort">
+          <option value="meeting">Meeting then time</option>
+          <option value="time">Race time</option>
+        </select>
       </div>
       <div class="filter-group">
-        <label>Sort results by</label>
-        <select id="f-sort">
-          <option value="meeting">Meeting then race time</option>
-          <option value="time">Race time across all meetings</option>
-        </select>
+        <label>Search mode</label>
+        <div class="toggle-wrap" onclick="document.getElementById('f-fuzzy').click()">
+          <input type="checkbox" id="f-fuzzy" checked/>
+          <label for="f-fuzzy">Fuzzy / phonetic</label>
+        </div>
       </div>
     </div>
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
       <button class="btn-secondary" id="btn-clear">Clear</button>
       <span class="spinner" id="spinner"></span>
+      {% if current_user.is_authenticated %}
+        <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
+      {% endif %}
       <button class="btn-sync" id="sync-btn">&#8635; Sync now</button>
     </div>
   </div>
 
-  <div class="tab-row">
-    <button class="tab active" data-tab="today">Today</button>
-    <button class="tab" data-tab="tomorrow">Tomorrow</button>
-    <button class="tab" data-tab="entries">Entries</button>
-    <button class="tab" data-tab="live"><span class="live-dot"></span>Live / results</button>
-  </div>
-
   <div id="results-area">
-    <div class="empty-state">
-      <div class="empty-icon">&#127944;</div>
+    <div class="syncing-state">
+      <div style="font-size:28px;margin-bottom:0.5rem">&#127944;</div>
       <div>Loading today's runners...</div>
     </div>
   </div>
@@ -287,7 +305,7 @@
   <div class="modal">
     <button class="modal-close" id="login-modal-close">&#215;</button>
     <h3>Sign in to tag horses</h3>
-    <p>Create a free account to tag horses and receive a morning email alert whenever they are running.</p>
+    <p>Create a free account to tag horses and receive morning email alerts.</p>
     <div class="modal-btns">
       <a href="/register" class="modal-btn-primary" style="text-decoration:none;text-align:center;display:block">Create account</a>
       <a href="/login" class="modal-btn-secondary" style="text-decoration:none;text-align:center;display:block">Sign in</a>
@@ -301,8 +319,10 @@
     <button class="modal-close" id="tag-modal-close">&#215;</button>
     <h3 id="tag-modal-title">Tag horse</h3>
     <p id="tag-modal-horse" style="font-weight:500;color:var(--brand);margin-bottom:0.75rem;font-size:15px"></p>
-    <label for="tag-notes">Notes (optional)</label>
-    <textarea id="tag-notes" placeholder="e.g. Good on soft ground, watch for Cheltenham..."></textarea>
+    <div class="modal-field">
+      <label for="tag-notes">Notes (optional)</label>
+      <textarea id="tag-notes" placeholder="e.g. Good on soft ground, watch for Cheltenham..."></textarea>
+    </div>
     <div class="modal-btns">
       <button class="modal-btn-primary" id="tag-modal-save">Save</button>
       <button class="modal-btn-secondary" id="tag-modal-cancel">Cancel</button>
@@ -311,43 +331,55 @@
   </div>
 </div>
 
+<!-- Save search modal -->
+<div class="modal-overlay" id="save-search-modal">
+  <div class="modal">
+    <button class="modal-close" id="save-search-close">&#215;</button>
+    <h3>Save this search</h3>
+    <p id="save-search-summary" style="font-size:12px;color:var(--text3);margin-bottom:0.75rem"></p>
+    <div class="modal-field">
+      <label for="save-search-name">Search name</label>
+      <input type="text" id="save-search-name" placeholder="e.g. Grey chasers, Gosden horses..."/>
+    </div>
+    <div class="modal-check">
+      <input type="checkbox" id="save-search-alert"/>
+      <label for="save-search-alert">&#128276; Email me today's matches after the 5am sync</label>
+    </div>
+    <div class="modal-btns">
+      <button class="modal-btn-primary" id="save-search-confirm">Save</button>
+      <button class="modal-btn-secondary" id="save-search-cancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
-var IS_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
-var STORAGE_KEY  = 'magnolia_filters_v2';
-var taggedMap    = {};
-var pendingHorse = null;
+var IS_LOGGED_IN  = {{ 'true' if current_user.is_authenticated else 'false' }};
+var STORAGE_KEY   = 'magnolia_filters_v3';
+var taggedMap     = {};
+var pendingHorse  = null;
+var savedSearches = [];
 var dropdownData   = { jockey: [], trainer: [], owner: [] };
 var selectedValues = { jockey: '', trainer: '', owner: '' };
 
 var COLOUR_META = {
-  'bay':            '#8B4513',
-  'dark bay':       '#3B1F0A',
-  'dark bay/brown': '#3B1F0A',
-  'chestnut':       '#C4622D',
-  'grey':           '#A8A8A8',
-  'black':          '#2A2A2A',
-  'roan':           '#9E6B55'
+  'bay': '#8B4513', 'dark bay': '#3B1F0A', 'dark bay/brown': '#3B1F0A',
+  'chestnut': '#C4622D', 'grey': '#A8A8A8', 'black': '#2A2A2A', 'roan': '#9E6B55'
 };
 
 function formatDate(d) {
-  var y  = d.getFullYear();
-  var m  = String(d.getMonth() + 1).padStart(2, '0');
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
   var dy = String(d.getDate()).padStart(2, '0');
   return y + '-' + m + '-' + dy;
 }
 
 function escHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function silkSvg(colour, num) {
   var c = COLOUR_META[(colour || '').toLowerCase()] || '#888888';
-  return '<svg class="silk" viewBox="0 0 20 20">'
-    + '<rect width="20" height="20" fill="' + c + '"/>'
+  return '<svg class="silk" viewBox="0 0 20 20"><rect width="20" height="20" fill="' + c + '"/>'
     + '<text x="10" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="sans-serif">'
     + escHtml(String(num)) + '</text></svg>';
 }
@@ -361,34 +393,31 @@ function colourChip(colour) {
 
 function formHtml(form) {
   if (!form) return '-';
-  var result = '';
+  var r = '';
   for (var i = 0; i < form.length; i++) {
-    var c = form[i];
-    if (c === '1') {
-      result += '<span class="form-win">' + c + '</span>';
-    } else {
-      result += '<span>' + c + '</span>';
-    }
+    r += form[i] === '1' ? '<span class="form-win">' + form[i] + '</span>' : '<span>' + form[i] + '</span>';
   }
-  return result;
+  return r;
+}
+
+// ── Filter persistence ────────────────────────────────────────────────────────
+function getFilters() {
+  return {
+    horse:   document.getElementById('f-horse').value.trim(),
+    jockey:  selectedValues.jockey,
+    trainer: selectedValues.trainer,
+    owner:   selectedValues.owner,
+    meeting: document.getElementById('f-meeting').value,
+    colour:  document.getElementById('f-colour').value,
+    type:    document.getElementById('f-type').value,
+    cls:     document.getElementById('f-class').value,
+    sort:    document.getElementById('f-sort').value,
+    fuzzy:   document.getElementById('f-fuzzy').checked
+  };
 }
 
 function saveFilters() {
-  try {
-    var filters = {
-      horse:   document.getElementById('f-horse').value,
-      jockey:  selectedValues.jockey,
-      trainer: selectedValues.trainer,
-      owner:   selectedValues.owner,
-      meeting: document.getElementById('f-meeting').value,
-      colour:  document.getElementById('f-colour').value,
-      type:    document.getElementById('f-type').value,
-      cls:     document.getElementById('f-class').value,
-      date:    document.getElementById('f-date').value,
-      sort:    document.getElementById('f-sort').value
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
-  } catch(e) {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getFilters())); } catch(e) {}
 }
 
 function restoreFilters() {
@@ -401,16 +430,30 @@ function restoreFilters() {
     if (f.type)    document.getElementById('f-type').value    = f.type;
     if (f.cls)     document.getElementById('f-class').value   = f.cls;
     if (f.sort)    document.getElementById('f-sort').value    = f.sort;
-    if (f.date)    document.getElementById('f-date').value    = f.date;
+    if (f.fuzzy !== undefined) document.getElementById('f-fuzzy').checked = f.fuzzy;
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
     if (f.owner)   { selectedValues.owner   = f.owner;   document.getElementById('f-owner').value   = f.owner; }
     return true;
-  } catch(e) {
-    return false;
-  }
+  } catch(e) { return false; }
 }
 
+function applyFilters(filters) {
+  document.getElementById('f-horse').value  = filters.horse   || '';
+  document.getElementById('f-colour').value = filters.colour  || '';
+  document.getElementById('f-type').value   = filters.type    || '';
+  document.getElementById('f-class').value  = filters.cls     || '';
+  document.getElementById('f-sort').value   = filters.sort    || 'meeting';
+  document.getElementById('f-fuzzy').checked = filters.fuzzy !== false;
+  selectedValues.jockey  = filters.jockey  || '';
+  selectedValues.trainer = filters.trainer || '';
+  selectedValues.owner   = filters.owner   || '';
+  document.getElementById('f-jockey').value  = filters.jockey  || '';
+  document.getElementById('f-trainer').value = filters.trainer || '';
+  document.getElementById('f-owner').value   = filters.owner   || '';
+}
+
+// ── Tagging ───────────────────────────────────────────────────────────────────
 function loadTags() {
   if (!IS_LOGGED_IN) return Promise.resolve();
   return fetch('/api/my-tags')
@@ -420,22 +463,18 @@ function loadTags() {
       for (var i = 0; i < tags.length; i++) {
         taggedMap[tags[i].horse_name.toLowerCase()] = tags[i].notes || '';
       }
-    })
-    .catch(function() {});
+    }).catch(function() {});
 }
 
 function openTagModal(horseName) {
-  if (!IS_LOGGED_IN) {
-    document.getElementById('login-modal').classList.add('open');
-    return;
-  }
+  if (!IS_LOGGED_IN) { document.getElementById('login-modal').classList.add('open'); return; }
   pendingHorse = horseName;
   var key      = horseName.toLowerCase();
   var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
-  document.getElementById('tag-modal-title').textContent     = isTagged ? 'Edit tag' : 'Tag horse';
-  document.getElementById('tag-modal-horse').textContent     = horseName;
-  document.getElementById('tag-notes').value                 = isTagged ? taggedMap[key] : '';
-  document.getElementById('tag-modal-remove').style.display  = isTagged ? 'inline-block' : 'none';
+  document.getElementById('tag-modal-title').textContent    = isTagged ? 'Edit tag' : 'Tag horse';
+  document.getElementById('tag-modal-horse').textContent    = horseName;
+  document.getElementById('tag-notes').value                = isTagged ? taggedMap[key] : '';
+  document.getElementById('tag-modal-remove').style.display = isTagged ? 'inline-block' : 'none';
   document.getElementById('tag-modal').classList.add('open');
   setTimeout(function() { document.getElementById('tag-notes').focus(); }, 50);
 }
@@ -444,35 +483,20 @@ function saveTag() {
   if (!pendingHorse) return;
   var horseName = pendingHorse;
   var notes     = document.getElementById('tag-notes').value.trim();
-  fetch('/api/tag', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ horse_name: horseName, notes: notes })
-  }).then(function() {
-    taggedMap[horseName.toLowerCase()] = notes;
-    refreshTagButtons(horseName);
-    closeTagModal();
-  });
+  fetch('/api/tag', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ horse_name: horseName, notes: notes }) })
+    .then(function() { taggedMap[horseName.toLowerCase()] = notes; refreshTagButtons(horseName); closeTagModal(); });
 }
 
 function removeTag() {
   if (!pendingHorse) return;
   var horseName = pendingHorse;
-  fetch('/api/untag', {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ horse_name: horseName })
-  }).then(function() {
-    delete taggedMap[horseName.toLowerCase()];
-    refreshTagButtons(horseName);
-    closeTagModal();
-  });
+  fetch('/api/untag', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ horse_name: horseName }) })
+    .then(function() { delete taggedMap[horseName.toLowerCase()]; refreshTagButtons(horseName); closeTagModal(); });
 }
 
-function closeTagModal() {
-  document.getElementById('tag-modal').classList.remove('open');
-  pendingHorse = null;
-}
+function closeTagModal() { document.getElementById('tag-modal').classList.remove('open'); pendingHorse = null; }
 
 function refreshTagButtons(horseName) {
   var key      = horseName.toLowerCase();
@@ -490,11 +514,63 @@ function makeTagBtn(horseName, isTagged, notes) {
   var esc      = escHtml(horseName);
   var hasNotes = isTagged && notes && notes.length > 0;
   return '<button class="tag-btn' + (isTagged ? ' tagged' : '') + '" data-horse="' + esc + '" title="' + (isTagged ? 'Edit tag / notes' : 'Tag this horse') + '">'
-    + (isTagged ? '&#9829;' : '&#9825;')
-    + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '')
-    + '</button>';
+    + (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '') + '</button>';
 }
 
+// ── Saved searches ────────────────────────────────────────────────────────────
+function loadSavedSearches() {
+  if (!IS_LOGGED_IN) return Promise.resolve();
+  return fetch('/api/saved-searches')
+    .then(function(r) { return r.json(); })
+    .then(function(data) { savedSearches = data; renderSavedChips(); })
+    .catch(function() {});
+}
+
+function renderSavedChips() {
+  var bar   = document.getElementById('saved-searches-bar');
+  var chips = document.getElementById('saved-chips');
+  if (!savedSearches.length) { bar.style.display = 'none'; return; }
+  bar.style.display = 'block';
+  var html = '<span class="saved-label">Saved:</span>';
+  for (var i = 0; i < savedSearches.length; i++) {
+    var s = savedSearches[i];
+    var alertDot = s.alert ? '<span class="chip-alert">&#128276;</span>' : '';
+    html += '<span class="saved-search-chip" data-id="' + s.id + '">'
+      + escHtml(s.name) + alertDot
+      + '<button class="chip-del" data-id="' + s.id + '" title="Remove">&#215;</button>'
+      + '</span>';
+  }
+  chips.innerHTML = html;
+}
+
+function openSaveSearchModal() {
+  var f = getFilters();
+  var parts = [];
+  if (f.horse)   parts.push('Horse: ' + f.horse);
+  if (f.jockey)  parts.push('Jockey: ' + f.jockey);
+  if (f.trainer) parts.push('Trainer: ' + f.trainer);
+  if (f.colour)  parts.push('Colour: ' + f.colour);
+  if (f.meeting) parts.push('Meeting: ' + f.meeting);
+  if (f.owner)   parts.push('Owner: ' + f.owner);
+  var summary = parts.length ? parts.join(', ') : 'All runners for today';
+  document.getElementById('save-search-summary').textContent = summary;
+  document.getElementById('save-search-name').value = '';
+  document.getElementById('save-search-alert').checked = false;
+  document.getElementById('save-search-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('save-search-name').focus(); }, 50);
+}
+
+function confirmSaveSearch() {
+  var name  = document.getElementById('save-search-name').value.trim();
+  var alert = document.getElementById('save-search-alert').checked;
+  if (!name) { document.getElementById('save-search-name').focus(); return; }
+  var filters = getFilters();
+  fetch('/api/saved-searches', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name, filters: filters, alert: alert }) })
+    .then(function() { document.getElementById('save-search-modal').classList.remove('open'); return loadSavedSearches(); });
+}
+
+// ── Dropdowns ─────────────────────────────────────────────────────────────────
 function initDropdown(field) {
   var input = document.getElementById('f-' + field);
   var dd    = document.getElementById('dd-' + field);
@@ -507,31 +583,24 @@ function initDropdown(field) {
       var v = dropdownData[field][i];
       if (!q || v.toLowerCase().indexOf(q) !== -1) items.push(v);
     }
-    if (items.length === 0) {
-      dd.innerHTML = '<div class="dropdown-empty">No matches</div>';
-      return;
-    }
+    if (!items.length) { dd.innerHTML = '<div class="dropdown-empty">No matches</div>'; return; }
     var h = '<div class="dropdown-item" data-value="">- Any ' + field + ' -</div>';
     for (var j = 0; j < items.length; j++) {
-      var active = items[j] === selectedValues[field] ? ' active' : '';
-      h += '<div class="dropdown-item' + active + '" data-value="' + escHtml(items[j]) + '">' + escHtml(items[j]) + '</div>';
+      h += '<div class="dropdown-item' + (items[j] === selectedValues[field] ? ' active' : '') + '" data-value="' + escHtml(items[j]) + '">' + escHtml(items[j]) + '</div>';
     }
     dd.innerHTML = h;
   }
 
   input.addEventListener('focus', function() { renderDropdown(input.value); dd.classList.add('open'); });
   input.addEventListener('input', function() { selectedValues[field] = ''; renderDropdown(input.value); dd.classList.add('open'); });
-
   dd.addEventListener('mousedown', function(e) {
     var item = e.target.closest('.dropdown-item');
     if (!item) return;
     selectedValues[field] = item.dataset.value;
     input.value = item.dataset.value;
     dd.classList.remove('open');
-    saveFilters();
-    runSearch();
+    saveFilters(); runSearch();
   });
-
   document.addEventListener('click', function(e) {
     if (!wrap.contains(e.target)) {
       dd.classList.remove('open');
@@ -547,39 +616,13 @@ function loadOptions() {
       dropdownData.jockey  = data.jockeys  || [];
       dropdownData.trainer = data.trainers || [];
       dropdownData.owner   = data.owners   || [];
-    })
-    .catch(function() {});
+    }).catch(function() {});
 }
 
-function setTab(tab) {
-  var tabs = document.querySelectorAll('.tab');
-  for (var i = 0; i < tabs.length; i++) {
-    tabs[i].classList.toggle('active', tabs[i].dataset.tab === tab);
-  }
-  var di    = document.getElementById('f-date');
-  var today = new Date();
-  if (tab === 'today') {
-    di.value = formatDate(today);
-    runSearch();
-  } else if (tab === 'tomorrow') {
-    document.getElementById('results-area').innerHTML = '<div class="empty-state"><div class="empty-icon">&#128197;</div><div>Tomorrow\'s racecards require a Standard plan subscription.<br><a href="https://www.theracingapi.com" target="_blank" style="color:var(--brand)">Upgrade at theracingapi.com</a></div></div>';
-  } else if (tab === 'entries') {
-    di.value = '';
-    runSearch();
-  } else if (tab === 'live') {
-    di.value = formatDate(today);
-    runSearch();
-  }
-}
-
+// ── Build results ─────────────────────────────────────────────────────────────
 function buildRaceBlock(race, meetingLabel) {
-  var meetingTag = meetingLabel
-    ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">' + escHtml(meetingLabel) + '</span>'
-    : '';
-
-  var tableRows  = '';
-  var mobileCards = '';
-
+  var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">' + escHtml(meetingLabel) + '</span>' : '';
+  var tableRows = '', mobileCards = '';
   for (var i = 0; i < race.runners.length; i++) {
     var r        = race.runners[i];
     var rName    = r.name || '';
@@ -591,7 +634,7 @@ function buildRaceBlock(race, meetingLabel) {
     tableRows += '<tr>'
       + '<td><span class="horse-num">' + escHtml(String(r.number || '-')) + '</span></td>'
       + '<td><div class="horse-name-cell">' + silkSvg(r.colour, r.number || '')
-      + '<div style="min-width:0"><div class="horse-name">' + escHtml(rName || '-') + '</div>'
+      + '<div style="min-width:0"><div class="horse-name">' + escHtml(rName) + '</div>'
       + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
       + '<td>' + colourChip(r.colour) + '</td>'
       + '<td><span class="form-str">' + formHtml(r.form) + '</span></td>'
@@ -605,7 +648,7 @@ function buildRaceBlock(race, meetingLabel) {
     mobileCards += '<div class="runner-card">'
       + '<div class="runner-card-top">' + silkSvg(r.colour, r.number || '')
       + '<span class="runner-card-num">' + escHtml(String(r.number || '-')) + '</span>'
-      + '<span class="runner-card-name">' + escHtml(rName || '-') + '</span>'
+      + '<span class="runner-card-name">' + escHtml(rName) + '</span>'
       + '<span class="runner-card-form">' + formHtml(r.form) + '</span>' + tb + '</div>'
       + '<div class="runner-card-grid">'
       + '<div class="runner-card-field"><span class="label">Jockey</span><span class="value">' + escHtml(r.jockey || '-') + '</span></div>'
@@ -620,51 +663,35 @@ function buildRaceBlock(race, meetingLabel) {
   }
 
   return '<div class="race-block">'
-    + '<div class="race-header">'
-    + '<span class="race-time">' + escHtml(race.time || '') + '</span>'
+    + '<div class="race-header"><span class="race-time">' + escHtml(race.time || '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race.class || '') + '</div></div>'
-    + meetingTag
-    + '<span class="race-badge">' + race.runners.length + ' runner' + (race.runners.length !== 1 ? 's' : '') + '</span>'
-    + '</div>'
+    + meetingTag + '<span class="race-badge">' + race.runners.length + ' runner' + (race.runners.length !== 1 ? 's' : '') + '</span></div>'
     + '<div class="table-wrap"><table><thead><tr>'
-    + '<th style="width:40px">#</th>'
-    + '<th style="width:21%">Horse</th>'
-    + '<th style="width:100px">Colour</th>'
-    + '<th style="width:70px">Form</th>'
-    + '<th style="width:62px">Age/sex</th>'
-    + '<th style="width:48px">Wgt</th>'
-    + '<th style="width:38px">OR</th>'
-    + '<th style="width:19%">Jockey / trainer</th>'
-    + '<th style="width:36px"></th>'
+    + '<th style="width:40px">#</th><th style="width:21%">Horse</th><th style="width:100px">Colour</th>'
+    + '<th style="width:70px">Form</th><th style="width:62px">Age/sex</th><th style="width:48px">Wgt</th>'
+    + '<th style="width:38px">OR</th><th style="width:19%">Jockey / trainer</th><th style="width:36px"></th>'
     + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
-    + '<div class="runner-cards">' + mobileCards + '</div>'
-    + '</div>';
+    + '<div class="runner-cards">' + mobileCards + '</div></div>';
 }
 
 function renderResults(data) {
   var area = document.getElementById('results-area');
-  if (!data || data.length === 0) {
+  if (!data || !data.length) {
     area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>';
     return;
   }
-  var totalRunners = 0;
-  var totalRaces   = 0;
-  var meetingSet   = {};
+  var totalRunners = 0, totalRaces = 0, meetingSet = {};
   for (var i = 0; i < data.length; i++) {
     meetingSet[data[i].meeting] = 1;
     totalRaces += data[i].races.length;
-    for (var j = 0; j < data[i].races.length; j++) {
-      totalRunners += data[i].races[j].runners.length;
-    }
+    for (var j = 0; j < data[i].races.length; j++) totalRunners += data[i].races[j].runners.length;
   }
   var totalMeetings = Object.keys(meetingSet).length;
-  var sortMode      = document.getElementById('f-sort').value;
-  var html = '<div class="results-header"><span>'
-    + totalRunners + ' runner' + (totalRunners !== 1 ? 's' : '')
+  var sortMode = document.getElementById('f-sort').value;
+  var html = '<div class="results-header"><span>' + totalRunners + ' runner' + (totalRunners !== 1 ? 's' : '')
     + ' across ' + totalRaces + ' race' + (totalRaces !== 1 ? 's' : '')
-    + ' at ' + totalMeetings + ' meeting' + (totalMeetings !== 1 ? 's' : '')
-    + '</span></div>';
+    + ' at ' + totalMeetings + ' meeting' + (totalMeetings !== 1 ? 's' : '') + '</span></div>';
 
   if (sortMode === 'time') {
     for (var a = 0; a < data.length; a++) {
@@ -675,14 +702,11 @@ function renderResults(data) {
   } else {
     for (var c = 0; c < data.length; c++) {
       var block = data[c];
-      html += '<div class="meeting-block">'
-        + '<div class="meeting-header"><div>'
+      html += '<div class="meeting-block"><div class="meeting-header"><div>'
         + '<div class="meeting-name">' + escHtml(block.meeting) + '</div>'
         + '<div class="meeting-meta">' + escHtml(block.date || '') + '</div>'
         + '</div></div>';
-      for (var d = 0; d < block.races.length; d++) {
-        html += buildRaceBlock(block.races[d], null);
-      }
+      for (var d = 0; d < block.races.length; d++) html += buildRaceBlock(block.races[d], null);
       html += '</div>';
     }
   }
@@ -690,22 +714,15 @@ function renderResults(data) {
 }
 
 function populateMeetingDropdown(data) {
-  var sel      = document.getElementById('f-meeting');
-  var current  = sel.value;
-  var seen     = {};
-  var meetings = [];
+  var sel = document.getElementById('f-meeting'), current = sel.value, seen = {}, meetings = [];
   for (var i = 0; i < data.length; i++) {
-    if (!seen[data[i].meeting]) {
-      seen[data[i].meeting] = 1;
-      meetings.push(data[i].meeting);
-    }
+    if (!seen[data[i].meeting]) { seen[data[i].meeting] = 1; meetings.push(data[i].meeting); }
   }
   meetings.sort();
   sel.innerHTML = '<option value="">All meetings</option>';
   for (var j = 0; j < meetings.length; j++) {
     var opt = document.createElement('option');
-    opt.value = meetings[j];
-    opt.textContent = meetings[j];
+    opt.value = meetings[j]; opt.textContent = meetings[j];
     if (meetings[j] === current) opt.selected = true;
     sel.appendChild(opt);
   }
@@ -715,68 +732,71 @@ function runSearch() {
   var spinner = document.getElementById('spinner');
   spinner.classList.add('active');
   saveFilters();
-  var params  = new URLSearchParams();
-  var horse   = document.getElementById('f-horse').value.trim();
-  var meeting = document.getElementById('f-meeting').value;
-  var colour  = document.getElementById('f-colour').value;
-  var date    = document.getElementById('f-date').value;
-  var sort    = document.getElementById('f-sort').value;
-  if (horse)                   params.append('horse',   horse);
-  if (selectedValues.jockey)   params.append('jockey',  selectedValues.jockey);
-  if (selectedValues.trainer)  params.append('trainer', selectedValues.trainer);
-  if (selectedValues.owner)    params.append('owner',   selectedValues.owner);
-  if (meeting)                 params.append('meeting', meeting);
-  if (colour)                  params.append('colour',  colour);
-  if (date)                    params.append('date',    date);
-  params.append('sort', sort);
+  var f      = getFilters();
+  var params = new URLSearchParams();
+  if (f.horse)   params.append('horse',   f.horse);
+  if (f.jockey)  params.append('jockey',  f.jockey);
+  if (f.trainer) params.append('trainer', f.trainer);
+  if (f.owner)   params.append('owner',   f.owner);
+  if (f.meeting) params.append('meeting', f.meeting);
+  if (f.colour)  params.append('colour',  f.colour);
+  params.append('sort',  f.sort || 'meeting');
+  params.append('fuzzy', f.fuzzy ? 'true' : 'false');
   fetch('/api/search?' + params.toString())
     .then(function(r) { return r.json(); })
     .then(function(data) { renderResults(data); populateMeetingDropdown(data); })
-    .catch(function() {
-      document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not connect to the server.</div></div>';
-    })
+    .catch(function() { document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not connect to the server.</div></div>'; })
     .finally(function() { spinner.classList.remove('active'); });
 }
 
 function clearFilters() {
-  document.getElementById('f-horse').value = '';
-  document.getElementById('f-date').value  = formatDate(new Date());
-  var selects = ['f-meeting', 'f-colour', 'f-type', 'f-class'];
-  for (var i = 0; i < selects.length; i++) document.getElementById(selects[i]).value = '';
-  document.getElementById('f-sort').value = 'meeting';
-  var fields = ['jockey', 'trainer', 'owner'];
-  for (var j = 0; j < fields.length; j++) {
-    selectedValues[fields[j]] = '';
-    document.getElementById('f-' + fields[j]).value = '';
-  }
-  var tabs = document.querySelectorAll('.tab');
-  for (var k = 0; k < tabs.length; k++) tabs[k].classList.remove('active');
-  document.querySelector('.tab').classList.add('active');
+  document.getElementById('f-horse').value  = '';
+  document.getElementById('f-colour').value = '';
+  document.getElementById('f-type').value   = '';
+  document.getElementById('f-class').value  = '';
+  document.getElementById('f-sort').value   = 'meeting';
+  document.getElementById('f-fuzzy').checked = true;
+  document.getElementById('f-meeting').value = '';
+  selectedValues.jockey = selectedValues.trainer = selectedValues.owner = '';
+  document.getElementById('f-jockey').value  = '';
+  document.getElementById('f-trainer').value = '';
+  document.getElementById('f-owner').value   = '';
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   runSearch();
 }
 
-// Wire up events
+function autoSyncIfNeeded() {
+  return fetch('/api/check-today')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.count === 0) {
+        document.getElementById('results-area').innerHTML = '<div class="syncing-state"><div style="font-size:28px;margin-bottom:0.5rem">&#8635;</div><div>Syncing today\'s runners...</div></div>';
+        return fetch('/api/sync', { method: 'POST' });
+      }
+    }).catch(function() {});
+}
+
+// ── Wire up events ────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
+var saveBtn = document.getElementById('btn-save-search');
+if (saveBtn) saveBtn.addEventListener('click', openSaveSearchModal);
+
+document.getElementById('save-search-confirm').addEventListener('click', confirmSaveSearch);
+document.getElementById('save-search-cancel').addEventListener('click', function() { document.getElementById('save-search-modal').classList.remove('open'); });
+document.getElementById('save-search-close').addEventListener('click', function() { document.getElementById('save-search-modal').classList.remove('open'); });
+document.getElementById('save-search-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmSaveSearch(); });
+
 document.getElementById('sync-btn').addEventListener('click', function() {
   var btn = document.getElementById('sync-btn');
-  btn.textContent = 'Syncing...';
-  btn.classList.add('syncing');
+  btn.textContent = 'Syncing...'; btn.classList.add('syncing');
   fetch('/api/sync', { method: 'POST' })
     .then(function() { return loadOptions(); })
     .then(function() { return runSearch(); })
     .catch(function() {})
     .finally(function() { btn.innerHTML = '&#8635; Sync now'; btn.classList.remove('syncing'); });
 });
-
-var tabEls = document.querySelectorAll('.tab');
-for (var ti = 0; ti < tabEls.length; ti++) {
-  tabEls[ti].addEventListener('click', (function(t) {
-    return function() { setTab(t.dataset.tab); };
-  })(tabEls[ti]));
-}
 
 document.getElementById('results-area').addEventListener('click', function(e) {
   var btn = e.target.closest('.tag-btn');
@@ -787,41 +807,57 @@ document.getElementById('tag-modal-save').addEventListener('click', saveTag);
 document.getElementById('tag-modal-remove').addEventListener('click', removeTag);
 document.getElementById('tag-modal-cancel').addEventListener('click', closeTagModal);
 document.getElementById('tag-modal-close').addEventListener('click', closeTagModal);
-document.getElementById('tag-notes').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && e.ctrlKey) saveTag();
+document.getElementById('tag-notes').addEventListener('keydown', function(e) { if (e.key === 'Enter' && e.ctrlKey) saveTag(); });
+document.getElementById('login-modal-close').addEventListener('click', function() { document.getElementById('login-modal').classList.remove('open'); });
+document.getElementById('login-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+document.getElementById('tag-modal').addEventListener('click', function(e) { if (e.target === this) closeTagModal(); });
+document.getElementById('save-search-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+
+// Saved search chip clicks
+document.getElementById('saved-chips').addEventListener('click', function(e) {
+  var del = e.target.closest('.chip-del');
+  if (del) {
+    var id = parseInt(del.dataset.id);
+    fetch('/api/saved-searches/' + id, { method: 'DELETE' })
+      .then(function() { return loadSavedSearches(); });
+    return;
+  }
+  var chip = e.target.closest('.saved-search-chip');
+  if (chip) {
+    var chipId = parseInt(chip.dataset.id);
+    for (var i = 0; i < savedSearches.length; i++) {
+      if (savedSearches[i].id === chipId) {
+        applyFilters(savedSearches[i].filters);
+        saveFilters();
+        runSearch();
+        break;
+      }
+    }
+  }
 });
 
-document.getElementById('login-modal-close').addEventListener('click', function() {
-  document.getElementById('login-modal').classList.remove('open');
-});
-document.getElementById('login-modal').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
-document.getElementById('tag-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeTagModal();
-});
-
-var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort', 'f-date'];
+var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort', 'f-fuzzy'];
 for (var ci = 0; ci < changeIds.length; ci++) {
   document.getElementById(changeIds[ci]).addEventListener('change', function() { saveFilters(); runSearch(); });
 }
+document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
 
-document.getElementById('f-horse').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') { saveFilters(); runSearch(); }
-});
-
-// Initialise
 initDropdown('jockey');
 initDropdown('trainer');
 initDropdown('owner');
 
-var hadSaved = restoreFilters();
-if (!document.getElementById('f-date').value) {
-  document.getElementById('f-date').value = formatDate(new Date());
-}
+// Clear any old saved date from previous version
+try {
+  var old = localStorage.getItem(STORAGE_KEY);
+  if (old) { var parsed = JSON.parse(old); if (parsed.date !== undefined) { delete parsed.date; localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } }
+} catch(e) {}
 
-loadOptions()
+restoreFilters();
+
+autoSyncIfNeeded()
+  .then(function() { return loadOptions(); })
   .then(function() { return loadTags(); })
+  .then(function() { return loadSavedSearches(); })
   .then(function() { runSearch(); });
 </script>
 </body>
