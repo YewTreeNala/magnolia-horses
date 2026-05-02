@@ -194,9 +194,19 @@
       </div>
     </div>
     <div class="filter-grid">
-      <div class="filter-group">
+      <div class="filter-group" style="grid-column:span 2">
         <label>Horse name</label>
-        <input type="text" id="f-horse" placeholder="e.g. Desert Crown" autocomplete="off"/>
+        <div style="display:flex;gap:6px;align-items:stretch">
+          <input type="text" id="f-horse" placeholder="e.g. Desert Crown" autocomplete="off" style="flex:1"/>
+          <button type="button" id="fuzzy-btn" title="Toggle fuzzy / phonetic matching"
+            style="flex-shrink:0;padding:0 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--border2);background:var(--brand);color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s">
+            &#127518; Fuzzy on
+          </button>
+        </div>
+        <div id="fuzzy-hint" style="font-size:11px;color:var(--brand);margin-top:4px">
+          Finds near-matches and sound-alikes (e.g. "Dessert Crown" finds "Desert Crown")
+        </div>
+        <input type="checkbox" id="f-fuzzy" checked style="display:none"/>
       </div>
       <div class="filter-group">
         <label>Jockey</label>
@@ -271,13 +281,7 @@
           <option value="time">Race time</option>
         </select>
       </div>
-      <div class="filter-group">
-        <label>Search mode</label>
-        <div class="toggle-wrap" onclick="document.getElementById('f-fuzzy').click()">
-          <input type="checkbox" id="f-fuzzy" checked/>
-          <label for="f-fuzzy">Fuzzy / phonetic</label>
-        </div>
-      </div>
+
     </div>
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
@@ -762,6 +766,7 @@ function clearFilters() {
   document.getElementById('f-trainer').value = '';
   document.getElementById('f-owner').value   = '';
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+  syncFuzzyBtn();
   runSearch();
 }
 
@@ -842,6 +847,30 @@ for (var ci = 0; ci < changeIds.length; ci++) {
 }
 document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
 
+document.getElementById('fuzzy-btn').addEventListener('click', function() {
+  var cb   = document.getElementById('f-fuzzy');
+  var hint = document.getElementById('fuzzy-hint');
+  var btn  = document.getElementById('fuzzy-btn');
+  cb.checked = !cb.checked;
+  if (cb.checked) {
+    btn.innerHTML  = '&#127518; Fuzzy on';
+    btn.style.background = 'var(--brand)';
+    btn.style.color      = '#fff';
+    btn.style.borderColor = 'var(--brand)';
+    hint.textContent = 'Fuzzy & phonetic on — finds near-matches and sound-alikes';
+    hint.style.color = 'var(--brand)';
+  } else {
+    btn.innerHTML  = '&#128269; Exact';
+    btn.style.background = 'var(--surface2)';
+    btn.style.color      = 'var(--text2)';
+    btn.style.borderColor = 'var(--border2)';
+    hint.textContent = 'Exact match — case-insensitive, must contain the text typed';
+    hint.style.color = 'var(--text3)';
+  }
+  saveFilters();
+  runSearch();
+});
+
 initDropdown('jockey');
 initDropdown('trainer');
 initDropdown('owner');
@@ -855,10 +884,31 @@ try {
 restoreFilters();
 
 autoSyncIfNeeded()
-  .then(function() { return loadOptions(); })
+  .then(function() { return function syncFuzzyBtn() {
+  var cb   = document.getElementById('f-fuzzy');
+  var btn  = document.getElementById('fuzzy-btn');
+  var hint = document.getElementById('fuzzy-hint');
+  if (cb.checked) {
+    btn.innerHTML        = '&#127518; Fuzzy on';
+    btn.style.background = 'var(--brand)';
+    btn.style.color      = '#fff';
+    btn.style.borderColor = 'var(--brand)';
+    hint.textContent = 'Fuzzy & phonetic on — finds near-matches and sound-alikes';
+    hint.style.color = 'var(--brand)';
+  } else {
+    btn.innerHTML        = '&#128269; Exact';
+    btn.style.background = 'var(--surface2)';
+    btn.style.color      = 'var(--text2)';
+    btn.style.borderColor = 'var(--border2)';
+    hint.textContent = 'Exact match — case-insensitive, must contain the text typed';
+    hint.style.color = 'var(--text3)';
+  }
+}
+
+loadOptions(); })
   .then(function() { return loadTags(); })
   .then(function() { return loadSavedSearches(); })
-  .then(function() { runSearch(); });
+  .then(function() { syncFuzzyBtn(); runSearch(); });
 </script>
 </body>
 </html>
