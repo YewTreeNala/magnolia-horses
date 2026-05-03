@@ -429,8 +429,12 @@ def manual_sync():
 @app.route('/account')
 @login_required
 def account():
-    logs = EmailLog.query.filter_by(user_id=current_user.id)\
-        .order_by(EmailLog.id.desc()).limit(10).all()
+    try:
+        logs = EmailLog.query.filter_by(user_id=current_user.id)            .order_by(EmailLog.id.desc()).limit(10).all()
+    except Exception:
+        # Table may not exist yet — create it and return empty
+        db.create_all()
+        logs = []
     return render_template('account.html', logs=logs)
 
 
@@ -493,8 +497,11 @@ def run_all_searches():
 @app.route('/api/email-log')
 @login_required
 def email_log():
-    logs = EmailLog.query.filter_by(user_id=current_user.id)\
-        .order_by(EmailLog.id.desc()).limit(10).all()
+    try:
+        logs = EmailLog.query.filter_by(user_id=current_user.id)            .order_by(EmailLog.id.desc()).limit(10).all()
+    except Exception:
+        db.create_all()
+        logs = []
     return jsonify([{
         'id':      l.id,
         'subject': l.subject,
