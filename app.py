@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, Meeting, Race, Runner, ColourOverride
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride
 from sync import sync_todays_races
 from email_service import send_morning_alerts
 from rapidfuzz import fuzz
@@ -424,6 +424,99 @@ def sort_by_time(runners, tagged_map):
 def manual_sync():
     sync_todays_races(app)
     return jsonify({'status': 'ok'})
+
+
+@app.route('/account')
+@login_required
+def account():
+    logs = EmailLog.query.filter_by(user_id=current_user.id)        .order_by(EmailLog.id.desc()).limit(10).all()
+    return render_template('account.html', logs=logs)
+
+
+@app.route('/api/run-all-searches')
+@login_required
+def run_all_searches():
+    """Run all of the current user's saved searches and return combined results."""
+    searches = SavedSearch.query.filter_by(user_id=current_user.id).all()
+    if not searches:
+        return jsonify([])
+
+    today = date.today().strftime('%Y-%m-%d')
+    all_runners = db.session.query(Runner).join(Race).join(Meeting)        .filter(Meeting.date == today).all()
+
+    tagged_map = {t.horse_name.lower(): t.notes or ''
+                  for t in TaggedHorse.query.filter_by(user_id=current_user.id).all()}
+
+    # Collect matched runner ids across all searches to deduplicate
+    matched_ids = {}   # runner.id -> runner obj
+
+    for saved in searches:
+        try:
+            f = json.loads(saved.filters)
+        except Exception:
+            continue
+        for r in all_runners:
+            if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():    continue
+            if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():  continue
+            if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():         continue
+            if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():         continue
+            if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():           continue
+            hf = (f.get('horse') or '').strip()
+            if hf:
+                use_fuzzy = f.get('fuzzy', True)
+                nl = r.horse_name.lower(); sl = hf.lower()
+                if use_fuzzy:
+                    ok = (sl in nl or fuzz.partial_ratio(sl, nl) >= 75
+                          or any(jellyfish.soundex(w) == jellyfish.soundex(s)
+                                 for w in nl.split() for s in sl.split() if len(w) > 2 and len(s) > 2))
+                else:
+                    ok = sl in nl
+                if not ok:
+                    continue
+            matched_ids[r.id] = r
+
+    matched = list(matched_ids.values())
+    matched.sort(key=lambda r: (r.race.meeting.name, r.race.time, int(r.number or 0)))
+
+    if matched:
+        return jsonify(sort_by_meeting(matched, tagged_map))
+    return jsonify([])
+
+
+@app.route('/api/email-log')
+@login_required
+def email_log():
+    logs = EmailLog.query.filter_by(user_id=current_user.id)        .order_by(EmailLog.id.desc()).limit(10).all()
+    return jsonify([{
+        'id':      l.id,
+        'subject': l.subject,
+        'status':  l.status,
+        'sent_at': l.sent_at,
+    } for l in logs])
+
+
+@app.route('/api/email-log/<int:log_id>')
+@login_required
+def email_log_detail(log_id):
+    log = EmailLog.query.filter_by(id=log_id, user_id=current_user.id).first()
+    if not log:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify({
+        'id':        log.id,
+        'subject':   log.subject,
+        'status':    log.status,
+        'sent_at':   log.sent_at,
+        'html_body': log.html_body,
+    })
+
+
+@app.route('/api/send-test-email', methods=['POST'])
+@login_required
+def send_test_email():
+    """Send a test version of the morning email right now."""
+    from email_service import send_morning_alerts_for_user
+    result = send_morning_alerts_for_user(current_user.id, app)
+    return jsonify(result)
 
 
 @app.route('/admin/colours')

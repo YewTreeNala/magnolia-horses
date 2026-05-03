@@ -80,3 +80,14 @@ class ColourOverride(db.Model):
     horse_name = db.Column(db.String(100), unique=True, nullable=False)
     colour     = db.Column(db.String(30), nullable=False)
     updated_at = db.Column(db.String(30))
+
+
+class EmailLog(db.Model):
+    """Records every email sent so users can see what was sent and when."""
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subject    = db.Column(db.String(200))
+    html_body  = db.Column(db.Text)
+    status     = db.Column(db.String(20))   # 'sent', 'failed', 'no_api_key'
+    sent_at    = db.Column(db.String(30))
+    user       = db.relationship('User', backref=db.backref('email_logs', lazy=True))

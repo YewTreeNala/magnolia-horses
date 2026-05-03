@@ -8,26 +8,47 @@ FROM_EMAIL       = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
 SITE_URL         = os.getenv('SITE_URL', 'https://magnoliahorses.com')
 
 
-def send_email(to_email, to_name, subject, html_body):
+def send_email(to_email, to_name, subject, html_body, user_id=None):
+    from datetime import datetime as _dt
+    status = 'sent'
     if not SENDGRID_API_KEY:
         print(f'[Email] No API key — would have sent to {to_email}: {subject}')
-        return False
-    payload = {
-        'personalizations': [{'to': [{'email': to_email, 'name': to_name}]}],
-        'from':    {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
-        'subject': subject,
-        'content': [{'type': 'text/html', 'value': html_body}]
-    }
-    response = requests.post(
-        'https://api.sendgrid.com/v3/mail/send',
-        json=payload,
-        headers={'Authorization': f'Bearer {SENDGRID_API_KEY}', 'Content-Type': 'application/json'}
-    )
-    if response.status_code == 202:
-        print(f'[Email] Sent to {to_email}: {subject}')
-        return True
-    print(f'[Email] Failed ({response.status_code}): {response.text}')
-    return False
+        status = 'no_api_key'
+    else:
+        payload = {
+            'personalizations': [{'to': [{'email': to_email, 'name': to_name}]}],
+            'from':    {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
+            'subject': subject,
+            'content': [{'type': 'text/html', 'value': html_body}]
+        }
+        response = requests.post(
+            'https://api.sendgrid.com/v3/mail/send',
+            json=payload,
+            headers={'Authorization': f'Bearer {SENDGRID_API_KEY}', 'Content-Type': 'application/json'}
+        )
+        if response.status_code == 202:
+            print(f'[Email] Sent to {to_email}: {subject}')
+        else:
+            print(f'[Email] Failed ({response.status_code}): {response.text}')
+            status = 'failed'
+
+    # Log the email if we have a user_id
+    if user_id is not None:
+        try:
+            from models import db, EmailLog
+            log = EmailLog(
+                user_id=user_id,
+                subject=subject,
+                html_body=html_body,
+                status=status,
+                sent_at=_dt.now().strftime('%Y-%m-%d %H:%M:%S')
+            )
+            db.session.add(log)
+            db.session.commit()
+        except Exception as e:
+            print(f'[Email] Failed to log email: {e}')
+
+    return status == 'sent' 
 
 
 def _badge(reason):
@@ -172,7 +193,82 @@ def send_morning_alerts(app):
 
             n       = len(combined)
             subject = f"Magnolia Horses: {n} runner{'s' if n != 1 else ''} to follow today"
-            send_email(user.email, user.name, subject, build_combined_email(user.name, combined))
+            send_email(user.email, user.name, subject, build_combined_email(user.name, combined), user_id=user.id)
             alerts_sent += 1
 
         print(f'[Alerts] Morning alerts sent to {alerts_sent} users')
+
+
+def send_morning_alerts_for_user(user_id, app):
+    """Send the morning alert email immediately for a single user — used for test sends."""
+    from models import db, User, Runner, Race, Meeting
+    from datetime import date
+    import json
+    from rapidfuzz import fuzz
+    import jellyfish
+
+    with app.app_context():
+        user = User.query.get(user_id)
+        if not user:
+            return {'status': 'error', 'message': 'User not found'}
+
+        today       = date.today().strftime('%Y-%m-%d')
+        all_runners = db.session.query(Runner).join(Race).join(Meeting)            .filter(Meeting.date == today).all()
+
+        runner_reasons = {}
+
+        tagged_names = {t.horse_name.lower() for t in user.tagged}
+        for r in all_runners:
+            if r.horse_name.lower() in tagged_names:
+                runner_reasons.setdefault(r.id, {'runner': r, 'reasons': []})
+                runner_reasons[r.id]['reasons'].append('Favourite')
+
+        for saved in user.searches:
+            try:
+                f = json.loads(saved.filters)
+            except Exception:
+                continue
+            for r in all_runners:
+                if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():    continue
+                if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():  continue
+                if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():         continue
+                if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():         continue
+                if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():           continue
+                hf = (f.get('horse') or '').strip()
+                if hf:
+                    use_fuzzy = f.get('fuzzy', True)
+                    nl = r.horse_name.lower(); sl = hf.lower()
+                    if use_fuzzy:
+                        ok = (sl in nl or fuzz.partial_ratio(sl, nl) >= 75
+                              or any(jellyfish.soundex(w) == jellyfish.soundex(s)
+                                     for w in nl.split() for s in sl.split() if len(w) > 2 and len(s) > 2))
+                    else:
+                        ok = sl in nl
+                    if not ok:
+                        continue
+                runner_reasons.setdefault(r.id, {'runner': r, 'reasons': []})
+                runner_reasons[r.id]['reasons'].append(f'Search: {saved.name}')
+
+        if not runner_reasons:
+            return {'status': 'no_runners', 'message': 'No runners matched your favourites or saved searches today'}
+
+        combined = sorted([
+            {
+                'horse_name': e['runner'].horse_name,
+                'meeting':    e['runner'].race.meeting.name,
+                'time':       e['runner'].race.time,
+                'jockey':     e['runner'].jockey,
+                'trainer':    e['runner'].trainer,
+                'colour':     e['runner'].colour,
+                'reason':     ' & '.join(e['reasons']),
+            }
+            for e in runner_reasons.values()
+        ], key=lambda x: x['time'])
+
+        n       = len(combined)
+        subject = f"[Test] Magnolia Horses: {n} runner{'s' if n != 1 else ''} to follow today"
+        html    = build_combined_email(user.name, combined)
+        ok      = send_email(user.email, user.name, subject, html, user_id=user.id)
+        if ok:
+            return {'status': 'sent', 'message': f'Test email sent to {user.email} with {n} runners'}
+        return {'status': 'failed', 'message': 'Email send failed — check SendGrid API key'}

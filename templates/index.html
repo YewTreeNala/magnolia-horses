@@ -179,6 +179,7 @@
       {% if current_user.is_authenticated %}
         <span class="nav-user">{{ current_user.name }}</span>
         <a href="/my-horses">My horses</a>
+        <a href="/account">Account</a>
         <a href="/logout">Sign out</a>
       {% else %}
         <a href="/login">Sign in</a>
@@ -191,6 +192,11 @@
     <div id="saved-searches-bar" style="display:none">
       <div class="saved-searches-bar" id="saved-chips">
         <span class="saved-label">Saved:</span>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
+        <button id="btn-run-all" style="font-size:12px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;background:var(--surface2);color:var(--brand);border:0.5px solid rgba(139,58,58,0.35)">
+          &#9654; Run all saved searches
+        </button>
       </div>
     </div>
     <div class="filter-grid">
@@ -817,6 +823,33 @@ document.getElementById('login-modal-close').addEventListener('click', function(
 document.getElementById('login-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
 document.getElementById('tag-modal').addEventListener('click', function(e) { if (e.target === this) closeTagModal(); });
 document.getElementById('save-search-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+
+var runAllBtn = document.getElementById('btn-run-all');
+if (runAllBtn) {
+  runAllBtn.addEventListener('click', function() {
+    var btn = document.getElementById('btn-run-all');
+    btn.textContent = 'Running...';
+    btn.disabled = true;
+    document.getElementById('spinner').classList.add('active');
+    fetch('/api/run-all-searches')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        renderResults(data);
+        populateMeetingDropdown(data);
+        // Clear individual filter fields to show user these are combined results
+        document.getElementById('results-area').querySelectorAll('.results-header span')[0] &&
+          (document.getElementById('results-area').querySelectorAll('.results-header span')[0].textContent += ' — all saved searches');
+      })
+      .catch(function() {
+        document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not run searches.</div></div>';
+      })
+      .finally(function() {
+        btn.innerHTML = '&#9654; Run all saved searches';
+        btn.disabled = false;
+        document.getElementById('spinner').classList.remove('active');
+      });
+  });
+}
 
 // Saved search chip clicks
 document.getElementById('saved-chips').addEventListener('click', function(e) {
