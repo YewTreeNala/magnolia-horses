@@ -429,7 +429,8 @@ def manual_sync():
 @app.route('/account')
 @login_required
 def account():
-    logs = EmailLog.query.filter_by(user_id=current_user.id)        .order_by(EmailLog.id.desc()).limit(10).all()
+    logs = EmailLog.query.filter_by(user_id=current_user.id)\
+        .order_by(EmailLog.id.desc()).limit(10).all()
     return render_template('account.html', logs=logs)
 
 
@@ -476,7 +477,13 @@ def run_all_searches():
             matched_ids[r.id] = r
 
     matched = list(matched_ids.values())
-    matched.sort(key=lambda r: (r.race.meeting.name, r.race.time, int(r.number or 0)))
+    def sort_key(r):
+        try:
+            num = int(r.number or 0)
+        except (ValueError, TypeError):
+            num = 0
+        return (r.race.meeting.name, r.race.time, num)
+    matched.sort(key=sort_key)
 
     if matched:
         return jsonify(sort_by_meeting(matched, tagged_map))
@@ -486,7 +493,8 @@ def run_all_searches():
 @app.route('/api/email-log')
 @login_required
 def email_log():
-    logs = EmailLog.query.filter_by(user_id=current_user.id)        .order_by(EmailLog.id.desc()).limit(10).all()
+    logs = EmailLog.query.filter_by(user_id=current_user.id)\
+        .order_by(EmailLog.id.desc()).limit(10).all()
     return jsonify([{
         'id':      l.id,
         'subject': l.subject,
