@@ -14,6 +14,18 @@ from datetime import datetime, date
 
 load_dotenv()
 
+# UK racecourses for the UK-only filter
+UK_COURSES = {
+    'ascot','ayr','bath','beverley','brighton','carlisle','catterick','chelmsford',
+    'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las',
+    'goodwood','hamilton','haydock','hereford','huntingdon','kempton','leicester',
+    'lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
+    'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon',
+    'salisbury','sandown','sedgefield','southwell','stratford','taunton',
+    'thirsk','uttoxeter','warwick','wetherby','windsor','wolverhampton',
+    'worcester','wincanton','yarmouth','york'
+}
+
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'change-this-in-production')
 
@@ -305,25 +317,32 @@ def options():
 
 @app.route('/api/search')
 def search():
-    horse   = request.args.get('horse', '').strip()
-    trainer = request.args.get('trainer', '').strip()
-    jockey  = request.args.get('jockey', '').strip()
-    colour  = request.args.get('colour', '').strip()
-    meeting = request.args.get('meeting', '').strip()
-    owner   = request.args.get('owner', '').strip()
-    sort    = request.args.get('sort', 'meeting').strip()
-    fuzzy   = request.args.get('fuzzy', 'true').strip().lower() != 'false'
+    horse    = request.args.get('horse', '').strip()
+    trainer  = request.args.get('trainer', '').strip()
+    jockey   = request.args.get('jockey', '').strip()
+    colour   = request.args.get('colour', '').strip()
+    meeting  = request.args.get('meeting', '').strip()
+    owner    = request.args.get('owner', '').strip()
+    sort     = request.args.get('sort', 'meeting').strip()
+    fuzzy    = request.args.get('fuzzy', 'true').strip().lower() != 'false'
+    uk_only  = request.args.get('uk_only', 'false').strip().lower() == 'true'
 
     today = date.today().strftime('%Y-%m-%d')
     query = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today)
 
-    if trainer: query = query.filter(Runner.trainer == trainer)
-    if jockey:  query = query.filter(Runner.jockey == jockey)
-    if colour:  query = query.filter(Runner.colour.ilike(f'%{colour}%'))
-    if meeting: query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
-    if owner:   query = query.filter(Runner.owner == owner)
+    if trainer:  query = query.filter(Runner.trainer == trainer)
+    if jockey:   query = query.filter(Runner.jockey == jockey)
+    if colour:   query = query.filter(Runner.colour.ilike(f'%{colour}%'))
+    if meeting:  query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
+    if owner:    query = query.filter(Runner.owner == owner)
+    if uk_only:
+        query = query.filter(Meeting.name.ilike('%') )  # fetch all then filter in Python
 
     runners = query.order_by(Meeting.name, Race.time, Runner.number).all()
+
+    # Apply UK-only filter in Python (case-insensitive course name match)
+    if uk_only:
+        runners = [r for r in runners if r.race.meeting.name.lower().strip() in UK_COURSES]
 
     if horse:
         def is_match(name, search_term, use_fuzzy):
@@ -461,6 +480,7 @@ def run_all_searches():
         except Exception:
             continue
         for r in all_runners:
+            if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES:    continue
             if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():    continue
             if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():  continue
             if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():         continue

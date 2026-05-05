@@ -287,6 +287,13 @@
           <option value="time">Race time</option>
         </select>
       </div>
+      <div class="filter-group">
+        <label>Country</label>
+        <div class="toggle-wrap" id="uk-only-wrap" onclick="document.getElementById('f-uk-only').click()" style="cursor:pointer">
+          <input type="checkbox" id="f-uk-only"/>
+          <label for="f-uk-only" style="cursor:pointer;font-size:13px;color:var(--text2)">UK meetings only</label>
+        </div>
+      </div>
 
     </div>
     <div class="btn-row">
@@ -422,7 +429,8 @@ function getFilters() {
     type:    document.getElementById('f-type').value,
     cls:     document.getElementById('f-class').value,
     sort:    document.getElementById('f-sort').value,
-    fuzzy:   document.getElementById('f-fuzzy').checked
+    fuzzy:   document.getElementById('f-fuzzy').checked,
+    uk_only: document.getElementById('f-uk-only').checked
   };
 }
 
@@ -440,7 +448,8 @@ function restoreFilters() {
     if (f.type)    document.getElementById('f-type').value    = f.type;
     if (f.cls)     document.getElementById('f-class').value   = f.cls;
     if (f.sort)    document.getElementById('f-sort').value    = f.sort;
-    if (f.fuzzy !== undefined) document.getElementById('f-fuzzy').checked = f.fuzzy;
+    if (f.fuzzy   !== undefined) document.getElementById('f-fuzzy').checked   = f.fuzzy;
+    if (f.uk_only !== undefined) document.getElementById('f-uk-only').checked = f.uk_only;
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
     if (f.owner)   { selectedValues.owner   = f.owner;   document.getElementById('f-owner').value   = f.owner; }
@@ -454,7 +463,8 @@ function applyFilters(filters) {
   document.getElementById('f-type').value   = filters.type    || '';
   document.getElementById('f-class').value  = filters.cls     || '';
   document.getElementById('f-sort').value   = filters.sort    || 'meeting';
-  document.getElementById('f-fuzzy').checked = filters.fuzzy !== false;
+  document.getElementById('f-fuzzy').checked   = filters.fuzzy !== false;
+  document.getElementById('f-uk-only').checked = !!filters.uk_only;
   selectedValues.jockey  = filters.jockey  || '';
   selectedValues.trainer = filters.trainer || '';
   selectedValues.owner   = filters.owner   || '';
@@ -751,7 +761,8 @@ function runSearch() {
   if (f.meeting) params.append('meeting', f.meeting);
   if (f.colour)  params.append('colour',  f.colour);
   params.append('sort',  f.sort || 'meeting');
-  params.append('fuzzy', f.fuzzy ? 'true' : 'false');
+  params.append('fuzzy',   f.fuzzy   ? 'true' : 'false');
+  params.append('uk_only', f.uk_only ? 'true' : 'false');
   fetch('/api/search?' + params.toString())
     .then(function(r) { return r.json(); })
     .then(function(data) { renderResults(data); populateMeetingDropdown(data); })
@@ -765,7 +776,8 @@ function clearFilters() {
   document.getElementById('f-type').value   = '';
   document.getElementById('f-class').value  = '';
   document.getElementById('f-sort').value   = 'meeting';
-  document.getElementById('f-fuzzy').checked = true;
+  document.getElementById('f-fuzzy').checked   = true;
+  document.getElementById('f-uk-only').checked = false;
   document.getElementById('f-meeting').value = '';
   selectedValues.jockey = selectedValues.trainer = selectedValues.owner = '';
   document.getElementById('f-jockey').value  = '';
@@ -773,6 +785,7 @@ function clearFilters() {
   document.getElementById('f-owner').value   = '';
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   syncFuzzyBtn();
+  syncUKBtn();
   runSearch();
 }
 
@@ -874,11 +887,27 @@ document.getElementById('saved-chips').addEventListener('click', function(e) {
   }
 });
 
-var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort', 'f-fuzzy'];
+var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort', 'f-fuzzy', 'f-uk-only'];
 for (var ci = 0; ci < changeIds.length; ci++) {
   document.getElementById(changeIds[ci]).addEventListener('change', function() { saveFilters(); runSearch(); });
 }
 document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
+
+document.getElementById('f-uk-only').addEventListener('change', function() {
+  var wrap  = document.getElementById('uk-only-wrap');
+  var label = wrap.querySelector('label');
+  if (this.checked) {
+    wrap.style.background   = 'var(--brand-light)';
+    wrap.style.borderColor  = 'rgba(139,58,58,0.4)';
+    label.style.color       = 'var(--brand)';
+    label.style.fontWeight  = '500';
+  } else {
+    wrap.style.background   = 'var(--surface2)';
+    wrap.style.borderColor  = 'var(--border2)';
+    label.style.color       = 'var(--text2)';
+    label.style.fontWeight  = '400';
+  }
+});
 
 document.getElementById('fuzzy-btn').addEventListener('click', function() {
   var cb   = document.getElementById('f-fuzzy');
@@ -917,7 +946,24 @@ try {
 restoreFilters();
 
 autoSyncIfNeeded()
-  .then(function() { return function syncFuzzyBtn() {
+  .then(function() { return function syncUKBtn() {
+  var cb    = document.getElementById('f-uk-only');
+  var wrap  = document.getElementById('uk-only-wrap');
+  var label = wrap.querySelector('label');
+  if (cb.checked) {
+    wrap.style.background   = 'var(--brand-light)';
+    wrap.style.borderColor  = 'rgba(139,58,58,0.4)';
+    label.style.color       = 'var(--brand)';
+    label.style.fontWeight  = '500';
+  } else {
+    wrap.style.background   = 'var(--surface2)';
+    wrap.style.borderColor  = 'var(--border2)';
+    label.style.color       = 'var(--text2)';
+    label.style.fontWeight  = '400';
+  }
+}
+
+function syncFuzzyBtn() {
   var cb   = document.getElementById('f-fuzzy');
   var btn  = document.getElementById('fuzzy-btn');
   var hint = document.getElementById('fuzzy-hint');
@@ -941,7 +987,7 @@ autoSyncIfNeeded()
 loadOptions(); })
   .then(function() { return loadTags(); })
   .then(function() { return loadSavedSearches(); })
-  .then(function() { syncFuzzyBtn(); runSearch(); });
+  .then(function() { syncFuzzyBtn(); syncUKBtn(); runSearch(); });
 </script>
 </body>
 </html>

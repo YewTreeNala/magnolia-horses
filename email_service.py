@@ -6,6 +6,17 @@ from datetime import datetime
 SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
 FROM_EMAIL       = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
 SITE_URL         = os.getenv('SITE_URL', 'https://magnoliahorses.com')
+UK_COURSES = {
+    'ascot','ayr','bath','beverley','brighton','carlisle','catterick','chelmsford',
+    'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las',
+    'goodwood','hamilton','haydock','hereford','huntingdon','kempton','leicester',
+    'lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
+    'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon',
+    'salisbury','sandown','sedgefield','southwell','stratford','taunton',
+    'thirsk','uttoxeter','warwick','wetherby','windsor','wolverhampton',
+    'worcester','wincanton','yarmouth','york'
+}
+
 
 
 def send_email(to_email, to_name, subject, html_body, user_id=None):
@@ -70,59 +81,76 @@ def build_combined_email(user_name, runners):
     n         = len(runners)
     n_label   = f'{n} runner{"s" if n != 1 else ""}'
 
-    rows = ''
+    # Group by meeting, preserving time order within each
+    meetings_order = []
+    meetings_map   = {}
     for r in runners:
-        rows += (
-            '<tr style="border-bottom:1px solid #f0e8e4;">'
-            f'<td style="padding:8px 10px;color:#8b3a3a;font-weight:600;white-space:nowrap">{r["time"]}</td>'
-            f'<td style="padding:8px 10px;font-weight:600;color:#2a1f14">{r["horse_name"]}</td>'
-            f'<td style="padding:8px 10px;color:#6b5a48;font-size:12px">{r["meeting"]}</td>'
-            f'<td style="padding:8px 10px;color:#6b5a48;font-size:12px">{r["jockey"] or "."}</td>'
-            f'<td style="padding:8px 10px;color:#6b5a48;font-size:12px">{r["trainer"] or "."}</td>'
-            f'<td style="padding:8px 10px;color:#6b5a48;font-size:12px">{r["colour"] or "."}</td>'
-            f'<td style="padding:8px 10px">{_badge(r["reason"])}</td>'
-            '</tr>'
-        )
+        m = r['meeting']
+        if m not in meetings_map:
+            meetings_map[m] = []
+            meetings_order.append(m)
+        meetings_map[m].append(r)
 
-    table = (
-        '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-        '<thead><tr style="background:#f5ece8;">'
-        + ''.join(
-            f'<th style="padding:6px 10px;text-align:left;color:#8b3a3a;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;">{h}</th>'
-            for h in ['Time', 'Horse', 'Meeting', 'Jockey', 'Trainer', 'Colour', 'Reason']
+    meeting_blocks = ''
+    for meeting_name in meetings_order:
+        mrs  = meetings_map[meeting_name]
+        rows = ''
+        for r in mrs:
+            rows += (
+                '<tr style="border-bottom:1px solid #f0e8e4;">'
+                f'<td style="padding:7px 10px;color:#8b3a3a;font-weight:600;white-space:nowrap;width:56px">{r["time"]}</td>'
+                f'<td style="padding:7px 10px;font-weight:600;color:#2a1f14">{r["horse_name"]}</td>'
+                f'<td style="padding:7px 10px;color:#6b5a48;font-size:12px">{r["jockey"] or "-"}</td>'
+                f'<td style="padding:7px 10px;color:#6b5a48;font-size:12px">{r["trainer"] or "-"}</td>'
+                f'<td style="padding:7px 10px;color:#6b5a48;font-size:12px">{r["colour"] or "-"}</td>'
+                f'<td style="padding:7px 10px">{_badge(r["reason"])}</td>'
+                '</tr>'
+            )
+        meeting_blocks += (
+            '<div style="margin-bottom:18px;">'
+            f'<div style="background:#8b3a3a;color:#fff;font-size:13px;font-weight:600;'
+            f'padding:7px 12px;border-radius:6px 6px 0 0;letter-spacing:0.02em">{meeting_name}</div>'
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;'
+            'border:0.5px solid #e8ddd8;border-top:none;border-radius:0 0 6px 6px;overflow:hidden;">'
+            '<thead><tr style="background:#f5ece8;">'
+            + ''.join(
+                f'<th style="padding:5px 10px;text-align:left;color:#8b3a3a;'
+                f'font-size:10px;text-transform:uppercase;letter-spacing:0.05em">{h}</th>'
+                for h in ['Time', 'Horse', 'Jockey', 'Trainer', 'Colour', 'Reason']
+            )
+            + f'</tr></thead><tbody>{rows}</tbody></table>'
+            '</div>'
         )
-        + f'</tr></thead><tbody>{rows}</tbody></table>'
-    )
 
     legend = (
-        '<div style="margin-top:14px;font-size:12px;color:#9c8a78;">'
-        '<span style="margin-right:16px">'
-        '<span style="background:#8b3a3a1a;color:#8b3a3a;border:0.5px solid #8b3a3a44;padding:1px 7px;border-radius:20px;font-size:11px">Favourite</span>'
-        ' Horse you tagged</span>'
-        '<span>'
-        '<span style="background:#185fa51a;color:#185fa5;border:0.5px solid #185fa544;padding:1px 7px;border-radius:20px;font-size:11px">Search: name</span>'
-        ' Matches a saved search</span>'
+        '<div style="margin-top:8px;font-size:12px;color:#9c8a78;display:flex;gap:14px;flex-wrap:wrap;">'
+        '<span><span style="background:#8b3a3a1a;color:#8b3a3a;border:0.5px solid #8b3a3a44;'
+        'padding:1px 7px;border-radius:20px;font-size:11px">Favourite</span> Horse you tagged</span>'
+        '<span><span style="background:#185fa51a;color:#185fa5;border:0.5px solid #185fa544;'
+        'padding:1px 7px;border-radius:20px;font-size:11px">Search: name</span> Saved search match</span>'
         '</div>'
     )
 
     return (
         '<!DOCTYPE html><html><head><meta charset="UTF-8"/></head>'
-        '<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;background:#f5f1eb;margin:0;padding:20px;">'
-        '<div style="max-width:700px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);">'
+        '<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f1eb;margin:0;padding:20px;">'
+        '<div style="max-width:680px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,0.1);">'
         '<div style="background:#8b3a3a;padding:24px 28px;">'
         '<div style="font-family:Georgia,serif;font-size:22px;color:#fff;font-weight:600;">Magnolia Horses</div>'
         f'<div style="color:rgba(255,255,255,0.75);font-size:13px;margin-top:4px;">Morning alert &mdash; {today_str}</div>'
         '</div>'
         '<div style="padding:24px 28px;">'
         f'<p style="color:#2a1f14;font-size:15px;margin:0 0 6px;">Good morning {user_name},</p>'
-        f'<p style="color:#6b5a48;font-size:14px;margin:0 0 20px;">Here {"are" if n != 1 else "is"} your {n_label} to follow today, sorted by race time.</p>'
-        + table + legend +
-        f'<div style="margin-top:24px;"><a href="{SITE_URL}" style="background:#8b3a3a;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;">View race cards</a></div>'
+        f'<p style="color:#6b5a48;font-size:14px;margin:0 0 20px;">Here {"are" if n != 1 else "is"} your {n_label} to follow today, grouped by meeting.</p>'
+        + meeting_blocks + legend +
+        f'<div style="margin-top:24px;"><a href="{SITE_URL}" style="background:#8b3a3a;color:#fff;'
+        f'padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;">View race cards</a></div>'
         '</div>'
         f'<div style="padding:16px 28px;border-top:1px solid #f0e8e4;font-size:12px;color:#9c8a78;">'
         f'Manage your <a href="{SITE_URL}/my-horses" style="color:#8b3a3a;">favourites and saved searches</a>'
         '</div></div></body></html>'
     )
+
 
 
 def send_morning_alerts(app):
@@ -156,6 +184,7 @@ def send_morning_alerts(app):
                 except Exception:
                     continue
                 for r in all_runners:
+                    if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES:    continue
                     if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():          continue
                     if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():        continue
                     if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():              continue
@@ -229,6 +258,7 @@ def send_morning_alerts_for_user(user_id, app):
             except Exception:
                 continue
             for r in all_runners:
+                    if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES:    continue
                 if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():    continue
                 if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():  continue
                 if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():         continue
