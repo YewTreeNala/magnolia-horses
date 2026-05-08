@@ -14,7 +14,7 @@ from datetime import datetime, date
 
 load_dotenv()
 
-ADMIN_EMAIL = 'markj@ukedwards.co.uk'
+ADMIN_EMAIL = 'mark@ukedwards.co.uk'
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'change-this-in-production')
