@@ -14,17 +14,7 @@ from datetime import datetime, date
 
 load_dotenv()
 
-# UK racecourses for the UK-only filter
-UK_COURSES = {
-    'ascot','ayr','bath','beverley','brighton','carlisle','catterick','chelmsford',
-    'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las',
-    'goodwood','hamilton','haydock','hereford','huntingdon','kempton','leicester',
-    'lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
-    'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon',
-    'salisbury','sandown','sedgefield','southwell','stratford','taunton',
-    'thirsk','uttoxeter','warwick','wetherby','windsor','wolverhampton',
-    'worcester','wincanton','yarmouth','york'
-}
+ADMIN_EMAIL = 'markj@ukedwards.co.uk'
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'change-this-in-production')
@@ -41,19 +31,26 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+UK_COURSES = {
+    'ascot', 'ayr', 'bath', 'beverley', 'brighton', 'carlisle', 'catterick',
+    'chelmsford', 'cheltenham', 'chepstow', 'chester', 'doncaster', 'epsom',
+    'exeter', 'ffos las', 'goodwood', 'hamilton', 'haydock', 'hereford',
+    'huntingdon', 'kempton', 'leicester', 'lingfield', 'ludlow', 'market rasen',
+    'musselburgh', 'newbury', 'newcastle', 'newmarket', 'nottingham', 'perth',
+    'plumpton', 'pontefract', 'redcar', 'ripon', 'salisbury', 'sandown',
+    'sedgefield', 'southwell', 'stratford', 'taunton', 'thirsk', 'uttoxeter',
+    'warwick', 'wetherby', 'windsor', 'wolverhampton', 'worcester', 'wincanton',
+    'yarmouth', 'york'
+}
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+
 with app.app_context():
     db.create_all()
-
-scheduler = BackgroundScheduler()
-# Hourly sync
-scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', hours=1)
-# 5am daily sync + alerts
-scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
-scheduler.start()
 
 
 def sync_and_alert(app):
@@ -61,11 +58,25 @@ def sync_and_alert(app):
     send_morning_alerts(app)
 
 
+scheduler = BackgroundScheduler()
+# Every 15 minutes during the day
+scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
+# 5am daily sync + alerts
+scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
+scheduler.start()
+
+
+# ── Helper ─────────────────────────────────────────────────────────────────────
+
+def is_admin():
+    return current_user.is_authenticated and current_user.email == ADMIN_EMAIL
+
+
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', is_admin=is_admin())
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -125,7 +136,7 @@ def logout():
 @app.route('/my-horses')
 @login_required
 def my_horses():
-    tagged  = TaggedHorse.query.filter_by(user_id=current_user.id).order_by(TaggedHorse.horse_name).all()
+    tagged   = TaggedHorse.query.filter_by(user_id=current_user.id).order_by(TaggedHorse.horse_name).all()
     searches = SavedSearch.query.filter_by(user_id=current_user.id).order_by(SavedSearch.name).all()
 
     today        = date.today().strftime('%Y-%m-%d')
@@ -134,8 +145,7 @@ def my_horses():
 
     running_today = []
     if tagged_names:
-        runners = db.session.query(Runner).join(Race).join(Meeting)\
-            .filter(Meeting.date == today).all()
+        runners = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all()
         for r in runners:
             if r.horse_name.lower() in tagged_names:
                 running_today.append({
@@ -148,9 +158,9 @@ def my_horses():
                     'form':       r.form or '',
                     'colour':     r.colour or '',
                     'notes':      tagged_notes.get(r.horse_name.lower(), ''),
+                    'position':   r.position or '',
                 })
 
-    # Parse saved search filters for display
     searches_display = []
     for s in searches:
         try:
@@ -164,6 +174,7 @@ def my_horses():
         if f.get('colour'):  parts.append(f"Colour: {f['colour']}")
         if f.get('meeting'): parts.append(f"Meeting: {f['meeting']}")
         if f.get('owner'):   parts.append(f"Owner: {f['owner']}")
+        if f.get('uk_only'): parts.append('UK only')
         searches_display.append({
             'id':      s.id,
             'name':    s.name,
@@ -172,10 +183,57 @@ def my_horses():
             'filters': s.filters,
         })
 
-    return render_template('my_horses.html',
-                           tagged=tagged,
-                           running_today=running_today,
-                           searches=searches_display)
+    return render_template('my_horses.html', tagged=tagged,
+                           running_today=running_today, searches=searches_display)
+
+
+@app.route('/account')
+@login_required
+def account():
+    try:
+        logs = EmailLog.query.filter_by(user_id=current_user.id)\
+            .order_by(EmailLog.id.desc()).limit(10).all()
+    except Exception:
+        db.create_all()
+        logs = []
+    return render_template('account.html', logs=logs, is_admin=is_admin())
+
+
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    if not is_admin():
+        return redirect(url_for('index'))
+    users = User.query.order_by(User.created_at.desc()).all()
+    users_data = []
+    for u in users:
+        searches = []
+        for s in u.searches:
+            try:
+                f = json.loads(s.filters)
+            except Exception:
+                f = {}
+            parts = []
+            if f.get('horse'):   parts.append(f"Horse: {f['horse']}")
+            if f.get('jockey'):  parts.append(f"Jockey: {f['jockey']}")
+            if f.get('trainer'): parts.append(f"Trainer: {f['trainer']}")
+            if f.get('colour'):  parts.append(f"Colour: {f['colour']}")
+            if f.get('meeting'): parts.append(f"Meeting: {f['meeting']}")
+            if f.get('uk_only'): parts.append('UK only')
+            searches.append({
+                'name':    s.name,
+                'summary': ', '.join(parts) if parts else 'All runners',
+                'alert':   s.alert,
+            })
+        users_data.append({
+            'id':           u.id,
+            'name':         u.name,
+            'email':        u.email,
+            'created_at':   u.created_at or '—',
+            'tagged_count': len(u.tagged),
+            'searches':     searches,
+        })
+    return render_template('admin_users.html', users=users_data)
 
 
 # ── Tag API ────────────────────────────────────────────────────────────────────
@@ -239,12 +297,8 @@ def update_tag_notes():
 @login_required
 def get_saved_searches():
     searches = SavedSearch.query.filter_by(user_id=current_user.id).order_by(SavedSearch.name).all()
-    return jsonify([{
-        'id':      s.id,
-        'name':    s.name,
-        'filters': json.loads(s.filters),
-        'alert':   s.alert,
-    } for s in searches])
+    return jsonify([{'id': s.id, 'name': s.name, 'filters': json.loads(s.filters), 'alert': s.alert}
+                    for s in searches])
 
 
 @app.route('/api/saved-searches', methods=['POST'])
@@ -262,11 +316,8 @@ def save_search():
         existing.alert   = alert
         db.session.commit()
         return jsonify({'status': 'updated', 'id': existing.id})
-    s = SavedSearch(
-        user_id=current_user.id, name=name,
-        filters=json.dumps(filters), alert=alert,
-        created_at=datetime.now().strftime('%Y-%m-%d %H:%M')
-    )
+    s = SavedSearch(user_id=current_user.id, name=name, filters=json.dumps(filters),
+                    alert=alert, created_at=datetime.now().strftime('%Y-%m-%d %H:%M'))
     db.session.add(s)
     db.session.commit()
     return jsonify({'status': 'saved', 'id': s.id})
@@ -298,16 +349,18 @@ def toggle_search_alert(search_id):
 @app.route('/api/check-today')
 def check_today():
     today = date.today().strftime('%Y-%m-%d')
-    count = db.session.query(Runner).join(Race).join(Meeting)\
-        .filter(Meeting.date == today).count()
+    count = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).count()
     return jsonify({'count': count, 'date': today})
 
 
 @app.route('/api/options')
 def options():
-    jockeys  = db.session.query(Runner.jockey).filter(Runner.jockey != '', Runner.jockey != None).distinct().order_by(Runner.jockey).all()
-    trainers = db.session.query(Runner.trainer).filter(Runner.trainer != '', Runner.trainer != None).distinct().order_by(Runner.trainer).all()
-    owners   = db.session.query(Runner.owner).filter(Runner.owner != '', Runner.owner != None).distinct().order_by(Runner.owner).all()
+    jockeys  = db.session.query(Runner.jockey).filter(Runner.jockey != '', Runner.jockey != None)\
+        .distinct().order_by(Runner.jockey).all()
+    trainers = db.session.query(Runner.trainer).filter(Runner.trainer != '', Runner.trainer != None)\
+        .distinct().order_by(Runner.trainer).all()
+    owners   = db.session.query(Runner.owner).filter(Runner.owner != '', Runner.owner != None)\
+        .distinct().order_by(Runner.owner).all()
     return jsonify({
         'jockeys':  [r[0] for r in jockeys],
         'trainers': [r[0] for r in trainers],
@@ -317,30 +370,27 @@ def options():
 
 @app.route('/api/search')
 def search():
-    horse    = request.args.get('horse', '').strip()
-    trainer  = request.args.get('trainer', '').strip()
-    jockey   = request.args.get('jockey', '').strip()
-    colour   = request.args.get('colour', '').strip()
-    meeting  = request.args.get('meeting', '').strip()
-    owner    = request.args.get('owner', '').strip()
-    sort     = request.args.get('sort', 'meeting').strip()
-    fuzzy    = request.args.get('fuzzy', 'true').strip().lower() != 'false'
-    uk_only  = request.args.get('uk_only', 'false').strip().lower() == 'true'
+    horse   = request.args.get('horse',   '').strip()
+    trainer = request.args.get('trainer', '').strip()
+    jockey  = request.args.get('jockey',  '').strip()
+    colour  = request.args.get('colour',  '').strip()
+    meeting = request.args.get('meeting', '').strip()
+    owner   = request.args.get('owner',   '').strip()
+    sort    = request.args.get('sort',    'meeting').strip()
+    fuzzy   = request.args.get('fuzzy',   'true').strip().lower() != 'false'
+    uk_only = request.args.get('uk_only', 'false').strip().lower() == 'true'
 
     today = date.today().strftime('%Y-%m-%d')
     query = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today)
 
-    if trainer:  query = query.filter(Runner.trainer == trainer)
-    if jockey:   query = query.filter(Runner.jockey == jockey)
-    if colour:   query = query.filter(Runner.colour.ilike(f'%{colour}%'))
-    if meeting:  query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
-    if owner:    query = query.filter(Runner.owner == owner)
-    if uk_only:
-        query = query.filter(Meeting.name.ilike('%') )  # fetch all then filter in Python
+    if trainer: query = query.filter(Runner.trainer == trainer)
+    if jockey:  query = query.filter(Runner.jockey == jockey)
+    if colour:  query = query.filter(Runner.colour.ilike(f'%{colour}%'))
+    if meeting: query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
+    if owner:   query = query.filter(Runner.owner == owner)
 
     runners = query.order_by(Meeting.name, Race.time, Runner.number).all()
 
-    # Apply UK-only filter in Python (case-insensitive course name match)
     if uk_only:
         runners = [r for r in runners if r.race.meeting.name.lower().strip() in UK_COURSES]
 
@@ -373,28 +423,57 @@ def search():
         return jsonify(sort_by_meeting(runners, tagged_map))
 
 
-def build_race_obj(r_data, tagged_map):
+def runner_to_dict(r, tagged_map):
     return {
-        'time':     r_data['race'].time,
-        'name':     r_data['race'].name,
-        'distance': r_data['race'].distance,
-        'class':    r_data['race'].race_class,
-        'runners': [{
-            'number':  r.number,
-            'name':    r.horse_name,
-            'colour':  r.colour,
-            'age':     r.age,
-            'sex':     r.sex,
-            'trainer': r.trainer,
-            'jockey':  r.jockey,
-            'owner':   r.owner,
-            'form':    r.form,
-            'weight':  r.weight,
-            'or':      r.official_rating,
-            'odds':    r.odds,
-            'tagged':  r.horse_name.lower() in tagged_map,
-            'notes':   tagged_map.get(r.horse_name.lower(), ''),
-        } for r in r_data['runners']]
+        'number':   r.number,
+        'name':     r.horse_name,
+        'colour':   r.colour,
+        'age':      r.age,
+        'sex':      r.sex,
+        'trainer':  r.trainer,
+        'jockey':   r.jockey,
+        'owner':    r.owner,
+        'form':     r.form,
+        'weight':   r.weight,
+        'or':       r.official_rating,
+        'odds':     r.odds,
+        'headgear': r.headgear or '',
+        'last_run': r.last_run or '',
+        'position': r.position or '',
+        'tagged':   r.horse_name.lower() in tagged_map,
+        'notes':    tagged_map.get(r.horse_name.lower(), ''),
+    }
+
+
+def build_race_obj(r_data, tagged_map):
+    race    = r_data['race']
+    runners = r_data['runners']
+    is_result = (race.race_status or '').lower() == 'result'
+
+    # Sort by finishing position if race is complete, else by number
+    if is_result:
+        def pos_key(r):
+            p = r.position or ''
+            try:
+                return int(p)
+            except (ValueError, TypeError):
+                return 999
+        runners = sorted(runners, key=pos_key)
+    else:
+        def num_key(r):
+            try:
+                return int(r.number or 0)
+            except (ValueError, TypeError):
+                return 0
+        runners = sorted(runners, key=num_key)
+
+    return {
+        'time':      race.time,
+        'name':      race.name,
+        'distance':  race.distance,
+        'class':     race.race_class,
+        'is_result': is_result,
+        'runners':   [runner_to_dict(r, tagged_map) for r in runners]
     }
 
 
@@ -428,7 +507,8 @@ def sort_by_time(runners, tagged_map):
     time_groups = {}
     for r_key, r_data in races.items():
         t = r_data['race'].time
-        if t not in time_groups: time_groups[t] = []
+        if t not in time_groups:
+            time_groups[t] = []
         time_groups[t].append(r_data)
     result = []
     for time_slot in sorted(time_groups.keys()):
@@ -439,53 +519,29 @@ def sort_by_time(runners, tagged_map):
     return result
 
 
-@app.route('/api/sync', methods=['POST'])
-def manual_sync():
-    sync_todays_races(app)
-    return jsonify({'status': 'ok'})
-
-
-@app.route('/account')
-@login_required
-def account():
-    try:
-        logs = EmailLog.query.filter_by(user_id=current_user.id)            .order_by(EmailLog.id.desc()).limit(10).all()
-    except Exception:
-        # Table may not exist yet — create it and return empty
-        db.create_all()
-        logs = []
-    return render_template('account.html', logs=logs)
-
-
 @app.route('/api/run-all-searches')
 @login_required
 def run_all_searches():
-    """Run all of the current user's saved searches and return combined results."""
     searches = SavedSearch.query.filter_by(user_id=current_user.id).all()
     if not searches:
         return jsonify([])
-
-    today = date.today().strftime('%Y-%m-%d')
-    all_runners = db.session.query(Runner).join(Race).join(Meeting)        .filter(Meeting.date == today).all()
-
-    tagged_map = {t.horse_name.lower(): t.notes or ''
-                  for t in TaggedHorse.query.filter_by(user_id=current_user.id).all()}
-
-    # Collect matched runner ids across all searches to deduplicate
-    matched_ids = {}   # runner.id -> runner obj
-
+    today       = date.today().strftime('%Y-%m-%d')
+    all_runners = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all()
+    tagged_map  = {t.horse_name.lower(): t.notes or ''
+                   for t in TaggedHorse.query.filter_by(user_id=current_user.id).all()}
+    matched_ids = {}
     for saved in searches:
         try:
             f = json.loads(saved.filters)
         except Exception:
             continue
         for r in all_runners:
-            if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES:    continue
-            if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():    continue
-            if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower():  continue
-            if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():         continue
-            if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():         continue
-            if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():           continue
+            if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES: continue
+            if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():  continue
+            if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower(): continue
+            if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():       continue
+            if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():       continue
+            if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():         continue
             hf = (f.get('horse') or '').strip()
             if hf:
                 use_fuzzy = f.get('fuzzy', True)
@@ -499,35 +555,32 @@ def run_all_searches():
                 if not ok:
                     continue
             matched_ids[r.id] = r
-
     matched = list(matched_ids.values())
-    def sort_key(r):
-        try:
-            num = int(r.number or 0)
-        except (ValueError, TypeError):
-            num = 0
-        return (r.race.meeting.name, r.race.time, num)
-    matched.sort(key=sort_key)
-
     if matched:
         return jsonify(sort_by_meeting(matched, tagged_map))
     return jsonify([])
+
+
+@app.route('/api/sync', methods=['POST'])
+@login_required
+def manual_sync():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    sync_todays_races(app)
+    return jsonify({'status': 'ok'})
 
 
 @app.route('/api/email-log')
 @login_required
 def email_log():
     try:
-        logs = EmailLog.query.filter_by(user_id=current_user.id)            .order_by(EmailLog.id.desc()).limit(10).all()
+        logs = EmailLog.query.filter_by(user_id=current_user.id)\
+            .order_by(EmailLog.id.desc()).limit(10).all()
     except Exception:
         db.create_all()
         logs = []
-    return jsonify([{
-        'id':      l.id,
-        'subject': l.subject,
-        'status':  l.status,
-        'sent_at': l.sent_at,
-    } for l in logs])
+    return jsonify([{'id': l.id, 'subject': l.subject, 'status': l.status, 'sent_at': l.sent_at}
+                    for l in logs])
 
 
 @app.route('/api/email-log/<int:log_id>')
@@ -536,19 +589,13 @@ def email_log_detail(log_id):
     log = EmailLog.query.filter_by(id=log_id, user_id=current_user.id).first()
     if not log:
         return jsonify({'error': 'not found'}), 404
-    return jsonify({
-        'id':        log.id,
-        'subject':   log.subject,
-        'status':    log.status,
-        'sent_at':   log.sent_at,
-        'html_body': log.html_body,
-    })
+    return jsonify({'id': log.id, 'subject': log.subject, 'status': log.status,
+                    'sent_at': log.sent_at, 'html_body': log.html_body})
 
 
 @app.route('/api/send-test-email', methods=['POST'])
 @login_required
 def send_test_email():
-    """Send a test version of the morning email right now."""
     from email_service import send_morning_alerts_for_user
     result = send_morning_alerts_for_user(current_user.id, app)
     return jsonify(result)
@@ -580,7 +627,8 @@ def set_colour_override():
         return jsonify({'error': 'required'}), 400
     override = ColourOverride.query.filter_by(horse_name=horse_name).first()
     if override:
-        override.colour = colour; override.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M')
+        override.colour     = colour
+        override.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M')
     else:
         db.session.add(ColourOverride(horse_name=horse_name, colour=colour,
                                       updated_at=datetime.now().strftime('%Y-%m-%d %H:%M')))

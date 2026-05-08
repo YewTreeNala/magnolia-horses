@@ -12,6 +12,7 @@
       --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
       --brand: #8b3a3a; --brand-light: #f5ece8;
       --green: #3b6d11; --green-bg: #eaf3de; --red: #a32d2d;
+      --gold: #b8860b; --gold-bg: #fdf8e8;
       --blue: #185fa5; --blue-bg: rgba(230,241,251,0.9);
       --radius: 8px; --radius-lg: 12px;
     }
@@ -45,7 +46,7 @@
     .select-search-wrap .dropdown-item:hover, .select-search-wrap .dropdown-item.active { background: var(--brand-light); }
     .select-search-wrap .dropdown-empty { padding: 10px; font-size: 13px; color: var(--text3); }
 
-    .toggle-wrap { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); cursor: pointer; user-select: none; }
+    .toggle-wrap { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); cursor: pointer; }
     .toggle-wrap label { font-size: 13px; color: var(--text2); cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
     .toggle-wrap input[type="checkbox"] { width: 14px; height: 14px; accent-color: var(--brand); cursor: pointer; }
 
@@ -56,14 +57,14 @@
     .btn-secondary:hover { background: var(--surface2); }
     .btn-save-search { background: transparent; color: var(--brand); border: 0.5px solid rgba(139,58,58,0.4); border-radius: var(--radius); padding: 10px 14px; font-size: 13px; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-save-search:hover { background: var(--brand-light); }
-    .btn-sync { background: transparent; color: var(--blue); border: 0.5px solid var(--blue); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: inherit; margin-left: auto; min-height: 44px; }
+    .btn-sync { background: transparent; color: var(--blue); border: 0.5px solid var(--blue); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-sync:hover { background: var(--blue-bg); }
     .btn-sync.syncing { opacity: 0.6; pointer-events: none; }
 
-    .saved-searches-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 0.75rem; align-items: center; }
+    .saved-searches-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; align-items: center; }
     .saved-search-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--brand-light); border: 0.5px solid rgba(139,58,58,0.25); border-radius: 20px; padding: 4px 10px 4px 12px; font-size: 12px; color: var(--brand); cursor: pointer; }
     .saved-search-chip:hover { background: #eedbd5; }
-    .saved-search-chip .chip-alert { font-size: 10px; color: var(--green); margin-left: 2px; }
+    .saved-search-chip .chip-alert { font-size: 10px; color: var(--green); }
     .saved-search-chip .chip-del { background: none; border: none; cursor: pointer; color: var(--text3); font-size: 14px; padding: 0 0 0 4px; line-height: 1; }
     .saved-search-chip .chip-del:hover { color: var(--red); }
     .saved-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -71,7 +72,6 @@
     .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; font-size: 13px; color: var(--text2); }
     .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
     .empty-state .empty-icon { font-size: 32px; margin-bottom: 0.5rem; opacity: 0.5; }
-    .syncing-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; background: var(--surface); border-radius: var(--radius-lg); border: 0.5px solid var(--border); }
 
     .meeting-block { margin-bottom: 1.5rem; }
     .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -79,42 +79,57 @@
     .meeting-meta { font-size: 12px; color: var(--text2); }
     .race-block { border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 0.75rem; overflow: hidden; background: var(--surface); }
     .race-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; border-bottom: 0.5px solid var(--border); }
+    .race-header.result { background: var(--gold-bg); border-bottom-color: rgba(184,134,11,0.2); }
     .race-time { font-size: 15px; font-weight: 500; color: var(--brand); min-width: 44px; flex-shrink: 0; }
     .race-info { flex: 1; min-width: 0; }
     .race-name { font-size: 13px; font-weight: 500; line-height: 1.4; }
     .race-details { font-size: 12px; color: var(--text2); margin-top: 2px; }
     .race-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--brand-light); color: var(--brand); font-weight: 500; white-space: nowrap; border: 0.5px solid rgba(139,58,58,0.2); align-self: flex-start; flex-shrink: 0; }
+    .result-badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; background: var(--gold-bg); color: var(--gold); font-weight: 500; white-space: nowrap; border: 0.5px solid rgba(184,134,11,0.3); align-self: flex-start; flex-shrink: 0; }
 
     .table-wrap { overflow-x: auto; width: 100%; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
-    th { padding: 6px 10px; text-align: left; font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; overflow: hidden; }
+    th { padding: 6px 8px; text-align: left; font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    td { padding: 7px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle; overflow: hidden; }
     tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: var(--brand-light); }
-    .horse-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 12px; font-weight: 500; flex-shrink: 0; }
-    .horse-name-cell { display: flex; align-items: center; gap: 8px; }
-    .silk { width: 20px; height: 20px; border-radius: 2px; flex-shrink: 0; }
+    .pos-cell { font-weight: 700; font-size: 14px; color: var(--text2); text-align: center; }
+    .pos-cell.pos-1 { color: var(--gold); }
+    .pos-cell.pos-2 { color: #888; }
+    .pos-cell.pos-3 { color: #cd7f32; }
+    .horse-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 11px; font-weight: 500; }
+    .horse-name-cell { display: flex; align-items: center; gap: 7px; }
+    .silk { width: 18px; height: 18px; border-radius: 2px; flex-shrink: 0; }
     .horse-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .horse-owner { font-size: 11px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .form-str { font-family: "Courier New", monospace; font-size: 12px; letter-spacing: 0.06em; color: var(--text2); }
+    .form-str { font-family: "Courier New", monospace; font-size: 11px; letter-spacing: 0.05em; color: var(--text2); }
     .form-win { color: var(--green); font-weight: 500; }
-    .colour-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 7px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface2); color: var(--text2); white-space: nowrap; }
-    .colour-swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; border: 0.5px solid rgba(0,0,0,0.15); }
-    .jt-cell { font-size: 12px; color: var(--text2); line-height: 1.5; }
+    .colour-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 1px 6px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface2); color: var(--text2); white-space: nowrap; }
+    .colour-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 0.5px solid rgba(0,0,0,0.15); }
+    .jt-cell { font-size: 11px; color: var(--text2); line-height: 1.5; }
     .jt-cell strong { color: var(--text); font-weight: 500; }
-    .tag-btn { background: none; border: none; cursor: pointer; padding: 4px 6px; color: var(--text3); font-size: 17px; line-height: 1; border-radius: 4px; transition: color 0.15s; }
+    .headgear-chip { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #e8f4fd; color: #1565c0; border: 0.5px solid #90caf9; font-weight: 500; white-space: nowrap; }
+    .last-run-chip { font-size: 10px; color: var(--text3); }
+    .sp-chip { font-size: 11px; font-weight: 500; color: var(--gold); }
+
+    .tag-btn { background: none; border: none; cursor: pointer; padding: 3px 5px; color: var(--text3); font-size: 16px; line-height: 1; border-radius: 4px; transition: color 0.15s; }
     .tag-btn:hover { color: var(--brand); }
     .tag-btn.tagged { color: var(--brand); }
-    .tag-notes-dot { font-size: 8px; color: var(--brand); vertical-align: super; margin-left: 1px; }
+    .tag-notes-dot { font-size: 7px; color: var(--brand); vertical-align: super; margin-left: 1px; }
 
     .runner-cards { display: none; }
-    .runner-card { padding: 12px 14px; border-bottom: 0.5px solid var(--border); }
+    .runner-card { padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
     .runner-card:last-child { border-bottom: none; }
-    .runner-card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .runner-card-num { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 13px; font-weight: 500; flex-shrink: 0; }
+    .runner-card.winner { background: var(--gold-bg); }
+    .runner-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .runner-card-pos { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .runner-card-pos.pos-1 { background: var(--gold-bg); color: var(--gold); border-color: rgba(184,134,11,0.3); }
+    .runner-card-pos.pos-2 { background: #f5f5f5; color: #888; }
+    .runner-card-pos.pos-3 { background: #fdf0e8; color: #cd7f32; }
+    .runner-card-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 12px; font-weight: 500; flex-shrink: 0; }
     .runner-card-name { font-weight: 500; font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .runner-card-form { font-family: "Courier New", monospace; font-size: 13px; color: var(--text2); flex-shrink: 0; }
-    .runner-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+    .runner-card-form { font-family: "Courier New", monospace; font-size: 12px; color: var(--text2); flex-shrink: 0; }
+    .runner-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 12px; }
     .runner-card-field .label { color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 1px; }
     .runner-card-field .value { font-size: 13px; color: var(--text); }
     .runner-card-field .value.muted { color: var(--text2); }
@@ -180,6 +195,7 @@
         <span class="nav-user">{{ current_user.name }}</span>
         <a href="/my-horses">My horses</a>
         <a href="/account">Account</a>
+        {% if is_admin %}<a href="/admin/users">Users</a>{% endif %}
         <a href="/logout">Sign out</a>
       {% else %}
         <a href="/login">Sign in</a>
@@ -205,12 +221,12 @@
         <div style="display:flex;gap:6px;align-items:stretch">
           <input type="text" id="f-horse" placeholder="e.g. Desert Crown" autocomplete="off" style="flex:1"/>
           <button type="button" id="fuzzy-btn" title="Toggle fuzzy / phonetic matching"
-            style="flex-shrink:0;padding:0 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--border2);background:var(--brand);color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s">
+            style="flex-shrink:0;padding:0 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--brand);background:var(--brand);color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s">
             &#127518; Fuzzy on
           </button>
         </div>
         <div id="fuzzy-hint" style="font-size:11px;color:var(--brand);margin-top:4px">
-          Finds near-matches and sound-alikes (e.g. "Dessert Crown" finds "Desert Crown")
+          Fuzzy &amp; phonetic on &mdash; finds near-matches and sound-alikes
         </div>
         <input type="checkbox" id="f-fuzzy" checked style="display:none"/>
       </div>
@@ -289,12 +305,11 @@
       </div>
       <div class="filter-group">
         <label>Country</label>
-        <div class="toggle-wrap" id="uk-only-wrap" onclick="document.getElementById('f-uk-only').click()" style="cursor:pointer">
+        <div class="toggle-wrap" id="uk-only-wrap" onclick="document.getElementById('f-uk-only').click()">
           <input type="checkbox" id="f-uk-only"/>
           <label for="f-uk-only" style="cursor:pointer;font-size:13px;color:var(--text2)">UK meetings only</label>
         </div>
       </div>
-
     </div>
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
@@ -303,13 +318,15 @@
       {% if current_user.is_authenticated %}
         <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
       {% endif %}
-      <button class="btn-sync" id="sync-btn">&#8635; Sync now</button>
+      {% if is_admin %}
+        <button class="btn-sync" id="sync-btn">&#8635; Sync now</button>
+      {% endif %}
     </div>
   </div>
 
   <div id="results-area">
-    <div class="syncing-state">
-      <div style="font-size:28px;margin-bottom:0.5rem">&#127944;</div>
+    <div class="empty-state">
+      <div class="empty-icon">&#127944;</div>
       <div>Loading today's runners...</div>
     </div>
   </div>
@@ -338,7 +355,7 @@
     <p id="tag-modal-horse" style="font-weight:500;color:var(--brand);margin-bottom:0.75rem;font-size:15px"></p>
     <div class="modal-field">
       <label for="tag-notes">Notes (optional)</label>
-      <textarea id="tag-notes" placeholder="e.g. Good on soft ground, watch for Cheltenham..."></textarea>
+      <textarea id="tag-notes" placeholder="e.g. Good on soft ground..."></textarea>
     </div>
     <div class="modal-btns">
       <button class="modal-btn-primary" id="tag-modal-save">Save</button>
@@ -370,10 +387,11 @@
 </div>
 
 <script>
-var IS_LOGGED_IN  = {{ 'true' if current_user.is_authenticated else 'false' }};
-var STORAGE_KEY   = 'magnolia_filters_v3';
-var taggedMap     = {};
-var pendingHorse  = null;
+var IS_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
+var IS_ADMIN     = {{ 'true' if is_admin else 'false' }};
+var STORAGE_KEY  = 'magnolia_filters_v3';
+var taggedMap    = {};
+var pendingHorse = null;
 var savedSearches = [];
 var dropdownData   = { jockey: [], trainer: [], owner: [] };
 var selectedValues = { jockey: '', trainer: '', owner: '' };
@@ -384,37 +402,36 @@ var COLOUR_META = {
 };
 
 function formatDate(d) {
-  var y = d.getFullYear();
-  var m = String(d.getMonth() + 1).padStart(2, '0');
-  var dy = String(d.getDate()).padStart(2, '0');
-  return y + '-' + m + '-' + dy;
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
-
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
 function silkSvg(colour, num) {
-  var c = COLOUR_META[(colour || '').toLowerCase()] || '#888888';
+  var c = COLOUR_META[(colour||'').toLowerCase()] || '#888';
   return '<svg class="silk" viewBox="0 0 20 20"><rect width="20" height="20" fill="' + c + '"/>'
-    + '<text x="10" y="14" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="sans-serif">'
+    + '<text x="10" y="14" text-anchor="middle" font-size="8" font-weight="500" fill="white" font-family="sans-serif">'
     + escHtml(String(num)) + '</text></svg>';
 }
-
 function colourChip(colour) {
-  if (!colour) return '<span style="font-size:11px;color:var(--text3)">-</span>';
+  if (!colour) return '<span style="font-size:10px;color:var(--text3)">-</span>';
   var hex = COLOUR_META[colour.toLowerCase()];
   var sw  = hex ? '<span class="colour-swatch" style="background:' + hex + '"></span>' : '';
   return '<span class="colour-chip">' + sw + escHtml(colour) + '</span>';
 }
-
 function formHtml(form) {
   if (!form) return '-';
   var r = '';
-  for (var i = 0; i < form.length; i++) {
-    r += form[i] === '1' ? '<span class="form-win">' + form[i] + '</span>' : '<span>' + form[i] + '</span>';
+  for (var i=0;i<form.length;i++) {
+    r += form[i]==='1' ? '<span class="form-win">'+form[i]+'</span>' : '<span>'+form[i]+'</span>';
   }
   return r;
+}
+function posClass(pos) {
+  if (pos === '1') return ' pos-1';
+  if (pos === '2') return ' pos-2';
+  if (pos === '3') return ' pos-3';
+  return '';
 }
 
 // ── Filter persistence ────────────────────────────────────────────────────────
@@ -433,11 +450,9 @@ function getFilters() {
     uk_only: document.getElementById('f-uk-only').checked
   };
 }
-
 function saveFilters() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getFilters())); } catch(e) {}
 }
-
 function restoreFilters() {
   try {
     var saved = localStorage.getItem(STORAGE_KEY);
@@ -456,7 +471,6 @@ function restoreFilters() {
     return true;
   } catch(e) { return false; }
 }
-
 function applyFilters(filters) {
   document.getElementById('f-horse').value  = filters.horse   || '';
   document.getElementById('f-colour').value = filters.colour  || '';
@@ -476,518 +490,370 @@ function applyFilters(filters) {
 // ── Tagging ───────────────────────────────────────────────────────────────────
 function loadTags() {
   if (!IS_LOGGED_IN) return Promise.resolve();
-  return fetch('/api/my-tags')
-    .then(function(r) { return r.json(); })
-    .then(function(tags) {
-      taggedMap = {};
-      for (var i = 0; i < tags.length; i++) {
-        taggedMap[tags[i].horse_name.toLowerCase()] = tags[i].notes || '';
-      }
-    }).catch(function() {});
+  return fetch('/api/my-tags').then(function(r){return r.json();}).then(function(tags){
+    taggedMap = {};
+    for (var i=0;i<tags.length;i++) taggedMap[tags[i].horse_name.toLowerCase()] = tags[i].notes||'';
+  }).catch(function(){});
 }
-
 function openTagModal(horseName) {
   if (!IS_LOGGED_IN) { document.getElementById('login-modal').classList.add('open'); return; }
   pendingHorse = horseName;
-  var key      = horseName.toLowerCase();
-  var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
+  var key = horseName.toLowerCase(), isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
   document.getElementById('tag-modal-title').textContent    = isTagged ? 'Edit tag' : 'Tag horse';
   document.getElementById('tag-modal-horse').textContent    = horseName;
   document.getElementById('tag-notes').value                = isTagged ? taggedMap[key] : '';
   document.getElementById('tag-modal-remove').style.display = isTagged ? 'inline-block' : 'none';
   document.getElementById('tag-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('tag-notes').focus(); }, 50);
+  setTimeout(function(){ document.getElementById('tag-notes').focus(); }, 50);
 }
-
 function saveTag() {
   if (!pendingHorse) return;
-  var horseName = pendingHorse;
-  var notes     = document.getElementById('tag-notes').value.trim();
-  fetch('/api/tag', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ horse_name: horseName, notes: notes }) })
-    .then(function() { taggedMap[horseName.toLowerCase()] = notes; refreshTagButtons(horseName); closeTagModal(); });
+  var horseName = pendingHorse, notes = document.getElementById('tag-notes').value.trim();
+  fetch('/api/tag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({horse_name:horseName,notes:notes})})
+    .then(function(){ taggedMap[horseName.toLowerCase()]=notes; refreshTagButtons(horseName); closeTagModal(); });
 }
-
 function removeTag() {
   if (!pendingHorse) return;
   var horseName = pendingHorse;
-  fetch('/api/untag', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ horse_name: horseName }) })
-    .then(function() { delete taggedMap[horseName.toLowerCase()]; refreshTagButtons(horseName); closeTagModal(); });
+  fetch('/api/untag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({horse_name:horseName})})
+    .then(function(){ delete taggedMap[horseName.toLowerCase()]; refreshTagButtons(horseName); closeTagModal(); });
 }
-
-function closeTagModal() { document.getElementById('tag-modal').classList.remove('open'); pendingHorse = null; }
-
+function closeTagModal() { document.getElementById('tag-modal').classList.remove('open'); pendingHorse=null; }
 function refreshTagButtons(horseName) {
-  var key      = horseName.toLowerCase();
-  var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
-  var hasNotes = isTagged && taggedMap[key].length > 0;
-  var btns     = document.querySelectorAll('.tag-btn[data-horse="' + escHtml(horseName) + '"]');
-  for (var i = 0; i < btns.length; i++) {
-    btns[i].classList.toggle('tagged', isTagged);
-    btns[i].title     = isTagged ? 'Edit tag / notes' : 'Tag this horse';
-    btns[i].innerHTML = (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '');
+  var key=horseName.toLowerCase(), isTagged=Object.prototype.hasOwnProperty.call(taggedMap,key), hasNotes=isTagged&&taggedMap[key].length>0;
+  var btns=document.querySelectorAll('.tag-btn[data-horse="'+escHtml(horseName)+'"]');
+  for (var i=0;i<btns.length;i++){
+    btns[i].classList.toggle('tagged',isTagged);
+    btns[i].title=isTagged?'Edit tag / notes':'Tag this horse';
+    btns[i].innerHTML=(isTagged?'&#9829;':'&#9825;')+(hasNotes?'<span class="tag-notes-dot">&#9679;</span>':'');
   }
 }
-
-function makeTagBtn(horseName, isTagged, notes) {
-  var esc      = escHtml(horseName);
-  var hasNotes = isTagged && notes && notes.length > 0;
-  return '<button class="tag-btn' + (isTagged ? ' tagged' : '') + '" data-horse="' + esc + '" title="' + (isTagged ? 'Edit tag / notes' : 'Tag this horse') + '">'
-    + (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '') + '</button>';
+function makeTagBtn(horseName,isTagged,notes){
+  var esc=escHtml(horseName),hasNotes=isTagged&&notes&&notes.length>0;
+  return '<button class="tag-btn'+(isTagged?' tagged':'')+'" data-horse="'+esc+'" title="'+(isTagged?'Edit tag / notes':'Tag this horse')+'">'
+    +(isTagged?'&#9829;':'&#9825;')+(hasNotes?'<span class="tag-notes-dot">&#9679;</span>':'')+'</button>';
 }
 
 // ── Saved searches ────────────────────────────────────────────────────────────
 function loadSavedSearches() {
   if (!IS_LOGGED_IN) return Promise.resolve();
-  return fetch('/api/saved-searches')
-    .then(function(r) { return r.json(); })
-    .then(function(data) { savedSearches = data; renderSavedChips(); })
-    .catch(function() {});
+  return fetch('/api/saved-searches').then(function(r){return r.json();}).then(function(data){
+    savedSearches=data; renderSavedChips();
+  }).catch(function(){});
 }
-
-function renderSavedChips() {
-  var bar   = document.getElementById('saved-searches-bar');
-  var chips = document.getElementById('saved-chips');
-  if (!savedSearches.length) { bar.style.display = 'none'; return; }
-  bar.style.display = 'block';
-  var html = '<span class="saved-label">Saved:</span>';
-  for (var i = 0; i < savedSearches.length; i++) {
-    var s = savedSearches[i];
-    var alertDot = s.alert ? '<span class="chip-alert">&#128276;</span>' : '';
-    html += '<span class="saved-search-chip" data-id="' + s.id + '">'
-      + escHtml(s.name) + alertDot
-      + '<button class="chip-del" data-id="' + s.id + '" title="Remove">&#215;</button>'
-      + '</span>';
+function renderSavedChips(){
+  var bar=document.getElementById('saved-searches-bar'), chips=document.getElementById('saved-chips');
+  if (!savedSearches.length){bar.style.display='none';return;}
+  bar.style.display='block';
+  var html='<span class="saved-label">Saved:</span>';
+  for (var i=0;i<savedSearches.length;i++){
+    var s=savedSearches[i];
+    html+='<span class="saved-search-chip" data-id="'+s.id+'">'
+      +escHtml(s.name)+(s.alert?'<span class="chip-alert">&#128276;</span>':'')
+      +'<button class="chip-del" data-id="'+s.id+'" title="Remove">&#215;</button></span>';
   }
-  chips.innerHTML = html;
+  chips.innerHTML=html;
 }
-
-function openSaveSearchModal() {
-  var f = getFilters();
-  var parts = [];
-  if (f.horse)   parts.push('Horse: ' + f.horse);
-  if (f.jockey)  parts.push('Jockey: ' + f.jockey);
-  if (f.trainer) parts.push('Trainer: ' + f.trainer);
-  if (f.colour)  parts.push('Colour: ' + f.colour);
-  if (f.meeting) parts.push('Meeting: ' + f.meeting);
-  if (f.owner)   parts.push('Owner: ' + f.owner);
-  var summary = parts.length ? parts.join(', ') : 'All runners for today';
-  document.getElementById('save-search-summary').textContent = summary;
-  document.getElementById('save-search-name').value = '';
-  document.getElementById('save-search-alert').checked = false;
+function openSaveSearchModal(){
+  var f=getFilters(),parts=[];
+  if (f.horse)   parts.push('Horse: '+f.horse);
+  if (f.jockey)  parts.push('Jockey: '+f.jockey);
+  if (f.trainer) parts.push('Trainer: '+f.trainer);
+  if (f.colour)  parts.push('Colour: '+f.colour);
+  if (f.meeting) parts.push('Meeting: '+f.meeting);
+  if (f.owner)   parts.push('Owner: '+f.owner);
+  if (f.uk_only) parts.push('UK only');
+  document.getElementById('save-search-summary').textContent=parts.length?parts.join(', '):'All runners for today';
+  document.getElementById('save-search-name').value='';
+  document.getElementById('save-search-alert').checked=false;
   document.getElementById('save-search-modal').classList.add('open');
-  setTimeout(function() { document.getElementById('save-search-name').focus(); }, 50);
+  setTimeout(function(){document.getElementById('save-search-name').focus();},50);
 }
-
-function confirmSaveSearch() {
-  var name  = document.getElementById('save-search-name').value.trim();
-  var alert = document.getElementById('save-search-alert').checked;
-  if (!name) { document.getElementById('save-search-name').focus(); return; }
-  var filters = getFilters();
-  fetch('/api/saved-searches', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: name, filters: filters, alert: alert }) })
-    .then(function() { document.getElementById('save-search-modal').classList.remove('open'); return loadSavedSearches(); });
+function confirmSaveSearch(){
+  var name=document.getElementById('save-search-name').value.trim();
+  var alert=document.getElementById('save-search-alert').checked;
+  if (!name){document.getElementById('save-search-name').focus();return;}
+  fetch('/api/saved-searches',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name,filters:getFilters(),alert:alert})})
+    .then(function(){document.getElementById('save-search-modal').classList.remove('open');return loadSavedSearches();});
 }
 
 // ── Dropdowns ─────────────────────────────────────────────────────────────────
-function initDropdown(field) {
-  var input = document.getElementById('f-' + field);
-  var dd    = document.getElementById('dd-' + field);
-  var wrap  = document.getElementById('wrap-' + field);
-
-  function renderDropdown(filter) {
-    var q     = (filter || '').toLowerCase();
-    var items = [];
-    for (var i = 0; i < dropdownData[field].length; i++) {
-      var v = dropdownData[field][i];
-      if (!q || v.toLowerCase().indexOf(q) !== -1) items.push(v);
-    }
-    if (!items.length) { dd.innerHTML = '<div class="dropdown-empty">No matches</div>'; return; }
-    var h = '<div class="dropdown-item" data-value="">- Any ' + field + ' -</div>';
-    for (var j = 0; j < items.length; j++) {
-      h += '<div class="dropdown-item' + (items[j] === selectedValues[field] ? ' active' : '') + '" data-value="' + escHtml(items[j]) + '">' + escHtml(items[j]) + '</div>';
-    }
-    dd.innerHTML = h;
+function initDropdown(field){
+  var input=document.getElementById('f-'+field),dd=document.getElementById('dd-'+field),wrap=document.getElementById('wrap-'+field);
+  function renderDD(filter){
+    var q=(filter||'').toLowerCase(),items=[];
+    for (var i=0;i<dropdownData[field].length;i++){var v=dropdownData[field][i];if(!q||v.toLowerCase().indexOf(q)!==-1)items.push(v);}
+    if(!items.length){dd.innerHTML='<div class="dropdown-empty">No matches</div>';return;}
+    var h='<div class="dropdown-item" data-value="">- Any '+field+' -</div>';
+    for (var j=0;j<items.length;j++) h+='<div class="dropdown-item'+(items[j]===selectedValues[field]?' active':'')+'" data-value="'+escHtml(items[j])+'">'+escHtml(items[j])+'</div>';
+    dd.innerHTML=h;
   }
-
-  input.addEventListener('focus', function() { renderDropdown(input.value); dd.classList.add('open'); });
-  input.addEventListener('input', function() { selectedValues[field] = ''; renderDropdown(input.value); dd.classList.add('open'); });
-  dd.addEventListener('mousedown', function(e) {
-    var item = e.target.closest('.dropdown-item');
-    if (!item) return;
-    selectedValues[field] = item.dataset.value;
-    input.value = item.dataset.value;
-    dd.classList.remove('open');
-    saveFilters(); runSearch();
+  input.addEventListener('focus',function(){renderDD(input.value);dd.classList.add('open');});
+  input.addEventListener('input',function(){selectedValues[field]='';renderDD(input.value);dd.classList.add('open');});
+  dd.addEventListener('mousedown',function(e){
+    var item=e.target.closest('.dropdown-item');if(!item)return;
+    selectedValues[field]=item.dataset.value;input.value=item.dataset.value;dd.classList.remove('open');saveFilters();runSearch();
   });
-  document.addEventListener('click', function(e) {
-    if (!wrap.contains(e.target)) {
-      dd.classList.remove('open');
-      if (input.value !== selectedValues[field]) input.value = selectedValues[field];
-    }
+  document.addEventListener('click',function(e){
+    if(!wrap.contains(e.target)){dd.classList.remove('open');if(input.value!==selectedValues[field])input.value=selectedValues[field];}
   });
 }
-
-function loadOptions() {
-  return fetch('/api/options')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      dropdownData.jockey  = data.jockeys  || [];
-      dropdownData.trainer = data.trainers || [];
-      dropdownData.owner   = data.owners   || [];
-    }).catch(function() {});
+function loadOptions(){
+  return fetch('/api/options').then(function(r){return r.json();}).then(function(data){
+    dropdownData.jockey=data.jockeys||[];dropdownData.trainer=data.trainers||[];dropdownData.owner=data.owners||[];
+  }).catch(function(){});
 }
 
 // ── Build results ─────────────────────────────────────────────────────────────
-function buildRaceBlock(race, meetingLabel) {
-  var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">' + escHtml(meetingLabel) + '</span>' : '';
-  var tableRows = '', mobileCards = '';
-  for (var i = 0; i < race.runners.length; i++) {
-    var r        = race.runners[i];
-    var rName    = r.name || '';
-    var key      = rName.toLowerCase();
-    var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
-    var notes    = isTagged ? taggedMap[key] : '';
-    var tb       = makeTagBtn(rName, isTagged, notes);
+function buildRaceBlock(race, meetingLabel){
+  var isResult  = race.is_result;
+  var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
+  var headerClass = isResult ? ' result' : '';
+  var statusBadge = isResult
+    ? '<span class="result-badge">&#127942; Result</span>'
+    : '<span class="race-badge">'+race.runners.length+' runner'+(race.runners.length!==1?'s':'')+'</span>';
 
-    tableRows += '<tr>'
-      + '<td><span class="horse-num">' + escHtml(String(r.number || '-')) + '</span></td>'
-      + '<td><div class="horse-name-cell">' + silkSvg(r.colour, r.number || '')
-      + '<div style="min-width:0"><div class="horse-name">' + escHtml(rName) + '</div>'
-      + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
-      + '<td>' + colourChip(r.colour) + '</td>'
-      + '<td><span class="form-str">' + formHtml(r.form) + '</span></td>'
-      + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.age || '-')) + 'yo ' + escHtml(r.sex || '') + '</td>'
-      + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.weight || '-')) + '</td>'
-      + '<td style="font-size:12px;color:var(--text2)">' + escHtml(String(r.or || '-')) + '</td>'
-      + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '-') + '</strong><br>T: ' + escHtml(r.trainer || '-') + '</div></td>'
-      + '<td style="width:36px;text-align:center">' + tb + '</td>'
-      + '</tr>';
+  var tableRows='', mobileCards='';
+  for (var i=0;i<race.runners.length;i++){
+    var r=race.runners[i];
+    var rName=r.name||'';
+    var key=rName.toLowerCase();
+    var isTagged=Object.prototype.hasOwnProperty.call(taggedMap,key);
+    var notes=isTagged?taggedMap[key]:'';
+    var tb=makeTagBtn(rName,isTagged,notes);
+    var pos=r.position||'';
+    var posDisp=pos?pos:r.number||'-';
+    var posCls=isResult?posClass(pos):'';
 
-    mobileCards += '<div class="runner-card">'
-      + '<div class="runner-card-top">' + silkSvg(r.colour, r.number || '')
-      + '<span class="runner-card-num">' + escHtml(String(r.number || '-')) + '</span>'
-      + '<span class="runner-card-name">' + escHtml(rName) + '</span>'
-      + '<span class="runner-card-form">' + formHtml(r.form) + '</span>' + tb + '</div>'
-      + '<div class="runner-card-grid">'
-      + '<div class="runner-card-field"><span class="label">Jockey</span><span class="value">' + escHtml(r.jockey || '-') + '</span></div>'
-      + '<div class="runner-card-field"><span class="label">Trainer</span><span class="value muted">' + escHtml(r.trainer || '-') + '</span></div>'
-      + '<div class="runner-card-field"><span class="label">Colour</span><span class="value">' + colourChip(r.colour) + '</span></div>'
-      + '<div class="runner-card-field"><span class="label">Age / sex</span><span class="value muted">' + escHtml(String(r.age || '-')) + 'yo ' + escHtml(r.sex || '') + '</span></div>'
-      + '<div class="runner-card-field"><span class="label">Weight</span><span class="value muted">' + escHtml(String(r.weight || '-')) + '</span></div>'
-      + '<div class="runner-card-field"><span class="label">OR</span><span class="value muted">' + escHtml(String(r.or || '-')) + '</span></div>'
-      + '<div class="runner-card-field" style="grid-column:1/-1"><span class="label">Owner</span><span class="value muted">' + escHtml(r.owner || '-') + '</span></div>'
-      + (notes ? '<div class="runner-card-field" style="grid-column:1/-1"><span class="label">My notes</span><span class="value" style="color:var(--brand)">' + escHtml(notes) + '</span></div>' : '')
-      + '</div></div>';
+    // Headgear
+    var hgHtml=r.headgear?'<span class="headgear-chip">'+escHtml(r.headgear)+'</span>':'';
+    // Last run
+    var lrHtml=r.last_run?'<span class="last-run-chip">'+escHtml(r.last_run)+'d</span>':'';
+    // SP for results
+    var spHtml=(isResult&&r.odds&&r.odds!=='None'&&r.odds!=='0')?'<span class="sp-chip">SP: '+escHtml(r.odds)+'</span>':'';
+
+    // Position cell — show pos number for results, horse number otherwise
+    var posCellVal = isResult ? (pos||'-') : (r.number||'-');
+
+    tableRows+='<tr>'
+      +'<td><span class="pos-cell'+posCls+'">'+escHtml(posCellVal)+'</span></td>'
+      +'<td><div class="horse-name-cell">'+silkSvg(r.colour,r.number||'')
+      +'<div style="min-width:0"><div class="horse-name">'+escHtml(rName)+'</div>'
+      +'<div class="horse-owner">'+escHtml(r.owner||'')+'</div></div></div></td>'
+      +'<td>'+colourChip(r.colour)+'</td>'
+      +'<td><span class="form-str">'+formHtml(r.form)+'</span></td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+escHtml(String(r.age||'-'))+'yo '+escHtml(r.sex||'')+'</td>'
+      +'<td>'+hgHtml+(hgHtml&&lrHtml?' ':'')+'<span style="font-size:11px;color:var(--text2)">'+escHtml(r.weight||'-')+'</span></td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+escHtml(String(r.or||'-'))+'</td>'
+      +'<td>'+lrHtml+'</td>'
+      +'<td>'+(isResult?spHtml:'')+'</td>'
+      +'<td><div class="jt-cell"><strong>'+escHtml(r.jockey||'-')+'</strong><br>T: '+escHtml(r.trainer||'-')+'</div></td>'
+      +'<td style="width:32px;text-align:center">'+tb+'</td>'
+      +'</tr>';
+
+    var cardPosClass=(isResult&&pos)?'runner-card-pos'+posClass(pos):'runner-card-num';
+    var cardPosVal=isResult?(pos||'-'):(r.number||'-');
+    var cardWinner=(isResult&&pos==='1')?' winner':'';
+
+    mobileCards+='<div class="runner-card'+cardWinner+'">'
+      +'<div class="runner-card-top"><span class="'+cardPosClass+'">'+escHtml(cardPosVal)+'</span>'
+      +silkSvg(r.colour,r.number||'')
+      +'<span class="runner-card-name">'+escHtml(rName)+'</span>'
+      +'<span class="runner-card-form">'+formHtml(r.form)+'</span>'+tb+'</div>'
+      +'<div class="runner-card-grid">'
+      +'<div class="runner-card-field"><span class="label">Jockey</span><span class="value">'+escHtml(r.jockey||'-')+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Trainer</span><span class="value muted">'+escHtml(r.trainer||'-')+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Colour</span><span class="value">'+colourChip(r.colour)+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Age / sex</span><span class="value muted">'+escHtml(String(r.age||'-'))+'yo '+escHtml(r.sex||'')+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Wgt'+(r.headgear?' / Gear':'')+'</span><span class="value muted">'+escHtml(r.weight||'-')+(r.headgear?' | <span style=\'color:#1565c0\'>'+escHtml(r.headgear)+'</span>':'')+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Last ran</span><span class="value muted">'+(r.last_run?escHtml(r.last_run)+' days ago':'-')+'</span></div>'
+      +(isResult&&r.odds&&r.odds!=='None'?'<div class="runner-card-field"><span class="label">SP</span><span class="value" style="color:var(--gold)">'+escHtml(r.odds)+'</span></div>':'')
+      +(notes?'<div class="runner-card-field" style="grid-column:1/-1"><span class="label">My notes</span><span class="value" style="color:var(--brand)">'+escHtml(notes)+'</span></div>':'')
+      +'</div></div>';
   }
 
   return '<div class="race-block">'
-    + '<div class="race-header"><span class="race-time">' + escHtml(race.time || '') + '</span>'
-    + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
-    + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race.class || '') + '</div></div>'
-    + meetingTag + '<span class="race-badge">' + race.runners.length + ' runner' + (race.runners.length !== 1 ? 's' : '') + '</span></div>'
-    + '<div class="table-wrap"><table><thead><tr>'
-    + '<th style="width:40px">#</th><th style="width:21%">Horse</th><th style="width:100px">Colour</th>'
-    + '<th style="width:70px">Form</th><th style="width:62px">Age/sex</th><th style="width:48px">Wgt</th>'
-    + '<th style="width:38px">OR</th><th style="width:19%">Jockey / trainer</th><th style="width:36px"></th>'
-    + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
-    + '<div class="runner-cards">' + mobileCards + '</div></div>';
+    +'<div class="race-header'+headerClass+'"><span class="race-time">'+escHtml(race.time||'')+'</span>'
+    +'<div class="race-info"><div class="race-name">'+escHtml(race.name||'')+'</div>'
+    +'<div class="race-details">'+escHtml(String(race.distance||''))+' &middot; '+escHtml(race.class||'')+'</div></div>'
+    +meetingTag+statusBadge+'</div>'
+    +'<div class="table-wrap"><table><thead><tr>'
+    +'<th style="width:32px">#</th>'
+    +'<th style="width:20%">Horse</th>'
+    +'<th style="width:90px">Colour</th>'
+    +'<th style="width:60px">Form</th>'
+    +'<th style="width:58px">Age/sex</th>'
+    +'<th style="width:70px">Wgt/gear</th>'
+    +'<th style="width:36px">OR</th>'
+    +'<th style="width:48px">Last ran</th>'
+    +'<th style="width:55px">SP</th>'
+    +'<th style="width:18%">Jockey / trainer</th>'
+    +'<th style="width:32px"></th>'
+    +'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
+    +'<div class="runner-cards">'+mobileCards+'</div>'
+    +'</div>';
 }
 
-function renderResults(data) {
-  var area = document.getElementById('results-area');
-  if (!data || !data.length) {
-    area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>';
-    return;
-  }
-  var totalRunners = 0, totalRaces = 0, meetingSet = {};
-  for (var i = 0; i < data.length; i++) {
-    meetingSet[data[i].meeting] = 1;
-    totalRaces += data[i].races.length;
-    for (var j = 0; j < data[i].races.length; j++) totalRunners += data[i].races[j].runners.length;
-  }
-  var totalMeetings = Object.keys(meetingSet).length;
-  var sortMode = document.getElementById('f-sort').value;
-  var html = '<div class="results-header"><span>' + totalRunners + ' runner' + (totalRunners !== 1 ? 's' : '')
-    + ' across ' + totalRaces + ' race' + (totalRaces !== 1 ? 's' : '')
-    + ' at ' + totalMeetings + ' meeting' + (totalMeetings !== 1 ? 's' : '') + '</span></div>';
-
-  if (sortMode === 'time') {
-    for (var a = 0; a < data.length; a++) {
-      for (var b = 0; b < data[a].races.length; b++) {
-        html += '<div class="meeting-block">' + buildRaceBlock(data[a].races[b], data[a].meeting) + '</div>';
-      }
-    }
+function renderResults(data){
+  var area=document.getElementById('results-area');
+  if (!data||!data.length){area.innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>';return;}
+  var totalRunners=0,totalRaces=0,ms={};
+  for (var i=0;i<data.length;i++){ms[data[i].meeting]=1;totalRaces+=data[i].races.length;for(var j=0;j<data[i].races.length;j++)totalRunners+=data[i].races[j].runners.length;}
+  var totalMeetings=Object.keys(ms).length;
+  var sortMode=document.getElementById('f-sort').value;
+  var html='<div class="results-header"><span>'+totalRunners+' runner'+(totalRunners!==1?'s':'')+' across '+totalRaces+' race'+(totalRaces!==1?'s':'')+' at '+totalMeetings+' meeting'+(totalMeetings!==1?'s':'')+'</span></div>';
+  if (sortMode==='time'){
+    for (var a=0;a<data.length;a++) for (var b=0;b<data[a].races.length;b++) html+='<div class="meeting-block">'+buildRaceBlock(data[a].races[b],data[a].meeting)+'</div>';
   } else {
-    for (var c = 0; c < data.length; c++) {
-      var block = data[c];
-      html += '<div class="meeting-block"><div class="meeting-header"><div>'
-        + '<div class="meeting-name">' + escHtml(block.meeting) + '</div>'
-        + '<div class="meeting-meta">' + escHtml(block.date || '') + '</div>'
-        + '</div></div>';
-      for (var d = 0; d < block.races.length; d++) html += buildRaceBlock(block.races[d], null);
-      html += '</div>';
+    for (var c=0;c<data.length;c++){
+      var block=data[c];
+      html+='<div class="meeting-block"><div class="meeting-header"><div><div class="meeting-name">'+escHtml(block.meeting)+'</div><div class="meeting-meta">'+escHtml(block.date||'')+'</div></div></div>';
+      for (var d=0;d<block.races.length;d++) html+=buildRaceBlock(block.races[d],null);
+      html+='</div>';
     }
   }
-  area.innerHTML = html;
+  area.innerHTML=html;
 }
 
-function populateMeetingDropdown(data) {
-  var sel = document.getElementById('f-meeting'), current = sel.value, seen = {}, meetings = [];
-  for (var i = 0; i < data.length; i++) {
-    if (!seen[data[i].meeting]) { seen[data[i].meeting] = 1; meetings.push(data[i].meeting); }
-  }
+function populateMeetingDropdown(data){
+  var sel=document.getElementById('f-meeting'),current=sel.value,seen={},meetings=[];
+  for (var i=0;i<data.length;i++) if(!seen[data[i].meeting]){seen[data[i].meeting]=1;meetings.push(data[i].meeting);}
   meetings.sort();
-  sel.innerHTML = '<option value="">All meetings</option>';
-  for (var j = 0; j < meetings.length; j++) {
-    var opt = document.createElement('option');
-    opt.value = meetings[j]; opt.textContent = meetings[j];
-    if (meetings[j] === current) opt.selected = true;
-    sel.appendChild(opt);
-  }
+  sel.innerHTML='<option value="">All meetings</option>';
+  for (var j=0;j<meetings.length;j++){var opt=document.createElement('option');opt.value=meetings[j];opt.textContent=meetings[j];if(meetings[j]===current)opt.selected=true;sel.appendChild(opt);}
 }
 
-function runSearch() {
-  var spinner = document.getElementById('spinner');
+function runSearch(){
+  var spinner=document.getElementById('spinner');
   spinner.classList.add('active');
   saveFilters();
-  var f      = getFilters();
-  var params = new URLSearchParams();
+  var f=getFilters(),params=new URLSearchParams();
   if (f.horse)   params.append('horse',   f.horse);
   if (f.jockey)  params.append('jockey',  f.jockey);
   if (f.trainer) params.append('trainer', f.trainer);
   if (f.owner)   params.append('owner',   f.owner);
   if (f.meeting) params.append('meeting', f.meeting);
   if (f.colour)  params.append('colour',  f.colour);
-  params.append('sort',  f.sort || 'meeting');
+  params.append('sort',    f.sort    || 'meeting');
   params.append('fuzzy',   f.fuzzy   ? 'true' : 'false');
   params.append('uk_only', f.uk_only ? 'true' : 'false');
-  fetch('/api/search?' + params.toString())
-    .then(function(r) { return r.json(); })
-    .then(function(data) { renderResults(data); populateMeetingDropdown(data); })
-    .catch(function() { document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not connect to the server.</div></div>'; })
-    .finally(function() { spinner.classList.remove('active'); });
+  fetch('/api/search?'+params.toString())
+    .then(function(r){return r.json();})
+    .then(function(data){renderResults(data);populateMeetingDropdown(data);})
+    .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not connect to the server.</div></div>';})
+    .finally(function(){spinner.classList.remove('active');});
 }
 
-function clearFilters() {
-  document.getElementById('f-horse').value  = '';
-  document.getElementById('f-colour').value = '';
-  document.getElementById('f-type').value   = '';
-  document.getElementById('f-class').value  = '';
-  document.getElementById('f-sort').value   = 'meeting';
-  document.getElementById('f-fuzzy').checked   = true;
-  document.getElementById('f-uk-only').checked = false;
-  document.getElementById('f-meeting').value = '';
-  selectedValues.jockey = selectedValues.trainer = selectedValues.owner = '';
-  document.getElementById('f-jockey').value  = '';
-  document.getElementById('f-trainer').value = '';
-  document.getElementById('f-owner').value   = '';
-  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  syncFuzzyBtn();
-  syncUKBtn();
-  runSearch();
+function clearFilters(){
+  document.getElementById('f-horse').value='';
+  document.getElementById('f-colour').value='';
+  document.getElementById('f-type').value='';
+  document.getElementById('f-class').value='';
+  document.getElementById('f-sort').value='meeting';
+  document.getElementById('f-fuzzy').checked=true;
+  document.getElementById('f-uk-only').checked=false;
+  document.getElementById('f-meeting').value='';
+  selectedValues.jockey=selectedValues.trainer=selectedValues.owner='';
+  document.getElementById('f-jockey').value='';
+  document.getElementById('f-trainer').value='';
+  document.getElementById('f-owner').value='';
+  try{localStorage.removeItem(STORAGE_KEY);}catch(e){}
+  syncFuzzyBtn();syncUKBtn();runSearch();
 }
 
-function autoSyncIfNeeded() {
-  return fetch('/api/check-today')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      if (data.count === 0) {
-        document.getElementById('results-area').innerHTML = '<div class="syncing-state"><div style="font-size:28px;margin-bottom:0.5rem">&#8635;</div><div>Syncing today\'s runners...</div></div>';
-        return fetch('/api/sync', { method: 'POST' });
-      }
-    }).catch(function() {});
+function autoSyncIfNeeded(){
+  return fetch('/api/check-today').then(function(r){return r.json();}).then(function(data){
+    if (data.count===0){
+      document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#8635;</div><div>Syncing today\'s runners...</div></div>';
+      return fetch('/api/sync',{method:'POST'}).catch(function(){});
+    }
+  }).catch(function(){});
 }
 
-// ── Wire up events ────────────────────────────────────────────────────────────
+function syncFuzzyBtn(){
+  var cb=document.getElementById('f-fuzzy'),btn=document.getElementById('fuzzy-btn'),hint=document.getElementById('fuzzy-hint');
+  if (cb.checked){btn.innerHTML='&#127518; Fuzzy on';btn.style.background='var(--brand)';btn.style.color='#fff';btn.style.borderColor='var(--brand)';hint.textContent='Fuzzy & phonetic on \u2014 finds near-matches and sound-alikes';hint.style.color='var(--brand)';}
+  else{btn.innerHTML='&#128269; Exact';btn.style.background='var(--surface2)';btn.style.color='var(--text2)';btn.style.borderColor='var(--border2)';hint.textContent='Exact match \u2014 case-insensitive, must contain the text typed';hint.style.color='var(--text3)';}
+}
+function syncUKBtn(){
+  var cb=document.getElementById('f-uk-only'),wrap=document.getElementById('uk-only-wrap'),label=wrap.querySelector('label');
+  if (cb.checked){wrap.style.background='var(--brand-light)';wrap.style.borderColor='rgba(139,58,58,0.4)';label.style.color='var(--brand)';label.style.fontWeight='500';}
+  else{wrap.style.background='var(--surface2)';wrap.style.borderColor='var(--border2)';label.style.color='var(--text2)';label.style.fontWeight='400';}
+}
+
+// ── Event wiring ─────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
-var saveBtn = document.getElementById('btn-save-search');
-if (saveBtn) saveBtn.addEventListener('click', openSaveSearchModal);
+var saveBtn=document.getElementById('btn-save-search');
+if (saveBtn) saveBtn.addEventListener('click',openSaveSearchModal);
 
-document.getElementById('save-search-confirm').addEventListener('click', confirmSaveSearch);
-document.getElementById('save-search-cancel').addEventListener('click', function() { document.getElementById('save-search-modal').classList.remove('open'); });
-document.getElementById('save-search-close').addEventListener('click', function() { document.getElementById('save-search-modal').classList.remove('open'); });
-document.getElementById('save-search-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmSaveSearch(); });
-
-document.getElementById('sync-btn').addEventListener('click', function() {
-  var btn = document.getElementById('sync-btn');
-  btn.textContent = 'Syncing...'; btn.classList.add('syncing');
-  fetch('/api/sync', { method: 'POST' })
-    .then(function() { return loadOptions(); })
-    .then(function() { return runSearch(); })
-    .catch(function() {})
-    .finally(function() { btn.innerHTML = '&#8635; Sync now'; btn.classList.remove('syncing'); });
-});
-
-document.getElementById('results-area').addEventListener('click', function(e) {
-  var btn = e.target.closest('.tag-btn');
-  if (btn) openTagModal(btn.dataset.horse);
-});
-
-document.getElementById('tag-modal-save').addEventListener('click', saveTag);
-document.getElementById('tag-modal-remove').addEventListener('click', removeTag);
-document.getElementById('tag-modal-cancel').addEventListener('click', closeTagModal);
-document.getElementById('tag-modal-close').addEventListener('click', closeTagModal);
-document.getElementById('tag-notes').addEventListener('keydown', function(e) { if (e.key === 'Enter' && e.ctrlKey) saveTag(); });
-document.getElementById('login-modal-close').addEventListener('click', function() { document.getElementById('login-modal').classList.remove('open'); });
-document.getElementById('login-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
-document.getElementById('tag-modal').addEventListener('click', function(e) { if (e.target === this) closeTagModal(); });
-document.getElementById('save-search-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
-
-var runAllBtn = document.getElementById('btn-run-all');
-if (runAllBtn) {
-  runAllBtn.addEventListener('click', function() {
-    var btn = document.getElementById('btn-run-all');
-    btn.textContent = 'Running...';
-    btn.disabled = true;
-    document.getElementById('spinner').classList.add('active');
-    fetch('/api/run-all-searches')
-      .then(function(r) { return r.json(); })
-      .then(function(data) {
-        renderResults(data);
-        populateMeetingDropdown(data);
-        // Clear individual filter fields to show user these are combined results
-        document.getElementById('results-area').querySelectorAll('.results-header span')[0] &&
-          (document.getElementById('results-area').querySelectorAll('.results-header span')[0].textContent += ' — all saved searches');
-      })
-      .catch(function() {
-        document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not run searches.</div></div>';
-      })
-      .finally(function() {
-        btn.innerHTML = '&#9654; Run all saved searches';
-        btn.disabled = false;
-        document.getElementById('spinner').classList.remove('active');
-      });
+var syncBtn=document.getElementById('sync-btn');
+if (syncBtn){
+  syncBtn.addEventListener('click',function(){
+    syncBtn.textContent='Syncing...';syncBtn.classList.add('syncing');
+    fetch('/api/sync',{method:'POST'}).then(function(){return loadOptions();}).then(function(){return runSearch();}).catch(function(){})
+      .finally(function(){syncBtn.innerHTML='&#8635; Sync now';syncBtn.classList.remove('syncing');});
   });
 }
 
-// Saved search chip clicks
-document.getElementById('saved-chips').addEventListener('click', function(e) {
-  var del = e.target.closest('.chip-del');
-  if (del) {
-    var id = parseInt(del.dataset.id);
-    fetch('/api/saved-searches/' + id, { method: 'DELETE' })
-      .then(function() { return loadSavedSearches(); });
-    return;
-  }
-  var chip = e.target.closest('.saved-search-chip');
-  if (chip) {
-    var chipId = parseInt(chip.dataset.id);
-    for (var i = 0; i < savedSearches.length; i++) {
-      if (savedSearches[i].id === chipId) {
-        applyFilters(savedSearches[i].filters);
-        saveFilters();
-        runSearch();
-        break;
-      }
-    }
-  }
+document.getElementById('save-search-confirm').addEventListener('click',confirmSaveSearch);
+document.getElementById('save-search-cancel').addEventListener('click',function(){document.getElementById('save-search-modal').classList.remove('open');});
+document.getElementById('save-search-close').addEventListener('click',function(){document.getElementById('save-search-modal').classList.remove('open');});
+document.getElementById('save-search-name').addEventListener('keydown',function(e){if(e.key==='Enter')confirmSaveSearch();});
+
+document.getElementById('results-area').addEventListener('click',function(e){
+  var btn=e.target.closest('.tag-btn');if(btn)openTagModal(btn.dataset.horse);
 });
 
-var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort', 'f-fuzzy', 'f-uk-only'];
-for (var ci = 0; ci < changeIds.length; ci++) {
-  document.getElementById(changeIds[ci]).addEventListener('change', function() { saveFilters(); runSearch(); });
+document.getElementById('tag-modal-save').addEventListener('click',saveTag);
+document.getElementById('tag-modal-remove').addEventListener('click',removeTag);
+document.getElementById('tag-modal-cancel').addEventListener('click',closeTagModal);
+document.getElementById('tag-modal-close').addEventListener('click',closeTagModal);
+document.getElementById('tag-notes').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.ctrlKey)saveTag();});
+document.getElementById('login-modal-close').addEventListener('click',function(){document.getElementById('login-modal').classList.remove('open');});
+document.getElementById('login-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+document.getElementById('tag-modal').addEventListener('click',function(e){if(e.target===this)closeTagModal();});
+document.getElementById('save-search-modal').addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});
+
+document.getElementById('saved-chips').addEventListener('click',function(e){
+  var del=e.target.closest('.chip-del');
+  if (del){fetch('/api/saved-searches/'+del.dataset.id,{method:'DELETE'}).then(function(){return loadSavedSearches();});return;}
+  var chip=e.target.closest('.saved-search-chip');
+  if (chip){var chipId=parseInt(chip.dataset.id);for(var i=0;i<savedSearches.length;i++)if(savedSearches[i].id===chipId){applyFilters(savedSearches[i].filters);saveFilters();runSearch();break;}}
+});
+
+var runAllBtn=document.getElementById('btn-run-all');
+if (runAllBtn){
+  runAllBtn.addEventListener('click',function(){
+    runAllBtn.textContent='Running...';runAllBtn.disabled=true;document.getElementById('spinner').classList.add('active');
+    fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){renderResults(data);populateMeetingDropdown(data);})
+      .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not run searches.</div></div>';})
+      .finally(function(){runAllBtn.innerHTML='&#9654; Run all saved searches';runAllBtn.disabled=false;document.getElementById('spinner').classList.remove('active');});
+  });
 }
-document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
 
-document.getElementById('f-uk-only').addEventListener('change', function() {
-  var wrap  = document.getElementById('uk-only-wrap');
-  var label = wrap.querySelector('label');
-  if (this.checked) {
-    wrap.style.background   = 'var(--brand-light)';
-    wrap.style.borderColor  = 'rgba(139,58,58,0.4)';
-    label.style.color       = 'var(--brand)';
-    label.style.fontWeight  = '500';
-  } else {
-    wrap.style.background   = 'var(--surface2)';
-    wrap.style.borderColor  = 'var(--border2)';
-    label.style.color       = 'var(--text2)';
-    label.style.fontWeight  = '400';
-  }
+document.getElementById('fuzzy-btn').addEventListener('click',function(){
+  var cb=document.getElementById('f-fuzzy');cb.checked=!cb.checked;syncFuzzyBtn();saveFilters();runSearch();
 });
+document.getElementById('f-uk-only').addEventListener('change',function(){syncUKBtn();});
 
-document.getElementById('fuzzy-btn').addEventListener('click', function() {
-  var cb   = document.getElementById('f-fuzzy');
-  var hint = document.getElementById('fuzzy-hint');
-  var btn  = document.getElementById('fuzzy-btn');
-  cb.checked = !cb.checked;
-  if (cb.checked) {
-    btn.innerHTML  = '&#127518; Fuzzy on';
-    btn.style.background = 'var(--brand)';
-    btn.style.color      = '#fff';
-    btn.style.borderColor = 'var(--brand)';
-    hint.textContent = 'Fuzzy & phonetic on — finds near-matches and sound-alikes';
-    hint.style.color = 'var(--brand)';
-  } else {
-    btn.innerHTML  = '&#128269; Exact';
-    btn.style.background = 'var(--surface2)';
-    btn.style.color      = 'var(--text2)';
-    btn.style.borderColor = 'var(--border2)';
-    hint.textContent = 'Exact match — case-insensitive, must contain the text typed';
-    hint.style.color = 'var(--text3)';
-  }
-  saveFilters();
-  runSearch();
-});
+var changeIds=['f-meeting','f-colour','f-type','f-class','f-sort','f-uk-only'];
+for (var ci=0;ci<changeIds.length;ci++){
+  document.getElementById(changeIds[ci]).addEventListener('change',function(){saveFilters();runSearch();});
+}
+document.getElementById('f-horse').addEventListener('keydown',function(e){if(e.key==='Enter'){saveFilters();runSearch();}});
 
-initDropdown('jockey');
-initDropdown('trainer');
-initDropdown('owner');
-
-// Clear any old saved date from previous version
-try {
-  var old = localStorage.getItem(STORAGE_KEY);
-  if (old) { var parsed = JSON.parse(old); if (parsed.date !== undefined) { delete parsed.date; localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed)); } }
-} catch(e) {}
-
+// ── Init ─────────────────────────────────────────────────────────────────────
+initDropdown('jockey');initDropdown('trainer');initDropdown('owner');
 restoreFilters();
 
 autoSyncIfNeeded()
-  .then(function() { return function syncUKBtn() {
-  var cb    = document.getElementById('f-uk-only');
-  var wrap  = document.getElementById('uk-only-wrap');
-  var label = wrap.querySelector('label');
-  if (cb.checked) {
-    wrap.style.background   = 'var(--brand-light)';
-    wrap.style.borderColor  = 'rgba(139,58,58,0.4)';
-    label.style.color       = 'var(--brand)';
-    label.style.fontWeight  = '500';
-  } else {
-    wrap.style.background   = 'var(--surface2)';
-    wrap.style.borderColor  = 'var(--border2)';
-    label.style.color       = 'var(--text2)';
-    label.style.fontWeight  = '400';
-  }
-}
-
-function syncFuzzyBtn() {
-  var cb   = document.getElementById('f-fuzzy');
-  var btn  = document.getElementById('fuzzy-btn');
-  var hint = document.getElementById('fuzzy-hint');
-  if (cb.checked) {
-    btn.innerHTML        = '&#127518; Fuzzy on';
-    btn.style.background = 'var(--brand)';
-    btn.style.color      = '#fff';
-    btn.style.borderColor = 'var(--brand)';
-    hint.textContent = 'Fuzzy & phonetic on — finds near-matches and sound-alikes';
-    hint.style.color = 'var(--brand)';
-  } else {
-    btn.innerHTML        = '&#128269; Exact';
-    btn.style.background = 'var(--surface2)';
-    btn.style.color      = 'var(--text2)';
-    btn.style.borderColor = 'var(--border2)';
-    hint.textContent = 'Exact match — case-insensitive, must contain the text typed';
-    hint.style.color = 'var(--text3)';
-  }
-}
-
-loadOptions(); })
-  .then(function() { return loadTags(); })
-  .then(function() { return loadSavedSearches(); })
-  .then(function() { syncFuzzyBtn(); syncUKBtn(); runSearch(); });
+  .then(function(){return loadOptions();})
+  .then(function(){return loadTags();})
+  .then(function(){return loadSavedSearches();})
+  .then(function(){syncFuzzyBtn();syncUKBtn();runSearch();});
 </script>
 </body>
 </html>

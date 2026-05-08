@@ -34,8 +34,8 @@ class SavedSearch(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     name       = db.Column(db.String(100), nullable=False)
-    filters    = db.Column(db.Text, nullable=False)   # JSON string of filter values
-    alert      = db.Column(db.Boolean, default=False) # email alert after 5am sync
+    filters    = db.Column(db.Text, nullable=False)
+    alert      = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.String(30))
 
 
@@ -48,14 +48,15 @@ class Meeting(db.Model):
 
 
 class Race(db.Model):
-    id         = db.Column(db.Integer, primary_key=True)
-    meeting_id = db.Column(db.Integer, db.ForeignKey('meeting.id'))
-    time       = db.Column(db.String(10))
-    name       = db.Column(db.String(200))
-    distance   = db.Column(db.String(20))
-    race_class = db.Column(db.String(50))
-    prize      = db.Column(db.String(50))
-    runners    = db.relationship('Runner', backref='race', lazy=True)
+    id          = db.Column(db.Integer, primary_key=True)
+    meeting_id  = db.Column(db.Integer, db.ForeignKey('meeting.id'))
+    time        = db.Column(db.String(10))
+    name        = db.Column(db.String(200))
+    distance    = db.Column(db.String(20))
+    race_class  = db.Column(db.String(50))
+    prize       = db.Column(db.String(50))
+    race_status = db.Column(db.String(20), default='')   # 'result', 'Active', etc
+    runners     = db.relationship('Runner', backref='race', lazy=True)
 
 
 class Runner(db.Model):
@@ -73,6 +74,9 @@ class Runner(db.Model):
     weight          = db.Column(db.String(10))
     official_rating = db.Column(db.String(10))
     odds            = db.Column(db.String(20))
+    headgear        = db.Column(db.String(20), default='')
+    last_run        = db.Column(db.String(10), default='')
+    position        = db.Column(db.String(5),  default='')  # finishing position
 
 
 class ColourOverride(db.Model):
@@ -83,11 +87,10 @@ class ColourOverride(db.Model):
 
 
 class EmailLog(db.Model):
-    """Records every email sent so users can see what was sent and when."""
-    id         = db.Column(db.Integer, primary_key=True)
-    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    subject    = db.Column(db.String(200))
-    html_body  = db.Column(db.Text)
-    status     = db.Column(db.String(20))   # 'sent', 'failed', 'no_api_key'
-    sent_at    = db.Column(db.String(30))
-    user       = db.relationship('User', backref=db.backref('email_logs', lazy=True))
+    id        = db.Column(db.Integer, primary_key=True)
+    user_id   = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    subject   = db.Column(db.String(200))
+    html_body = db.Column(db.Text)
+    status    = db.Column(db.String(20))
+    sent_at   = db.Column(db.String(30))
+    user      = db.relationship('User', backref=db.backref('email_logs', lazy=True))
