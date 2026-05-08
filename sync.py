@@ -30,10 +30,6 @@ def expand_colour(code):
 
 
 def _parse_results(res_json):
-    """
-    Build lookup: "course_lower_time" -> {horse_name_lower: result_dict}
-    Both APIs use the same 12hr time format e.g. "1:50", "2:20" - no conversion needed.
-    """
     results_by_key = {}
     for race in res_json.get("results", []):
         course = (race.get("course") or "").strip().lower()
@@ -55,7 +51,7 @@ def _parse_results(res_json):
 def sync_todays_races(app):
     with app.app_context():
 
-        # ── Fetch racecards (basic plan) ──────────────────────────────────────
+        # ── Fetch racecards ───────────────────────────────────────────────────
         rc_resp = requests.get(f"{BASE_URL}/racecards/basic", auth=get_auth())
         if rc_resp.status_code != 200:
             print(f"Racecard API error: {rc_resp.status_code} — {rc_resp.text[:200]}")
@@ -85,16 +81,15 @@ def sync_todays_races(app):
         seen_keys = set()
 
         for racecard in rc_resp.json().get("racecards", []):
-            course         = racecard.get("course", "")
+            course         = (racecard.get("course") or "").strip()
             date_str       = racecard.get("date", "")
             race_status    = racecard.get("race_status", "")
-            off_time       = racecard.get("off_time", "")
+            off_time       = (racecard.get("off_time") or "").strip()
             race_name      = racecard.get("race_name", "")
             going_detailed = racecard.get("going_detailed", "") or racecard.get("going", "")
             weather        = racecard.get("weather", "") or ""
             m_key          = f"{course.lower()}_{date_str}"
 
-            # Get or create meeting
             if m_key in existing_meetings:
                 meeting = existing_meetings[m_key]
             else:
@@ -104,7 +99,6 @@ def sync_todays_races(app):
                 existing_meetings[m_key] = meeting
             seen_keys.add(m_key)
 
-            # Find or create race
             race = None
             for er in meeting.races:
                 if er.time == off_time and er.name == race_name:
@@ -130,31 +124,27 @@ def sync_todays_races(app):
                 race.going_detailed = going_detailed
                 race.weather        = weather
 
-            # Results lookup - both APIs use same 12hr time format
-            result_runners = results_by_key.get(f"{course.lower()}_{off_time}", {})
-
+            # Results lookup — strip both sides for consistent matching
+            result_runners = results_by_key.get(f"{course.strip().lower()}_{off_time.strip()}", {})
 
             existing_runners = {r.horse_name.lower(): r for r in race.runners}
 
             for r in racecard.get("runners", []):
                 horse_name = r.get("horse") or ""
-                horse_key  = horse_name.lower()
+                horse_key  = horse_name.strip().lower()
 
                 colour = overrides.get(horse_key) or expand_colour(r.get("colour") or "")
 
-                # Result data
                 result   = result_runners.get(horse_key, {})
                 position = result.get("position", "")
                 sp_dec   = result.get("sp_dec", "") or str(r.get("sp_dec") or "")
 
-                # Trainer 14-day form
                 t14 = r.get("trainer_14_days") or {}
                 if isinstance(t14, dict) and t14.get("runs"):
                     trainer_14 = f"{t14.get('wins','0')}/{t14.get('runs','0')}"
                 else:
                     trainer_14 = ""
 
-                # Wind surgery
                 wind = ""
                 if r.get("wind_surgery") == "1" or r.get("wind_surgery") is True:
                     wind = "1"
@@ -172,11 +162,9 @@ def sync_todays_races(app):
                     "official_rating": str(r.get("ofr") or ""),
                     "rpr":             str(r.get("rpr") or ""),
                     "ts":              str(r.get("ts") or ""),
-                    "odds":            sp_dec,
                     "headgear":        r.get("headgear") or "",
                     "headgear_run":    str(r.get("headgear_run") or ""),
                     "last_run":        str(r.get("last_run") or ""),
-                    "position":        position,
                     "silk_url":        r.get("silk_url") or "",
                     "spotlight":       r.get("spotlight") or "",
                     "comment":         r.get("comment") or "",
@@ -188,11 +176,17 @@ def sync_todays_races(app):
                     runner = existing_runners[horse_key]
                     for k, v in fields.items():
                         setattr(runner, k, v)
+                    if position:
+                        runner.position = position
+                    if sp_dec:
+                        runner.odds = sp_dec
                 else:
                     runner = Runner(
                         race_id=race.id,
                         horse_name=horse_name,
                         number=str(r.get("number") or ""),
+                        position=position,
+                        odds=sp_dec,
                         **fields
                     )
                     db.session.add(runner)
