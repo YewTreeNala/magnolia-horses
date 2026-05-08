@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog
 from sync import sync_todays_races
 from email_service import send_morning_alerts
 from rapidfuzz import fuzz
@@ -578,6 +578,15 @@ def manual_sync():
     return jsonify({'status': 'ok'})
 
 
+@app.route('/api/sync-log')
+@login_required
+def sync_log():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    logs = SyncLog.query.order_by(SyncLog.id.desc()).limit(100).all()
+    return jsonify([{'id': l.id, 'created_at': l.created_at, 'level': l.level, 'message': l.message} for l in logs])
+
+
 @app.route('/api/email-log')
 @login_required
 def email_log():
@@ -676,9 +685,9 @@ def debug_results():
     res = req.get(f'{BASE}/results/today', auth=auth).json()
     result_keys = {}
     for race in res.get('results', []):
-        course = (race.get('course') or '').strip().lower()
-        off    = (race.get('off') or '').strip()
-        key    = f'{course}_{off}'
+        course  = (race.get('course') or '').strip().lower()
+        off     = (race.get('off') or '').strip()
+        key     = f'{course}_{off}'
         runners = race.get('runners', [])
         result_keys[key] = {
             'sample_horse': (runners[0].get('horse') or '') if runners else '',
