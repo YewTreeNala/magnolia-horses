@@ -32,21 +32,13 @@ def expand_colour(code):
 def _parse_results(res_json):
     """
     Build lookup: "course_lower_time" -> {horse_name_lower: result_dict}
-    Stores both 12hr and 24hr time keys for matching.
+    Both APIs use the same 12hr time format e.g. "1:50", "2:20" - no conversion needed.
     """
     results_by_key = {}
     for race in res_json.get("results", []):
         course = (race.get("course") or "").strip().lower()
         off    = (race.get("off") or "").strip()
-        keys   = [f"{course}_{off}"]
-        try:
-            hour, minute = off.split(":")
-            h = int(hour)
-            if h < 7:
-                h += 12
-            keys.append(f"{course}_{str(h).zfill(2)}:{minute}")
-        except (ValueError, AttributeError):
-            pass
+        key    = f"{course}_{off}"
         runners = {}
         for r in race.get("runners", []):
             horse = (r.get("horse") or "").strip().lower()
@@ -56,8 +48,7 @@ def _parse_results(res_json):
                 "sp_dec":   str(r.get("sp_dec") or ""),
                 "btn":      str(r.get("btn") or ""),
             }
-        for k in keys:
-            results_by_key[k] = runners
+        results_by_key[key] = runners
     return results_by_key
 
 
@@ -139,19 +130,9 @@ def sync_todays_races(app):
                 race.going_detailed = going_detailed
                 race.weather        = weather
 
-            # Results lookup for this race
-            result_runners = {}
-            lookup_keys = [f"{course.lower()}_{off_time}"]
-            try:
-                hour, minute = off_time.split(":")
-                h12 = int(hour) - 12 if int(hour) > 12 else int(hour)
-                lookup_keys.append(f"{course.lower()}_{h12}:{minute}")
-            except (ValueError, AttributeError):
-                pass
-            for lk in lookup_keys:
-                if lk in results_by_key:
-                    result_runners = results_by_key[lk]
-                    break
+            # Results lookup - both APIs use same 12hr time format
+            result_runners = results_by_key.get(f"{course.lower()}_{off_time}", {})
+
 
             existing_runners = {r.horse_name.lower(): r for r in race.runners}
 
