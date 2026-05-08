@@ -74,7 +74,15 @@
     .empty-state .empty-icon { font-size: 32px; margin-bottom: 0.5rem; opacity: 0.5; }
 
     .meeting-block { margin-bottom: 1.5rem; }
-    .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .meeting-header {
+      background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2);
+      border-left: 3px solid var(--brand); border-radius: var(--radius);
+      padding: 10px 14px; margin-bottom: 0.5rem;
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
     .meeting-name { font-size: 15px; font-weight: 500; color: var(--brand); }
     .meeting-meta { font-size: 12px; color: var(--text2); }
     .race-block { border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 0.75rem; overflow: hidden; background: var(--surface); }
@@ -97,7 +105,6 @@
     .pos-cell.pos-1 { color: var(--gold); }
     .pos-cell.pos-2 { color: #888; }
     .pos-cell.pos-3 { color: #cd7f32; }
-    .horse-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 0.5px solid var(--border2); font-size: 11px; font-weight: 500; }
     .horse-name-cell { display: flex; align-items: center; gap: 7px; }
     .silk { width: 18px; height: 18px; border-radius: 2px; flex-shrink: 0; }
     .horse-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -108,10 +115,7 @@
     .colour-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 0.5px solid rgba(0,0,0,0.15); }
     .jt-cell { font-size: 11px; color: var(--text2); line-height: 1.5; }
     .jt-cell strong { color: var(--text); font-weight: 500; }
-    .headgear-chip { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: #e8f4fd; color: #1565c0; border: 0.5px solid #90caf9; font-weight: 500; white-space: nowrap; }
-    .last-run-chip { font-size: 10px; color: var(--text3); }
     .sp-chip { font-size: 11px; font-weight: 500; color: var(--gold); }
-
     .tag-btn { background: none; border: none; cursor: pointer; padding: 3px 5px; color: var(--text3); font-size: 16px; line-height: 1; border-radius: 4px; transition: color 0.15s; }
     .tag-btn:hover { color: var(--brand); }
     .tag-btn.tagged { color: var(--brand); }
@@ -473,6 +477,14 @@ function posClass(pos) {
   return '';
 }
 
+// Convert "H:MM" time string to minutes for correct numeric sorting
+function timeToMins(t) {
+  if (!t) return 9999;
+  var parts = t.split(':');
+  if (parts.length !== 2) return 9999;
+  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+}
+
 function getFilters() {
   return {
     horse:   document.getElementById('f-horse').value.trim(),
@@ -642,9 +654,9 @@ function loadOptions(){
 
 // ── Build results ─────────────────────────────────────────────────────────────
 function buildRaceBlock(race, meetingLabel){
-  var isResult    = race.is_result;
-  var totalRnrs   = race.total_runners || race.runners.length;
-  var meetingTag  = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
+  var isResult   = race.is_result;
+  var totalRnrs  = race.total_runners || race.runners.length;
+  var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
   var headerClass = isResult ? ' result' : '';
   var statusBadge = isResult
     ? '<span class="result-badge">&#127942; Result &middot; '+totalRnrs+' ran</span>'
@@ -748,13 +760,26 @@ function renderResults(data){
   var totalMeetings=Object.keys(ms).length;
   var sortMode=document.getElementById('f-sort').value;
   var html='<div class="results-header"><span>'+totalRunners+' runner'+(totalRunners!==1?'s':'')+' across '+totalRaces+' race'+(totalRaces!==1?'s':'')+' at '+totalMeetings+' meeting'+(totalMeetings!==1?'s':'')+'</span></div>';
+
   if (sortMode==='time'){
-    for (var a=0;a<data.length;a++) for (var b=0;b<data[a].races.length;b++) html+='<div class="meeting-block">'+buildRaceBlock(data[a].races[b],data[a].meeting)+'</div>';
+    // Flatten all races, sort by time numerically, then render each with meeting label
+    var allRaces = [];
+    for (var a=0;a<data.length;a++) {
+      for (var b=0;b<data[a].races.length;b++) {
+        allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
+      }
+    }
+    allRaces.sort(function(x,y){ return timeToMins(x.race.time) - timeToMins(y.race.time); });
+    for (var c=0;c<allRaces.length;c++) {
+      html+='<div class="meeting-block">'+buildRaceBlock(allRaces[c].race, allRaces[c].meeting)+'</div>';
+    }
   } else {
-    for (var c=0;c<data.length;c++){
-      var block=data[c];
-      html+='<div class="meeting-block"><div class="meeting-header"><div><div class="meeting-name">'+escHtml(block.meeting)+'</div><div class="meeting-meta">'+escHtml(block.date||'')+'</div></div></div>';
-      for (var d=0;d<block.races.length;d++) html+=buildRaceBlock(block.races[d],null);
+    for (var d=0;d<data.length;d++){
+      var block=data[d];
+      html+='<div class="meeting-block">'
+        +'<div class="meeting-header"><div><div class="meeting-name">'+escHtml(block.meeting)+'</div>'
+        +'<div class="meeting-meta">'+escHtml(block.date||'')+'</div></div></div>';
+      for (var e=0;e<block.races.length;e++) html+=buildRaceBlock(block.races[e],null);
       html+='</div>';
     }
   }
@@ -828,15 +853,13 @@ function syncUKBtn(){
 }
 
 var allRunnersCache = {};
-
 function cacheRunners(data) {
   for (var i=0; i<data.length; i++) {
     var block = data[i];
     for (var j=0; j<block.races.length; j++) {
       var race = block.races[j];
       for (var k=0; k<race.runners.length; k++) {
-        var r = race.runners[k];
-        allRunnersCache[r.name.toLowerCase()] = r;
+        allRunnersCache[race.runners[k].name.toLowerCase()] = race.runners[k];
       }
     }
   }
@@ -854,20 +877,19 @@ function openHorsePopup(horseName) {
   }
   document.getElementById('popup-horse-name').textContent = horseName;
   document.getElementById('popup-wind-badge').innerHTML = r.wind_surgery ? '<span class="wind-surgery-badge">Wind surgery</span>' : '';
-  var spDiv  = document.getElementById('popup-spotlight');
-  var spText = document.getElementById('popup-spotlight-text');
-  if (r.spotlight) { spText.textContent = r.spotlight; spDiv.style.display = 'block'; }
-  else { spDiv.style.display = 'none'; }
+  var spDiv = document.getElementById('popup-spotlight');
+  if (r.spotlight) { document.getElementById('popup-spotlight-text').textContent = r.spotlight; spDiv.style.display='block'; }
+  else { spDiv.style.display='none'; }
   var fields = [
-    ['Age / sex',    r.age ? r.age+'yo '+r.sex : '-'],
-    ['Weight',       r.weight || '-'],
-    ['Draw',         r.draw || '-'],
-    ['Headgear',     r.headgear ? r.headgear+(r.headgear_run?' (run '+r.headgear_run+')':'') : 'None'],
-    ['Last ran',     r.last_run ? r.last_run+' days ago' : '-'],
-    ['OR',           r.or || '-'],
-    ['RPR',          r.rpr || '-'],
-    ['Topspeed',     r.ts || '-'],
-    ['Owner',        r.owner || '-', true],
+    ['Age / sex', r.age ? r.age+'yo '+r.sex : '-'],
+    ['Weight', r.weight || '-'],
+    ['Draw', r.draw || '-'],
+    ['Headgear', r.headgear ? r.headgear+(r.headgear_run?' (run '+r.headgear_run+')':'') : 'None'],
+    ['Last ran', r.last_run ? r.last_run+' days ago' : '-'],
+    ['OR', r.or || '-'],
+    ['RPR', r.rpr || '-'],
+    ['Topspeed', r.ts || '-'],
+    ['Owner', r.owner || '-', true],
     ['Trainer form (14d)', r.trainer_14_days ? r.trainer_14_days+' W/R' : '-', true],
   ];
   if (r.comment) fields.push(['Comment', r.comment, true]);
@@ -879,10 +901,7 @@ function openHorsePopup(horseName) {
   document.getElementById('popup-grid').innerHTML = gridHtml;
   document.getElementById('horse-popup').classList.add('open');
 }
-
-function closeHorsePopup() {
-  document.getElementById('horse-popup').classList.remove('open');
-}
+function closeHorsePopup() { document.getElementById('horse-popup').classList.remove('open'); }
 
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
@@ -905,18 +924,13 @@ document.getElementById('save-search-close').addEventListener('click',function()
 document.getElementById('save-search-name').addEventListener('keydown',function(e){if(e.key==='Enter')confirmSaveSearch();});
 
 document.getElementById('results-area').addEventListener('click',function(e){
-  var btn = e.target.closest('.tag-btn');
-  if (btn) { openTagModal(btn.dataset.horse); return; }
-  var link = e.target.closest('.horse-name-link');
-  if (link) { openHorsePopup(link.dataset.horse); return; }
-  var spBtn = e.target.closest('.spotlight-btn');
-  if (spBtn) { openHorsePopup(spBtn.dataset.horse); return; }
+  var btn=e.target.closest('.tag-btn'); if(btn){openTagModal(btn.dataset.horse);return;}
+  var link=e.target.closest('.horse-name-link'); if(link){openHorsePopup(link.dataset.horse);return;}
+  var spBtn=e.target.closest('.spotlight-btn'); if(spBtn){openHorsePopup(spBtn.dataset.horse);return;}
 });
 
-document.getElementById('horse-popup').addEventListener('click', function(e) {
-  if (e.target === this) closeHorsePopup();
-});
-document.getElementById('horse-popup-close').addEventListener('click', closeHorsePopup);
+document.getElementById('horse-popup').addEventListener('click',function(e){if(e.target===this)closeHorsePopup();});
+document.getElementById('horse-popup-close').addEventListener('click',closeHorsePopup);
 document.getElementById('tag-modal-save').addEventListener('click',saveTag);
 document.getElementById('tag-modal-remove').addEventListener('click',removeTag);
 document.getElementById('tag-modal-cancel').addEventListener('click',closeTagModal);
@@ -929,13 +943,13 @@ document.getElementById('save-search-modal').addEventListener('click',function(e
 
 document.getElementById('saved-chips').addEventListener('click',function(e){
   var del=e.target.closest('.chip-del');
-  if (del){fetch('/api/saved-searches/'+del.dataset.id,{method:'DELETE'}).then(function(){return loadSavedSearches();});return;}
+  if(del){fetch('/api/saved-searches/'+del.dataset.id,{method:'DELETE'}).then(function(){return loadSavedSearches();});return;}
   var chip=e.target.closest('.saved-search-chip');
-  if (chip){var chipId=parseInt(chip.dataset.id);for(var i=0;i<savedSearches.length;i++)if(savedSearches[i].id===chipId){applyFilters(savedSearches[i].filters);saveFilters();runSearch();break;}}
+  if(chip){var chipId=parseInt(chip.dataset.id);for(var i=0;i<savedSearches.length;i++)if(savedSearches[i].id===chipId){applyFilters(savedSearches[i].filters);saveFilters();runSearch();break;}}
 });
 
 var runAllBtn=document.getElementById('btn-run-all');
-if (runAllBtn){
+if(runAllBtn){
   runAllBtn.addEventListener('click',function(){
     runAllBtn.textContent='Running...';runAllBtn.disabled=true;document.getElementById('spinner').classList.add('active');
     fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
@@ -950,7 +964,7 @@ document.getElementById('fuzzy-btn').addEventListener('click',function(){
 document.getElementById('f-uk-only').addEventListener('change',function(){syncUKBtn();});
 
 var changeIds=['f-meeting','f-colour','f-type','f-class','f-sort','f-uk-only'];
-for (var ci=0;ci<changeIds.length;ci++){
+for(var ci=0;ci<changeIds.length;ci++){
   document.getElementById(changeIds[ci]).addEventListener('change',function(){saveFilters();runSearch();});
 }
 document.getElementById('f-horse').addEventListener('keydown',function(e){if(e.key==='Enter'){saveFilters();runSearch();}});
