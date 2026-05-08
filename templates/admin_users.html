@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Users &mdash; Magnolia Horses Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --surface: #fff; --surface2: #f5f1eb;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --green: #3b6d11; --green-bg: #eaf3de;
+      --blue: #185fa5; --blue-bg: #e6f1fb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 14px; padding: 0 1rem 3rem; }
+    .page { max-width: 1000px; margin: 0 auto; }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .admin-tag { font-size: 11px; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 20px; margin-left: 4px; }
+    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
+    .nav-links a { color: var(--brand); text-decoration: none; }
+    .nav-links a:hover { text-decoration: underline; }
+    .page-title { font-size: 20px; font-weight: 500; margin-bottom: 1.25rem; }
+    .stat-strip { display: flex; gap: 16px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; color: var(--text2); }
+    .stat strong { display: block; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .user-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .user-header { display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .user-name { font-size: 15px; font-weight: 500; }
+    .user-email { font-size: 13px; color: var(--text2); }
+    .user-meta { font-size: 12px; color: var(--text3); margin-left: auto; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 0.5px solid; display: inline-block; }
+    .badge-green { background: var(--green-bg); color: var(--green); border-color: rgba(59,109,17,0.2); }
+    .badge-blue  { background: var(--blue-bg);  color: var(--blue);  border-color: rgba(24,95,165,0.2); }
+    .searches-list { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 6px; }
+    .search-row { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 10px; background: var(--surface2); border-radius: var(--radius); }
+    .search-name { font-weight: 500; color: var(--text); min-width: 120px; }
+    .search-summary { color: var(--text2); flex: 1; }
+    .alert-on  { color: var(--green); font-size: 11px; white-space: nowrap; }
+    .alert-off { color: var(--text3); font-size: 11px; white-space: nowrap; }
+    .no-searches { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 6px; }
+    .divider { border: none; border-top: 0.5px solid var(--border); margin: 0.75rem 0 0; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-header">
+    <div>
+      <span class="brand-name">Magnolia Horses</span>
+      <span class="admin-tag">Admin</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Search</a>
+      <a href="/account">Account</a>
+      <a href="/admin/colours">Colours</a>
+      <a href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <div class="page-title">Registered users</div>
+
+  <div class="stat-strip">
+    <div class="stat"><strong>{{ users|length }}</strong>Total users</div>
+    <div class="stat"><strong>{{ users|sum(attribute='tagged_count') }}</strong>Total tagged horses</div>
+    <div class="stat"><strong>{{ users|sum(attribute='searches'|length) }}</strong>Total saved searches</div>
+    <div class="stat"><strong>{{ users|selectattr('searches')|map(attribute='searches')|sum|selectattr('alert')|list|length }}</strong>Alert searches</div>
+  </div>
+
+  {% for u in users %}
+  <div class="user-card">
+    <div class="user-header">
+      <div>
+        <div class="user-name">{{ u.name }}</div>
+        <div class="user-email">{{ u.email }}</div>
+      </div>
+      <span class="badge badge-green">{{ u.tagged_count }} tagged</span>
+      <span class="badge badge-blue">{{ u.searches|length }} searches</span>
+      <div class="user-meta">Joined {{ u.created_at }}</div>
+    </div>
+
+    {% if u.searches %}
+    <hr class="divider"/>
+    <div class="searches-list">
+      {% for s in u.searches %}
+      <div class="search-row">
+        <span class="search-name">{{ s.name }}</span>
+        <span class="search-summary">{{ s.summary }}</span>
+        {% if s.alert %}
+          <span class="alert-on">&#128276; Alert on</span>
+        {% else %}
+          <span class="alert-off">Alert off</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-searches">No saved searches</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+</body>
+</html>
