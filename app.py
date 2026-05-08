@@ -453,9 +453,10 @@ def runner_to_dict(r, tagged_map):
 
 
 def build_race_obj(r_data, tagged_map):
-    race    = r_data['race']
-    runners = r_data['runners']
-    is_result = (race.race_status or '').lower() == 'result'
+    race           = r_data['race']
+    runners        = r_data['runners']
+    is_result      = (race.race_status or '').lower() == 'result'
+    total_runners  = len(race.runners)  # always the full field from DB
 
     if is_result:
         def pos_key(r):
@@ -481,6 +482,7 @@ def build_race_obj(r_data, tagged_map):
         'is_result':      is_result,
         'going_detailed': race.going_detailed or '',
         'weather':        race.weather or '',
+        'total_runners':  total_runners,
         'runners':        [runner_to_dict(r, tagged_map) for r in runners]
     }
 

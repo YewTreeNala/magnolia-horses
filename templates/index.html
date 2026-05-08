@@ -162,7 +162,6 @@
     .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); line-height: 1; }
     .modal-close:hover { color: var(--text); }
 
-    /* Horse detail popup */
     .horse-popup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; display: none; align-items: center; justify-content: center; padding: 1rem; }
     .horse-popup.open { display: flex; }
     .horse-popup-inner { background: rgba(255,252,248,0.98); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 480px; width: 100%; border: 0.5px solid var(--border); position: relative; max-height: 85vh; overflow-y: auto; }
@@ -180,17 +179,11 @@
     .popup-spotlight .spotlight-title { font-size: 11px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
     .rp-logo { font-size: 10px; background: #003f8a; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700; letter-spacing: 0.02em; }
     .wind-surgery-badge { font-size: 10px; background: #fff3e0; color: #e65100; border: 0.5px solid #ffb74d; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
-
-    /* Silk image in table */
     .silk-img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
     .silk-fallback { width: 20px; height: 20px; border-radius: 2px; flex-shrink: 0; }
-
-    /* Spotlight button */
     .spotlight-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; line-height: 1; border-radius: 3px; color: var(--text3); display: inline-flex; align-items: center; gap: 2px; }
     .spotlight-btn:hover { background: var(--brand-light); color: var(--brand); }
     .spotlight-btn .rp-logo { font-size: 9px; }
-
-    /* Horse name clickable */
     .horse-name-link { cursor: pointer; color: var(--text); text-decoration: none; }
     .horse-name-link:hover { color: var(--brand); text-decoration: underline; }
 
@@ -450,9 +443,6 @@ var COLOUR_META = {
   'chestnut': '#C4622D', 'grey': '#A8A8A8', 'black': '#2A2A2A', 'roan': '#9E6B55'
 };
 
-function formatDate(d) {
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -483,7 +473,6 @@ function posClass(pos) {
   return '';
 }
 
-// ── Filter persistence ────────────────────────────────────────────────────────
 function getFilters() {
   return {
     horse:   document.getElementById('f-horse').value.trim(),
@@ -536,7 +525,6 @@ function applyFilters(filters) {
   document.getElementById('f-owner').value   = filters.owner   || '';
 }
 
-// ── Tagging ───────────────────────────────────────────────────────────────────
 function loadTags() {
   if (!IS_LOGGED_IN) return Promise.resolve();
   return fetch('/api/my-tags').then(function(r){return r.json();}).then(function(tags){
@@ -583,7 +571,6 @@ function makeTagBtn(horseName,isTagged,notes){
     +(isTagged?'&#9829;':'&#9825;')+(hasNotes?'<span class="tag-notes-dot">&#9679;</span>':'')+'</button>';
 }
 
-// ── Saved searches ────────────────────────────────────────────────────────────
 function loadSavedSearches() {
   if (!IS_LOGGED_IN) return Promise.resolve();
   return fetch('/api/saved-searches').then(function(r){return r.json();}).then(function(data){
@@ -627,7 +614,6 @@ function confirmSaveSearch(){
     .then(function(){document.getElementById('save-search-modal').classList.remove('open');return loadSavedSearches();});
 }
 
-// ── Dropdowns ─────────────────────────────────────────────────────────────────
 function initDropdown(field){
   var input=document.getElementById('f-'+field),dd=document.getElementById('dd-'+field),wrap=document.getElementById('wrap-'+field);
   function renderDD(filter){
@@ -656,12 +642,13 @@ function loadOptions(){
 
 // ── Build results ─────────────────────────────────────────────────────────────
 function buildRaceBlock(race, meetingLabel){
-  var isResult  = race.is_result;
-  var meetingTag = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
+  var isResult    = race.is_result;
+  var totalRnrs   = race.total_runners || race.runners.length;
+  var meetingTag  = meetingLabel ? '<span style="font-size:11px;color:var(--text2);margin-left:auto;flex-shrink:0">'+escHtml(meetingLabel)+'</span>' : '';
   var headerClass = isResult ? ' result' : '';
   var statusBadge = isResult
-    ? '<span class="result-badge">&#127942; Result</span>'
-    : '<span class="race-badge">'+race.runners.length+' runner'+(race.runners.length!==1?'s':'')+'</span>';
+    ? '<span class="result-badge">&#127942; Result &middot; '+totalRnrs+' ran</span>'
+    : '<span class="race-badge">'+totalRnrs+' runner'+(totalRnrs!==1?'s':'')+'</span>';
 
   var tableRows='', mobileCards='';
   for (var i=0;i<race.runners.length;i++){
@@ -675,7 +662,6 @@ function buildRaceBlock(race, meetingLabel){
     var posCellVal=isResult?(pos||'-'):(r.number||'-');
     var posCls=isResult?posClass(pos):'';
 
-    // Silk — use real image if available, fallback to coloured svg
     var silkHtml;
     if (r.silk_url) {
       silkHtml = '<img class="silk-img" src="'+escHtml(r.silk_url)+'" alt="silk" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">'
@@ -684,19 +670,12 @@ function buildRaceBlock(race, meetingLabel){
       silkHtml = silkSvg(r.colour, r.number||'');
     }
 
-    // Spotlight button
     var spBtn = r.spotlight
       ? '<button class="spotlight-btn" data-horse="'+escHtml(rName)+'" title="Racing Post spotlight"><span class="rp-logo">RP</span></button>'
       : '';
-
-    // Wind surgery indicator
     var windBadge = r.wind_surgery ? '<span class="wind-surgery-badge" title="Wind surgery">WS</span>' : '';
-
-    // SP display
     var spDisp = (isResult && r.odds && r.odds !== 'None' && r.odds !== '0' && r.odds !== '')
       ? '<span class="sp-chip">'+escHtml(r.odds)+'</span>' : '';
-
-    // Form column
     var formHtmlStr = formHtml(r.form);
 
     tableRows+='<tr>'
@@ -741,6 +720,7 @@ function buildRaceBlock(race, meetingLabel){
     +'<div class="race-header'+headerClass+'"><span class="race-time">'+escHtml(race.time||'')+'</span>'
     +'<div class="race-info"><div class="race-name">'+escHtml(race.name||'')+'</div>'
     +'<div class="race-details">'+escHtml(String(race.distance||''))+' &middot; '+escHtml(race.class||'')
+    +' &middot; '+totalRnrs+' runner'+(totalRnrs!==1?'s':'')
     +(race.going_detailed?' &middot; '+escHtml(race.going_detailed):'')
     +(race.weather?' &middot; &#127751; '+escHtml(race.weather):'')
     +'</div></div>'
@@ -805,7 +785,7 @@ function runSearch(){
   params.append('uk_only', f.uk_only ? 'true' : 'false');
   fetch('/api/search?'+params.toString())
     .then(function(r){return r.json();})
-    .then(function(data){cacheRunners(data);cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
+    .then(function(data){cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
     .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not connect to the server.</div></div>';})
     .finally(function(){spinner.classList.remove('active');});
 }
@@ -847,8 +827,7 @@ function syncUKBtn(){
   else{wrap.style.background='var(--surface2)';wrap.style.borderColor='var(--border2)';label.style.color='var(--text2)';label.style.fontWeight='400';}
 }
 
-// ── Horse detail popup ────────────────────────────────────────────────────────
-var allRunnersCache = {};  // horse_name_lower -> runner data
+var allRunnersCache = {};
 
 function cacheRunners(data) {
   for (var i=0; i<data.length; i++) {
@@ -866,8 +845,6 @@ function cacheRunners(data) {
 function openHorsePopup(horseName) {
   var r = allRunnersCache[horseName.toLowerCase()];
   if (!r) return;
-
-  // Silk
   var silkWrap = document.getElementById('popup-silk-wrap');
   if (r.silk_url) {
     silkWrap.innerHTML = '<img class="popup-silk" src="'+escHtml(r.silk_url)+'" alt="silk">';
@@ -875,21 +852,12 @@ function openHorsePopup(horseName) {
     var c = COLOUR_META[(r.colour||'').toLowerCase()] || '#888';
     silkWrap.innerHTML = '<svg class="popup-silk-fallback" viewBox="0 0 32 32"><rect width="32" height="32" fill="'+c+'" rx="3"/></svg>';
   }
-
   document.getElementById('popup-horse-name').textContent = horseName;
   document.getElementById('popup-wind-badge').innerHTML = r.wind_surgery ? '<span class="wind-surgery-badge">Wind surgery</span>' : '';
-
-  // Spotlight
   var spDiv  = document.getElementById('popup-spotlight');
   var spText = document.getElementById('popup-spotlight-text');
-  if (r.spotlight) {
-    spText.textContent = r.spotlight;
-    spDiv.style.display = 'block';
-  } else {
-    spDiv.style.display = 'none';
-  }
-
-  // Detail grid
+  if (r.spotlight) { spText.textContent = r.spotlight; spDiv.style.display = 'block'; }
+  else { spDiv.style.display = 'none'; }
   var fields = [
     ['Age / sex',    r.age ? r.age+'yo '+r.sex : '-'],
     ['Weight',       r.weight || '-'],
@@ -903,12 +871,10 @@ function openHorsePopup(horseName) {
     ['Trainer form (14d)', r.trainer_14_days ? r.trainer_14_days+' W/R' : '-', true],
   ];
   if (r.comment) fields.push(['Comment', r.comment, true]);
-
   var gridHtml = '';
   for (var fi=0; fi<fields.length; fi++) {
     var f = fields[fi];
-    var fullClass = f[2] ? ' full' : '';
-    gridHtml += '<div class="popup-field'+fullClass+'"><span class="popup-label">'+f[0]+'</span><span class="popup-value muted">'+escHtml(String(f[1]))+'</span></div>';
+    gridHtml += '<div class="popup-field'+(f[2]?' full':'')+'"><span class="popup-label">'+f[0]+'</span><span class="popup-value muted">'+escHtml(String(f[1]))+'</span></div>';
   }
   document.getElementById('popup-grid').innerHTML = gridHtml;
   document.getElementById('horse-popup').classList.add('open');
@@ -918,7 +884,6 @@ function closeHorsePopup() {
   document.getElementById('horse-popup').classList.remove('open');
 }
 
-// ── Event wiring ─────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
@@ -952,7 +917,6 @@ document.getElementById('horse-popup').addEventListener('click', function(e) {
   if (e.target === this) closeHorsePopup();
 });
 document.getElementById('horse-popup-close').addEventListener('click', closeHorsePopup);
-
 document.getElementById('tag-modal-save').addEventListener('click',saveTag);
 document.getElementById('tag-modal-remove').addEventListener('click',removeTag);
 document.getElementById('tag-modal-cancel').addEventListener('click',closeTagModal);
@@ -974,7 +938,7 @@ var runAllBtn=document.getElementById('btn-run-all');
 if (runAllBtn){
   runAllBtn.addEventListener('click',function(){
     runAllBtn.textContent='Running...';runAllBtn.disabled=true;document.getElementById('spinner').classList.add('active');
-    fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){cacheRunners(data);cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
+    fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
       .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not run searches.</div></div>';})
       .finally(function(){runAllBtn.innerHTML='&#9654; Run all saved searches';runAllBtn.disabled=false;document.getElementById('spinner').classList.remove('active');});
   });
@@ -991,7 +955,6 @@ for (var ci=0;ci<changeIds.length;ci++){
 }
 document.getElementById('f-horse').addEventListener('keydown',function(e){if(e.key==='Enter'){saveFilters();runSearch();}});
 
-// ── Init ─────────────────────────────────────────────────────────────────────
 initDropdown('jockey');initDropdown('trainer');initDropdown('owner');
 restoreFilters();
 
