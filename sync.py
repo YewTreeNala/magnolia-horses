@@ -1,8 +1,8 @@
+import re
 import requests
 import os
 from datetime import datetime
 from models import db, Meeting, Race, Runner, ColourOverride, SyncLog
-
 
 BASE_URL = "https://api.theracingapi.com/v1"
 
@@ -22,6 +22,11 @@ def _log(level, message):
         db.session.flush()
     except Exception as e:
         print(f"Log write failed: {e}")
+
+
+def _strip_country(name):
+    """Remove trailing country code e.g. 'Ryebridge (IRE)' -> 'Ryebridge'"""
+    return re.sub(r'\s*\([^)]{2,4}\)\s*$', '', name).strip()
 
 
 def expand_colour(code):
@@ -51,7 +56,8 @@ def _parse_results(res_json):
         key    = f"{course}_{off}"
         runners = {}
         for r in race.get("runners", []):
-            horse = (r.get("horse") or "").strip().lower()
+            raw_horse = (r.get("horse") or "").strip()
+            horse     = _strip_country(raw_horse).lower()
             runners[horse] = {
                 "position": str(r.get("position") or ""),
                 "sp":       r.get("sp") or "",
@@ -81,7 +87,7 @@ def sync_todays_races(app):
         res_resp = requests.get(f"{BASE_URL}/results/today", auth=get_auth())
         if res_resp.status_code == 200:
             results_by_key = _parse_results(res_resp.json())
-            _log("INFO", f"Results fetched: {len(results_by_key)} race keys — sample keys: {list(results_by_key.keys())[:3]}")
+            _log("INFO", f"Results fetched: {len(results_by_key)} race keys")
         else:
             _log("ERROR", f"Results API failed: {res_resp.status_code}")
 
@@ -96,7 +102,7 @@ def sync_todays_races(app):
         for m in Meeting.query.all():
             existing_meetings[f"{m.name.lower()}_{m.date}"] = m
 
-        seen_keys  = set()
+        seen_keys     = set()
         result_writes = 0
 
         for racecard in racecards:
@@ -146,9 +152,6 @@ def sync_todays_races(app):
             result_key     = f"{course.strip().lower()}_{off_time.strip()}"
             result_runners = results_by_key.get(result_key, {})
 
-            if race_status.lower() == 'result':
-                _log("INFO", f"Result race: {result_key} — result_runners found: {bool(result_runners)} — runner count: {len(result_runners)}")
-
             existing_runners = {r.horse_name.lower(): r for r in race.runners}
 
             for r in racecard.get("runners", []):
@@ -160,9 +163,6 @@ def sync_todays_races(app):
                 result   = result_runners.get(horse_key, {})
                 position = result.get("position", "")
                 sp_dec   = result.get("sp_dec", "") or str(r.get("sp_dec") or "")
-
-                if race_status.lower() == 'result' and not result:
-                    _log("WARN", f"No result match for horse '{horse_key}' in race {result_key} — available keys: {list(result_runners.keys())[:3]}")
 
                 t14 = r.get("trainer_14_days") or {}
                 if isinstance(t14, dict) and t14.get("runs"):
