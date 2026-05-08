@@ -105,3 +105,10 @@ class EmailLog(db.Model):
     status    = db.Column(db.String(20))
     sent_at   = db.Column(db.String(30))
     user      = db.relationship('User', backref=db.backref('email_logs', lazy=True))
+
+
+class SyncLog(db.Model):
+    id         = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.String(30))
+    level      = db.Column(db.String(10))  # INFO, WARN, ERROR
+    message    = db.Column(db.Text)
