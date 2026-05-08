@@ -162,6 +162,38 @@
     .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); line-height: 1; }
     .modal-close:hover { color: var(--text); }
 
+    /* Horse detail popup */
+    .horse-popup { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 600; display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .horse-popup.open { display: flex; }
+    .horse-popup-inner { background: rgba(255,252,248,0.98); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 480px; width: 100%; border: 0.5px solid var(--border); position: relative; max-height: 85vh; overflow-y: auto; }
+    .horse-popup h3 { font-size: 18px; font-weight: 600; color: var(--brand); margin-bottom: 0.25rem; display: flex; align-items: center; gap: 10px; }
+    .horse-popup .popup-silk { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+    .horse-popup .popup-silk-fallback { width: 32px; height: 32px; border-radius: 3px; flex-shrink: 0; }
+    .horse-popup .popup-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); line-height: 1; }
+    .horse-popup .popup-close:hover { color: var(--text); }
+    .popup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 1rem; }
+    .popup-field .popup-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px; }
+    .popup-field .popup-value { font-size: 13px; color: var(--text); }
+    .popup-field .popup-value.muted { color: var(--text2); }
+    .popup-field.full { grid-column: 1 / -1; }
+    .popup-spotlight { margin-top: 1rem; padding: 10px 12px; background: var(--brand-light); border-radius: var(--radius); border: 0.5px solid rgba(139,58,58,0.15); font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .popup-spotlight .spotlight-title { font-size: 11px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+    .rp-logo { font-size: 10px; background: #003f8a; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700; letter-spacing: 0.02em; }
+    .wind-surgery-badge { font-size: 10px; background: #fff3e0; color: #e65100; border: 0.5px solid #ffb74d; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
+
+    /* Silk image in table */
+    .silk-img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+    .silk-fallback { width: 20px; height: 20px; border-radius: 2px; flex-shrink: 0; }
+
+    /* Spotlight button */
+    .spotlight-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; line-height: 1; border-radius: 3px; color: var(--text3); display: inline-flex; align-items: center; gap: 2px; }
+    .spotlight-btn:hover { background: var(--brand-light); color: var(--brand); }
+    .spotlight-btn .rp-logo { font-size: 9px; }
+
+    /* Horse name clickable */
+    .horse-name-link { cursor: pointer; color: var(--text); text-decoration: none; }
+    .horse-name-link:hover { color: var(--brand); text-decoration: underline; }
+
     @media (max-width: 700px) {
       .table-wrap { display: none; }
       .runner-cards { display: block; }
@@ -332,6 +364,23 @@
   </div>
 
   <div class="footer">Magnolia Horses &nbsp;&middot;&nbsp; Race card data via The Racing API &nbsp;&middot;&nbsp; Colour data sourced from Weatherbys</div>
+</div>
+
+<!-- Horse detail popup -->
+<div class="horse-popup" id="horse-popup">
+  <div class="horse-popup-inner">
+    <button class="popup-close" id="horse-popup-close">&#215;</button>
+    <h3>
+      <span id="popup-silk-wrap"></span>
+      <span id="popup-horse-name"></span>
+      <span id="popup-wind-badge"></span>
+    </h3>
+    <div id="popup-spotlight" class="popup-spotlight" style="display:none">
+      <div class="spotlight-title"><span class="rp-logo">RP</span> Racing Post Spotlight</div>
+      <div id="popup-spotlight-text"></div>
+    </div>
+    <div class="popup-grid" id="popup-grid"></div>
+  </div>
 </div>
 
 <!-- Login prompt modal -->
@@ -623,32 +672,49 @@ function buildRaceBlock(race, meetingLabel){
     var notes=isTagged?taggedMap[key]:'';
     var tb=makeTagBtn(rName,isTagged,notes);
     var pos=r.position||'';
-    var posDisp=pos?pos:r.number||'-';
+    var posCellVal=isResult?(pos||'-'):(r.number||'-');
     var posCls=isResult?posClass(pos):'';
 
-    // Headgear
-    var hgHtml=r.headgear?'<span class="headgear-chip">'+escHtml(r.headgear)+'</span>':'';
-    // Last run
-    var lrHtml=r.last_run?'<span class="last-run-chip">'+escHtml(r.last_run)+'d</span>':'';
-    // SP for results
-    var spHtml=(isResult&&r.odds&&r.odds!=='None'&&r.odds!=='0')?'<span class="sp-chip">SP: '+escHtml(r.odds)+'</span>':'';
+    // Silk — use real image if available, fallback to coloured svg
+    var silkHtml;
+    if (r.silk_url) {
+      silkHtml = '<img class="silk-img" src="'+escHtml(r.silk_url)+'" alt="silk" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">'
+        + silkSvg(r.colour, r.number||'');
+    } else {
+      silkHtml = silkSvg(r.colour, r.number||'');
+    }
 
-    // Position cell — show pos number for results, horse number otherwise
-    var posCellVal = isResult ? (pos||'-') : (r.number||'-');
+    // Spotlight button
+    var spBtn = r.spotlight
+      ? '<button class="spotlight-btn" data-horse="'+escHtml(rName)+'" title="Racing Post spotlight"><span class="rp-logo">RP</span></button>'
+      : '';
+
+    // Wind surgery indicator
+    var windBadge = r.wind_surgery ? '<span class="wind-surgery-badge" title="Wind surgery">WS</span>' : '';
+
+    // SP display
+    var spDisp = (isResult && r.odds && r.odds !== 'None' && r.odds !== '0' && r.odds !== '')
+      ? '<span class="sp-chip">'+escHtml(r.odds)+'</span>' : '';
+
+    // Form column
+    var formHtmlStr = formHtml(r.form);
 
     tableRows+='<tr>'
-      +'<td><span class="pos-cell'+posCls+'">'+escHtml(posCellVal)+'</span></td>'
-      +'<td><div class="horse-name-cell">'+silkSvg(r.colour,r.number||'')
-      +'<div style="min-width:0"><div class="horse-name">'+escHtml(rName)+'</div>'
-      +'<div class="horse-owner">'+escHtml(r.owner||'')+'</div></div></div></td>'
+      +'<td class="pos-cell'+posCls+'" style="text-align:center;font-weight:700">'+escHtml(posCellVal)+'</td>'
+      +'<td><div class="horse-name-cell">'+silkHtml
+      +'<div style="min-width:0">'
+      +'<span class="horse-name-link" data-horse="'+escHtml(rName)+'" style="font-weight:500">'+escHtml(rName)+'</span>'+windBadge
+      +'<div class="horse-owner" style="font-size:10px;color:var(--text3)">'+escHtml(r.owner||'')+'</div>'
+      +'</div></div></td>'
+      +'<td>'+spBtn+'</td>'
       +'<td>'+colourChip(r.colour)+'</td>'
-      +'<td><span class="form-str">'+formHtml(r.form)+'</span></td>'
-      +'<td style="font-size:11px;color:var(--text2)">'+escHtml(String(r.age||'-'))+'yo '+escHtml(r.sex||'')+'</td>'
-      +'<td>'+hgHtml+(hgHtml&&lrHtml?' ':'')+'<span style="font-size:11px;color:var(--text2)">'+escHtml(r.weight||'-')+'</span></td>'
-      +'<td style="font-size:11px;color:var(--text2)">'+escHtml(String(r.or||'-'))+'</td>'
-      +'<td>'+lrHtml+'</td>'
-      +'<td>'+(isResult?spHtml:'')+'</td>'
-      +'<td><div class="jt-cell"><strong>'+escHtml(r.jockey||'-')+'</strong><br>T: '+escHtml(r.trainer||'-')+'</div></td>'
+      +'<td><span class="form-str">'+formHtmlStr+'</span></td>'
+      +'<td style="font-size:11px;color:var(--text2)">'+escHtml(r.or||'-')+(r.rpr&&r.rpr!=='-'?' / '+escHtml(r.rpr):'')+'</td>'
+      +'<td>'+spDisp+'</td>'
+      +'<td><div class="jt-cell"><strong>'+escHtml(r.jockey||'-')+'</strong>'
+      +(r.trainer_14_days?'<br><span style="font-size:10px;color:var(--text3)">'+escHtml(r.trainer||'-')+' ('+escHtml(r.trainer_14_days)+')</span>'
+        :'<br>'+escHtml(r.trainer||'-'))
+      +'</div></td>'
       +'<td style="width:32px;text-align:center">'+tb+'</td>'
       +'</tr>';
 
@@ -658,17 +724,15 @@ function buildRaceBlock(race, meetingLabel){
 
     mobileCards+='<div class="runner-card'+cardWinner+'">'
       +'<div class="runner-card-top"><span class="'+cardPosClass+'">'+escHtml(cardPosVal)+'</span>'
-      +silkSvg(r.colour,r.number||'')
-      +'<span class="runner-card-name">'+escHtml(rName)+'</span>'
-      +'<span class="runner-card-form">'+formHtml(r.form)+'</span>'+tb+'</div>'
+      +silkHtml
+      +'<span class="runner-card-name horse-name-link" data-horse="'+escHtml(rName)+'">'+escHtml(rName)+'</span>'
+      +'<span class="runner-card-form">'+formHtmlStr+'</span>'+tb+'</div>'
       +'<div class="runner-card-grid">'
       +'<div class="runner-card-field"><span class="label">Jockey</span><span class="value">'+escHtml(r.jockey||'-')+'</span></div>'
-      +'<div class="runner-card-field"><span class="label">Trainer</span><span class="value muted">'+escHtml(r.trainer||'-')+'</span></div>'
+      +'<div class="runner-card-field"><span class="label">Trainer '+(r.trainer_14_days?'('+escHtml(r.trainer_14_days)+')':'')+'</span><span class="value muted">'+escHtml(r.trainer||'-')+'</span></div>'
       +'<div class="runner-card-field"><span class="label">Colour</span><span class="value">'+colourChip(r.colour)+'</span></div>'
-      +'<div class="runner-card-field"><span class="label">Age / sex</span><span class="value muted">'+escHtml(String(r.age||'-'))+'yo '+escHtml(r.sex||'')+'</span></div>'
-      +'<div class="runner-card-field"><span class="label">Wgt'+(r.headgear?' / Gear':'')+'</span><span class="value muted">'+escHtml(r.weight||'-')+(r.headgear?' | <span style=\'color:#1565c0\'>'+escHtml(r.headgear)+'</span>':'')+'</span></div>'
-      +'<div class="runner-card-field"><span class="label">Last ran</span><span class="value muted">'+(r.last_run?escHtml(r.last_run)+' days ago':'-')+'</span></div>'
-      +(isResult&&r.odds&&r.odds!=='None'?'<div class="runner-card-field"><span class="label">SP</span><span class="value" style="color:var(--gold)">'+escHtml(r.odds)+'</span></div>':'')
+      +'<div class="runner-card-field"><span class="label">OR / RPR</span><span class="value muted">'+escHtml(r.or||'-')+(r.rpr&&r.rpr!=='-'?' / '+escHtml(r.rpr):'')+'</span></div>'
+      +(isResult&&r.odds?'<div class="runner-card-field"><span class="label">SP</span><span class="value" style="color:var(--gold)">'+escHtml(r.odds)+'</span></div>':'')
       +(notes?'<div class="runner-card-field" style="grid-column:1/-1"><span class="label">My notes</span><span class="value" style="color:var(--brand)">'+escHtml(notes)+'</span></div>':'')
       +'</div></div>';
   }
@@ -676,20 +740,21 @@ function buildRaceBlock(race, meetingLabel){
   return '<div class="race-block">'
     +'<div class="race-header'+headerClass+'"><span class="race-time">'+escHtml(race.time||'')+'</span>'
     +'<div class="race-info"><div class="race-name">'+escHtml(race.name||'')+'</div>'
-    +'<div class="race-details">'+escHtml(String(race.distance||''))+' &middot; '+escHtml(race.class||'')+'</div></div>'
+    +'<div class="race-details">'+escHtml(String(race.distance||''))+' &middot; '+escHtml(race.class||'')
+    +(race.going_detailed?' &middot; '+escHtml(race.going_detailed):'')
+    +(race.weather?' &middot; &#127751; '+escHtml(race.weather):'')
+    +'</div></div>'
     +meetingTag+statusBadge+'</div>'
     +'<div class="table-wrap"><table><thead><tr>'
-    +'<th style="width:32px">#</th>'
-    +'<th style="width:20%">Horse</th>'
+    +'<th style="width:30px">#</th>'
+    +'<th style="width:22%">Horse</th>'
+    +'<th style="width:28px">RP</th>'
     +'<th style="width:90px">Colour</th>'
     +'<th style="width:60px">Form</th>'
-    +'<th style="width:58px">Age/sex</th>'
-    +'<th style="width:70px">Wgt/gear</th>'
-    +'<th style="width:36px">OR</th>'
-    +'<th style="width:48px">Last ran</th>'
+    +'<th style="width:55px">OR/RPR</th>'
     +'<th style="width:55px">SP</th>'
-    +'<th style="width:18%">Jockey / trainer</th>'
-    +'<th style="width:32px"></th>'
+    +'<th style="width:20%">Jockey / trainer</th>'
+    +'<th style="width:30px"></th>'
     +'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
     +'<div class="runner-cards">'+mobileCards+'</div>'
     +'</div>';
@@ -740,7 +805,7 @@ function runSearch(){
   params.append('uk_only', f.uk_only ? 'true' : 'false');
   fetch('/api/search?'+params.toString())
     .then(function(r){return r.json();})
-    .then(function(data){renderResults(data);populateMeetingDropdown(data);})
+    .then(function(data){cacheRunners(data);cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
     .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not connect to the server.</div></div>';})
     .finally(function(){spinner.classList.remove('active');});
 }
@@ -782,6 +847,77 @@ function syncUKBtn(){
   else{wrap.style.background='var(--surface2)';wrap.style.borderColor='var(--border2)';label.style.color='var(--text2)';label.style.fontWeight='400';}
 }
 
+// ── Horse detail popup ────────────────────────────────────────────────────────
+var allRunnersCache = {};  // horse_name_lower -> runner data
+
+function cacheRunners(data) {
+  for (var i=0; i<data.length; i++) {
+    var block = data[i];
+    for (var j=0; j<block.races.length; j++) {
+      var race = block.races[j];
+      for (var k=0; k<race.runners.length; k++) {
+        var r = race.runners[k];
+        allRunnersCache[r.name.toLowerCase()] = r;
+      }
+    }
+  }
+}
+
+function openHorsePopup(horseName) {
+  var r = allRunnersCache[horseName.toLowerCase()];
+  if (!r) return;
+
+  // Silk
+  var silkWrap = document.getElementById('popup-silk-wrap');
+  if (r.silk_url) {
+    silkWrap.innerHTML = '<img class="popup-silk" src="'+escHtml(r.silk_url)+'" alt="silk">';
+  } else {
+    var c = COLOUR_META[(r.colour||'').toLowerCase()] || '#888';
+    silkWrap.innerHTML = '<svg class="popup-silk-fallback" viewBox="0 0 32 32"><rect width="32" height="32" fill="'+c+'" rx="3"/></svg>';
+  }
+
+  document.getElementById('popup-horse-name').textContent = horseName;
+  document.getElementById('popup-wind-badge').innerHTML = r.wind_surgery ? '<span class="wind-surgery-badge">Wind surgery</span>' : '';
+
+  // Spotlight
+  var spDiv  = document.getElementById('popup-spotlight');
+  var spText = document.getElementById('popup-spotlight-text');
+  if (r.spotlight) {
+    spText.textContent = r.spotlight;
+    spDiv.style.display = 'block';
+  } else {
+    spDiv.style.display = 'none';
+  }
+
+  // Detail grid
+  var fields = [
+    ['Age / sex',    r.age ? r.age+'yo '+r.sex : '-'],
+    ['Weight',       r.weight || '-'],
+    ['Draw',         r.draw || '-'],
+    ['Headgear',     r.headgear ? r.headgear+(r.headgear_run?' (run '+r.headgear_run+')':'') : 'None'],
+    ['Last ran',     r.last_run ? r.last_run+' days ago' : '-'],
+    ['OR',           r.or || '-'],
+    ['RPR',          r.rpr || '-'],
+    ['Topspeed',     r.ts || '-'],
+    ['Owner',        r.owner || '-', true],
+    ['Trainer form (14d)', r.trainer_14_days ? r.trainer_14_days+' W/R' : '-', true],
+  ];
+  if (r.comment) fields.push(['Comment', r.comment, true]);
+
+  var gridHtml = '';
+  for (var fi=0; fi<fields.length; fi++) {
+    var f = fields[fi];
+    var fullClass = f[2] ? ' full' : '';
+    gridHtml += '<div class="popup-field'+fullClass+'"><span class="popup-label">'+f[0]+'</span><span class="popup-value muted">'+escHtml(String(f[1]))+'</span></div>';
+  }
+  document.getElementById('popup-grid').innerHTML = gridHtml;
+  document.getElementById('horse-popup').classList.add('open');
+}
+
+function closeHorsePopup() {
+  document.getElementById('horse-popup').classList.remove('open');
+}
+
 // ── Event wiring ─────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
@@ -804,8 +940,18 @@ document.getElementById('save-search-close').addEventListener('click',function()
 document.getElementById('save-search-name').addEventListener('keydown',function(e){if(e.key==='Enter')confirmSaveSearch();});
 
 document.getElementById('results-area').addEventListener('click',function(e){
-  var btn=e.target.closest('.tag-btn');if(btn)openTagModal(btn.dataset.horse);
+  var btn = e.target.closest('.tag-btn');
+  if (btn) { openTagModal(btn.dataset.horse); return; }
+  var link = e.target.closest('.horse-name-link');
+  if (link) { openHorsePopup(link.dataset.horse); return; }
+  var spBtn = e.target.closest('.spotlight-btn');
+  if (spBtn) { openHorsePopup(spBtn.dataset.horse); return; }
 });
+
+document.getElementById('horse-popup').addEventListener('click', function(e) {
+  if (e.target === this) closeHorsePopup();
+});
+document.getElementById('horse-popup-close').addEventListener('click', closeHorsePopup);
 
 document.getElementById('tag-modal-save').addEventListener('click',saveTag);
 document.getElementById('tag-modal-remove').addEventListener('click',removeTag);
@@ -828,7 +974,7 @@ var runAllBtn=document.getElementById('btn-run-all');
 if (runAllBtn){
   runAllBtn.addEventListener('click',function(){
     runAllBtn.textContent='Running...';runAllBtn.disabled=true;document.getElementById('spinner').classList.add('active');
-    fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){renderResults(data);populateMeetingDropdown(data);})
+    fetch('/api/run-all-searches').then(function(r){return r.json();}).then(function(data){cacheRunners(data);cacheRunners(data);renderResults(data);populateMeetingDropdown(data);})
       .catch(function(){document.getElementById('results-area').innerHTML='<div class="empty-state"><div>Could not run searches.</div></div>';})
       .finally(function(){runAllBtn.innerHTML='&#9654; Run all saved searches';runAllBtn.disabled=false;document.getElementById('spinner').classList.remove('active');});
   });

@@ -48,15 +48,17 @@ class Meeting(db.Model):
 
 
 class Race(db.Model):
-    id          = db.Column(db.Integer, primary_key=True)
-    meeting_id  = db.Column(db.Integer, db.ForeignKey('meeting.id'))
-    time        = db.Column(db.String(10))
-    name        = db.Column(db.String(200))
-    distance    = db.Column(db.String(20))
-    race_class  = db.Column(db.String(50))
-    prize       = db.Column(db.String(50))
-    race_status = db.Column(db.String(20), default='')   # 'result', 'Active', etc
-    runners     = db.relationship('Runner', backref='race', lazy=True)
+    id             = db.Column(db.Integer, primary_key=True)
+    meeting_id     = db.Column(db.Integer, db.ForeignKey('meeting.id'))
+    time           = db.Column(db.String(10))
+    name           = db.Column(db.String(200))
+    distance       = db.Column(db.String(20))
+    race_class     = db.Column(db.String(50))
+    prize          = db.Column(db.String(50))
+    race_status    = db.Column(db.String(20),  default='')
+    going_detailed = db.Column(db.String(100), default='')
+    weather        = db.Column(db.String(100), default='')
+    runners        = db.relationship('Runner', backref='race', lazy=True)
 
 
 class Runner(db.Model):
@@ -64,6 +66,7 @@ class Runner(db.Model):
     race_id         = db.Column(db.Integer, db.ForeignKey('race.id'))
     horse_name      = db.Column(db.String(100))
     number          = db.Column(db.String(10))
+    draw            = db.Column(db.String(10),  default='')
     colour          = db.Column(db.String(30))
     age             = db.Column(db.String(5))
     sex             = db.Column(db.String(10))
@@ -73,10 +76,18 @@ class Runner(db.Model):
     form            = db.Column(db.String(30))
     weight          = db.Column(db.String(10))
     official_rating = db.Column(db.String(10))
+    rpr             = db.Column(db.String(10),  default='')
+    ts              = db.Column(db.String(10),  default='')
     odds            = db.Column(db.String(20))
-    headgear        = db.Column(db.String(20), default='')
-    last_run        = db.Column(db.String(10), default='')
-    position        = db.Column(db.String(5),  default='')  # finishing position
+    headgear        = db.Column(db.String(20),  default='')
+    headgear_run    = db.Column(db.String(10),  default='')
+    last_run        = db.Column(db.String(10),  default='')
+    position        = db.Column(db.String(5),   default='')
+    silk_url        = db.Column(db.String(300), default='')
+    spotlight       = db.Column(db.Text,        default='')
+    comment         = db.Column(db.Text,        default='')
+    wind_surgery    = db.Column(db.String(5),   default='')
+    trainer_14_days = db.Column(db.String(50),  default='')
 
 
 class ColourOverride(db.Model):
