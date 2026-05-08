@@ -65,8 +65,8 @@
   <div class="stat-strip">
     <div class="stat"><strong>{{ users|length }}</strong>Total users</div>
     <div class="stat"><strong>{{ users|sum(attribute='tagged_count') }}</strong>Total tagged horses</div>
-    <div class="stat"><strong>{{ users|sum(attribute='searches'|length) }}</strong>Total saved searches</div>
-    <div class="stat"><strong>{{ users|selectattr('searches')|map(attribute='searches')|sum|selectattr('alert')|list|length }}</strong>Alert searches</div>
+    <div class="stat"><strong>{% set total_searches = namespace(n=0) %}{% for u in users %}{% set total_searches.n = total_searches.n + u.searches|length %}{% endfor %}{{ total_searches.n }}</strong>Total saved searches</div>
+    <div class="stat"><strong>{% set alert_count = namespace(n=0) %}{% for u in users %}{% for s in u.searches %}{% if s.alert %}{% set alert_count.n = alert_count.n + 1 %}{% endif %}{% endfor %}{% endfor %}{{ alert_count.n }}</strong>Alert searches</div>
   </div>
 
   {% for u in users %}
