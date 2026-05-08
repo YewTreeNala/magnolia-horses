@@ -425,32 +425,23 @@ def search():
 
 def runner_to_dict(r, tagged_map):
     return {
-        'number':         r.number,
-        'name':           r.horse_name,
-        'colour':         r.colour,
-        'age':            r.age,
-        'sex':            r.sex,
-        'draw':           r.draw or '',
-        'trainer':        r.trainer,
-        'jockey':         r.jockey,
-        'owner':          r.owner,
-        'form':           r.form,
-        'weight':         r.weight,
-        'or':             r.official_rating,
-        'rpr':            r.rpr or '',
-        'ts':             r.ts or '',
-        'odds':           r.odds,
-        'headgear':       r.headgear or '',
-        'headgear_run':   r.headgear_run or '',
-        'last_run':       r.last_run or '',
-        'position':       r.position or '',
-        'silk_url':       r.silk_url or '',
-        'spotlight':      r.spotlight or '',
-        'comment':        r.comment or '',
-        'wind_surgery':   r.wind_surgery or '',
-        'trainer_14_days': r.trainer_14_days or '',
-        'tagged':         r.horse_name.lower() in tagged_map,
-        'notes':          tagged_map.get(r.horse_name.lower(), ''),
+        'number':   r.number,
+        'name':     r.horse_name,
+        'colour':   r.colour,
+        'age':      r.age,
+        'sex':      r.sex,
+        'trainer':  r.trainer,
+        'jockey':   r.jockey,
+        'owner':    r.owner,
+        'form':     r.form,
+        'weight':   r.weight,
+        'or':       r.official_rating,
+        'odds':     r.odds,
+        'headgear': r.headgear or '',
+        'last_run': r.last_run or '',
+        'position': r.position or '',
+        'tagged':   r.horse_name.lower() in tagged_map,
+        'notes':    tagged_map.get(r.horse_name.lower(), ''),
     }
 
 
@@ -477,14 +468,12 @@ def build_race_obj(r_data, tagged_map):
         runners = sorted(runners, key=num_key)
 
     return {
-        'time':           race.time,
-        'name':           race.name,
-        'distance':       race.distance,
-        'class':          race.race_class,
-        'is_result':      is_result,
-        'going_detailed': race.going_detailed or '',
-        'weather':        race.weather or '',
-        'runners':        [runner_to_dict(r, tagged_map) for r in runners]
+        'time':      race.time,
+        'name':      race.name,
+        'distance':  race.distance,
+        'class':     race.race_class,
+        'is_result': is_result,
+        'runners':   [runner_to_dict(r, tagged_map) for r in runners]
     }
 
 
