@@ -59,9 +59,7 @@ def sync_and_alert(app):
 
 
 scheduler = BackgroundScheduler()
-# Every 15 minutes during the day
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
-# 5am daily sync + alerts
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.start()
 
@@ -459,7 +457,6 @@ def build_race_obj(r_data, tagged_map):
     runners = r_data['runners']
     is_result = (race.race_status or '').lower() == 'result'
 
-    # Sort by finishing position if race is complete, else by number
     if is_result:
         def pos_key(r):
             p = r.position or ''
@@ -662,6 +659,56 @@ def delete_override(horse_name):
         db.session.delete(override)
         db.session.commit()
     return jsonify({'status': 'ok'})
+
+
+# ── Debug ──────────────────────────────────────────────────────────────────────
+
+@app.route('/api/debug-results')
+@login_required
+def debug_results():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    import requests as req
+    auth = (os.getenv('RACING_API_USER'), os.getenv('RACING_API_KEY'))
+    BASE = 'https://api.theracingapi.com/v1'
+
+    res = req.get(f'{BASE}/results/today', auth=auth).json()
+    result_keys = {}
+    for race in res.get('results', []):
+        course = (race.get('course') or '').strip().lower()
+        off    = (race.get('off') or '').strip()
+        key    = f'{course}_{off}'
+        runners = race.get('runners', [])
+        result_keys[key] = {
+            'sample_horse': (runners[0].get('horse') or '') if runners else '',
+            'sample_pos':   (runners[0].get('position') or '') if runners else '',
+            'sample_sp':    (runners[0].get('sp_dec') or '') if runners else '',
+        }
+
+    rc = req.get(f'{BASE}/racecards/basic', auth=auth).json()
+    racecard_keys = {}
+    for racecard in rc.get('racecards', []):
+        if (racecard.get('race_status') or '').lower() != 'result':
+            continue
+        course   = (racecard.get('course') or '').strip().lower()
+        off_time = (racecard.get('off_time') or '').strip()
+        key      = f'{course}_{off_time}'
+        racecard_keys[key] = {
+            'match_found': key in result_keys,
+            'result_data': result_keys.get(key, {})
+        }
+
+    return jsonify({
+        'result_keys':   result_keys,
+        'racecard_keys': racecard_keys,
+        'summary': {
+            'result_races':       len(result_keys),
+            'finished_racecards': len(racecard_keys),
+            'matched':   sum(1 for v in racecard_keys.values() if v['match_found']),
+            'unmatched': sum(1 for v in racecard_keys.values() if not v['match_found']),
+        }
+    })
 
 
 if __name__ == '__main__':
