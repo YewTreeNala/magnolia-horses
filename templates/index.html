@@ -80,8 +80,7 @@
       padding: 10px 14px; margin-bottom: 0.5rem;
       display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
       position: sticky; top: 0; z-index: 50;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
     }
     .meeting-name { font-size: 15px; font-weight: 500; color: var(--brand); }
     .meeting-meta { font-size: 12px; color: var(--text2); }
@@ -115,11 +114,30 @@
     .colour-swatch { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; border: 0.5px solid rgba(0,0,0,0.15); }
     .jt-cell { font-size: 11px; color: var(--text2); line-height: 1.5; }
     .jt-cell strong { color: var(--text); font-weight: 500; }
-    .sp-chip { font-size: 11px; font-weight: 500; color: var(--gold); }
+
+    /* Tag + search match cell */
+    .actions-cell { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
     .tag-btn { background: none; border: none; cursor: pointer; padding: 3px 5px; color: var(--text3); font-size: 16px; line-height: 1; border-radius: 4px; transition: color 0.15s; }
     .tag-btn:hover { color: var(--brand); }
     .tag-btn.tagged { color: var(--brand); }
     .tag-notes-dot { font-size: 7px; color: var(--brand); vertical-align: super; margin-left: 1px; }
+    .search-match-badge { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: var(--blue-bg); color: var(--blue); border: 0.5px solid rgba(24,95,165,0.25); white-space: nowrap; font-weight: 500; }
+
+    /* RP spotlight tooltip */
+    .spotlight-wrap { position: relative; display: inline-flex; }
+    .spotlight-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; line-height: 1; border-radius: 3px; color: var(--text3); display: inline-flex; align-items: center; gap: 2px; }
+    .spotlight-btn:hover { background: var(--brand-light); color: var(--brand); }
+    .spotlight-btn .rp-logo { font-size: 9px; }
+    .spotlight-tooltip {
+      display: none; position: absolute; left: 0; top: calc(100% + 6px);
+      width: 280px; background: rgba(255,252,248,0.98);
+      border: 0.5px solid rgba(139,58,58,0.2); border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 10px 12px;
+      font-size: 12px; color: var(--text2); line-height: 1.6;
+      z-index: 300; pointer-events: none;
+    }
+    .spotlight-tooltip .tt-title { font-size: 10px; color: var(--brand); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+    .spotlight-wrap:hover .spotlight-tooltip { display: block; }
 
     .runner-cards { display: none; }
     .runner-card { padding: 10px 14px; border-bottom: 0.5px solid var(--border); }
@@ -184,10 +202,6 @@
     .rp-logo { font-size: 10px; background: #003f8a; color: #fff; padding: 1px 5px; border-radius: 3px; font-weight: 700; letter-spacing: 0.02em; }
     .wind-surgery-badge { font-size: 10px; background: #fff3e0; color: #e65100; border: 0.5px solid #ffb74d; border-radius: 4px; padding: 1px 5px; margin-left: 4px; }
     .silk-img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
-    .silk-fallback { width: 20px; height: 20px; border-radius: 2px; flex-shrink: 0; }
-    .spotlight-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; line-height: 1; border-radius: 3px; color: var(--text3); display: inline-flex; align-items: center; gap: 2px; }
-    .spotlight-btn:hover { background: var(--brand-light); color: var(--brand); }
-    .spotlight-btn .rp-logo { font-size: 9px; }
     .horse-name-link { cursor: pointer; color: var(--text); text-decoration: none; }
     .horse-name-link:hover { color: var(--brand); text-decoration: underline; }
 
@@ -476,8 +490,6 @@ function posClass(pos) {
   if (pos === '3') return ' pos-3';
   return '';
 }
-
-// Convert "H:MM" time string to minutes for correct numeric sorting
 function timeToMins(t) {
   if (!t) return 9999;
   var parts = t.split(':');
@@ -485,6 +497,40 @@ function timeToMins(t) {
   return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
 }
 
+// ── Saved search client-side matching ────────────────────────────────────────
+function getMatchingSearches(r, meetingName) {
+  var matches = [];
+  for (var i = 0; i < savedSearches.length; i++) {
+    var f = savedSearches[i].filters;
+    if (!f) continue;
+    if (f.uk_only && !isUKCourse(meetingName)) continue;
+    if (f.colour  && (r.colour  || '').toLowerCase().indexOf(f.colour.toLowerCase())  === -1) continue;
+    if (f.meeting && meetingName.toLowerCase().indexOf(f.meeting.toLowerCase()) === -1) continue;
+    if (f.jockey  && (r.jockey  || '').toLowerCase() !== f.jockey.toLowerCase())  continue;
+    if (f.trainer && (r.trainer || '').toLowerCase() !== f.trainer.toLowerCase()) continue;
+    if (f.owner   && (r.owner   || '').toLowerCase() !== f.owner.toLowerCase())   continue;
+    if (f.horse && f.horse.trim()) {
+      var nl = r.name.toLowerCase(), sl = f.horse.trim().toLowerCase();
+      if (nl.indexOf(sl) === -1) continue; // simple contains — no fuzzy client-side
+    }
+    matches.push(savedSearches[i].name);
+  }
+  return matches;
+}
+
+var UK_COURSES_SET = new Set([
+  'ascot','ayr','bath','beverley','brighton','carlisle','catterick','chelmsford',
+  'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las',
+  'goodwood','hamilton','haydock','hereford','huntingdon','kempton','leicester',
+  'lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
+  'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon',
+  'salisbury','sandown','sedgefield','southwell','stratford','taunton','thirsk',
+  'uttoxeter','warwick','wetherby','windsor','wolverhampton','worcester',
+  'wincanton','yarmouth','york'
+]);
+function isUKCourse(name) { return UK_COURSES_SET.has((name||'').toLowerCase().trim()); }
+
+// ── Filter persistence ────────────────────────────────────────────────────────
 function getFilters() {
   return {
     horse:   document.getElementById('f-horse').value.trim(),
@@ -537,6 +583,7 @@ function applyFilters(filters) {
   document.getElementById('f-owner').value   = filters.owner   || '';
 }
 
+// ── Tagging ───────────────────────────────────────────────────────────────────
 function loadTags() {
   if (!IS_LOGGED_IN) return Promise.resolve();
   return fetch('/api/my-tags').then(function(r){return r.json();}).then(function(tags){
@@ -583,6 +630,7 @@ function makeTagBtn(horseName,isTagged,notes){
     +(isTagged?'&#9829;':'&#9825;')+(hasNotes?'<span class="tag-notes-dot">&#9679;</span>':'')+'</button>';
 }
 
+// ── Saved searches ────────────────────────────────────────────────────────────
 function loadSavedSearches() {
   if (!IS_LOGGED_IN) return Promise.resolve();
   return fetch('/api/saved-searches').then(function(r){return r.json();}).then(function(data){
@@ -626,6 +674,7 @@ function confirmSaveSearch(){
     .then(function(){document.getElementById('save-search-modal').classList.remove('open');return loadSavedSearches();});
 }
 
+// ── Dropdowns ─────────────────────────────────────────────────────────────────
 function initDropdown(field){
   var input=document.getElementById('f-'+field),dd=document.getElementById('dd-'+field),wrap=document.getElementById('wrap-'+field);
   function renderDD(filter){
@@ -661,6 +710,7 @@ function buildRaceBlock(race, meetingLabel){
   var statusBadge = isResult
     ? '<span class="result-badge">&#127942; Result &middot; '+totalRnrs+' ran</span>'
     : '<span class="race-badge">'+totalRnrs+' runner'+(totalRnrs!==1?'s':'')+'</span>';
+  var mName = meetingLabel || '';
 
   var tableRows='', mobileCards='';
   for (var i=0;i<race.runners.length;i++){
@@ -674,6 +724,15 @@ function buildRaceBlock(race, meetingLabel){
     var posCellVal=isResult?(pos||'-'):(r.number||'-');
     var posCls=isResult?posClass(pos):'';
 
+    // Search match badges
+    var matchBadges = '';
+    if (IS_LOGGED_IN && savedSearches.length) {
+      var matches = getMatchingSearches(r, mName);
+      for (var m=0; m<matches.length; m++) {
+        matchBadges += '<span class="search-match-badge">&#128269; '+escHtml(matches[m])+'</span>';
+      }
+    }
+
     var silkHtml;
     if (r.silk_url) {
       silkHtml = '<img class="silk-img" src="'+escHtml(r.silk_url)+'" alt="silk" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">'
@@ -682,12 +741,16 @@ function buildRaceBlock(race, meetingLabel){
       silkHtml = silkSvg(r.colour, r.number||'');
     }
 
-    var spBtn = r.spotlight
-      ? '<button class="spotlight-btn" data-horse="'+escHtml(rName)+'" title="Racing Post spotlight"><span class="rp-logo">RP</span></button>'
-      : '';
+    // RP spotlight button with hover tooltip
+    var spBtn = '';
+    if (r.spotlight) {
+      spBtn = '<div class="spotlight-wrap">'
+        + '<button class="spotlight-btn" data-horse="'+escHtml(rName)+'" title="Click for full details"><span class="rp-logo">RP</span></button>'
+        + '<div class="spotlight-tooltip"><div class="tt-title"><span class="rp-logo">RP</span> Racing Post Spotlight</div>'
+        + escHtml(r.spotlight)+'</div></div>';
+    }
+
     var windBadge = r.wind_surgery ? '<span class="wind-surgery-badge" title="Wind surgery">WS</span>' : '';
-    var spDisp = (isResult && r.odds && r.odds !== 'None' && r.odds !== '0' && r.odds !== '')
-      ? '<span class="sp-chip">'+escHtml(r.odds)+'</span>' : '';
     var formHtmlStr = formHtml(r.form);
 
     tableRows+='<tr>'
@@ -701,12 +764,11 @@ function buildRaceBlock(race, meetingLabel){
       +'<td>'+colourChip(r.colour)+'</td>'
       +'<td><span class="form-str">'+formHtmlStr+'</span></td>'
       +'<td style="font-size:11px;color:var(--text2)">'+escHtml(r.or||'-')+(r.rpr&&r.rpr!=='-'?' / '+escHtml(r.rpr):'')+'</td>'
-      +'<td>'+spDisp+'</td>'
       +'<td><div class="jt-cell"><strong>'+escHtml(r.jockey||'-')+'</strong>'
       +(r.trainer_14_days?'<br><span style="font-size:10px;color:var(--text3)">'+escHtml(r.trainer||'-')+' ('+escHtml(r.trainer_14_days)+')</span>'
         :'<br>'+escHtml(r.trainer||'-'))
       +'</div></td>'
-      +'<td style="width:32px;text-align:center">'+tb+'</td>'
+      +'<td><div class="actions-cell">'+tb+matchBadges+'</div></td>'
       +'</tr>';
 
     var cardPosClass=(isResult&&pos)?'runner-card-pos'+posClass(pos):'runner-card-num';
@@ -718,12 +780,12 @@ function buildRaceBlock(race, meetingLabel){
       +silkHtml
       +'<span class="runner-card-name horse-name-link" data-horse="'+escHtml(rName)+'">'+escHtml(rName)+'</span>'
       +'<span class="runner-card-form">'+formHtmlStr+'</span>'+tb+'</div>'
+      +(matchBadges ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">'+matchBadges+'</div>' : '')
       +'<div class="runner-card-grid">'
       +'<div class="runner-card-field"><span class="label">Jockey</span><span class="value">'+escHtml(r.jockey||'-')+'</span></div>'
       +'<div class="runner-card-field"><span class="label">Trainer '+(r.trainer_14_days?'('+escHtml(r.trainer_14_days)+')':'')+'</span><span class="value muted">'+escHtml(r.trainer||'-')+'</span></div>'
       +'<div class="runner-card-field"><span class="label">Colour</span><span class="value">'+colourChip(r.colour)+'</span></div>'
       +'<div class="runner-card-field"><span class="label">OR / RPR</span><span class="value muted">'+escHtml(r.or||'-')+(r.rpr&&r.rpr!=='-'?' / '+escHtml(r.rpr):'')+'</span></div>'
-      +(isResult&&r.odds?'<div class="runner-card-field"><span class="label">SP</span><span class="value" style="color:var(--gold)">'+escHtml(r.odds)+'</span></div>':'')
       +(notes?'<div class="runner-card-field" style="grid-column:1/-1"><span class="label">My notes</span><span class="value" style="color:var(--brand)">'+escHtml(notes)+'</span></div>':'')
       +'</div></div>';
   }
@@ -744,9 +806,8 @@ function buildRaceBlock(race, meetingLabel){
     +'<th style="width:90px">Colour</th>'
     +'<th style="width:60px">Form</th>'
     +'<th style="width:55px">OR/RPR</th>'
-    +'<th style="width:55px">SP</th>'
     +'<th style="width:20%">Jockey / trainer</th>'
-    +'<th style="width:30px"></th>'
+    +'<th></th>'
     +'</tr></thead><tbody>'+tableRows+'</tbody></table></div>'
     +'<div class="runner-cards">'+mobileCards+'</div>'
     +'</div>';
@@ -762,24 +823,17 @@ function renderResults(data){
   var html='<div class="results-header"><span>'+totalRunners+' runner'+(totalRunners!==1?'s':'')+' across '+totalRaces+' race'+(totalRaces!==1?'s':'')+' at '+totalMeetings+' meeting'+(totalMeetings!==1?'s':'')+'</span></div>';
 
   if (sortMode==='time'){
-    // Flatten all races, sort by time numerically, then render each with meeting label
     var allRaces = [];
-    for (var a=0;a<data.length;a++) {
-      for (var b=0;b<data[a].races.length;b++) {
-        allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
-      }
-    }
+    for (var a=0;a<data.length;a++) for (var b=0;b<data[a].races.length;b++) allRaces.push({race:data[a].races[b],meeting:data[a].meeting});
     allRaces.sort(function(x,y){ return timeToMins(x.race.time) - timeToMins(y.race.time); });
-    for (var c=0;c<allRaces.length;c++) {
-      html+='<div class="meeting-block">'+buildRaceBlock(allRaces[c].race, allRaces[c].meeting)+'</div>';
-    }
+    for (var c=0;c<allRaces.length;c++) html+='<div class="meeting-block">'+buildRaceBlock(allRaces[c].race,allRaces[c].meeting)+'</div>';
   } else {
     for (var d=0;d<data.length;d++){
       var block=data[d];
       html+='<div class="meeting-block">'
         +'<div class="meeting-header"><div><div class="meeting-name">'+escHtml(block.meeting)+'</div>'
         +'<div class="meeting-meta">'+escHtml(block.date||'')+'</div></div></div>';
-      for (var e=0;e<block.races.length;e++) html+=buildRaceBlock(block.races[e],null);
+      for (var e=0;e<block.races.length;e++) html+=buildRaceBlock(block.races[e], null);
       html+='</div>';
     }
   }
@@ -903,6 +957,7 @@ function openHorsePopup(horseName) {
 }
 function closeHorsePopup() { document.getElementById('horse-popup').classList.remove('open'); }
 
+// ── Event wiring ──────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
