@@ -44,6 +44,10 @@ UK_COURSES = {
 }
 
 
+def is_uk_course(name):
+    return (name or '').strip().lower() in UK_COURSES
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
@@ -366,6 +370,21 @@ def options():
     })
 
 
+def _fuzzy_match(name, search_term):
+    name_l   = name.lower()
+    search_l = search_term.lower()
+    if search_l in name_l:
+        return True
+    if fuzz.partial_ratio(search_l, name_l) >= 75:
+        return True
+    for word in name_l.split():
+        for sword in search_l.split():
+            if len(word) > 2 and len(sword) > 2:
+                if jellyfish.soundex(word) == jellyfish.soundex(sword):
+                    return True
+    return False
+
+
 @app.route('/api/search')
 def search():
     horse   = request.args.get('horse',   '').strip()
@@ -386,29 +405,20 @@ def search():
     if colour:  query = query.filter(Runner.colour.ilike(f'%{colour}%'))
     if meeting: query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
     if owner:   query = query.filter(Runner.owner == owner)
+    if uk_only: query = query.filter(Meeting.name.in_([c.title() for c in UK_COURSES] + list(UK_COURSES)))
 
     runners = query.order_by(Meeting.name, Race.time, Runner.number).all()
 
+    # UK filter as post-process to handle case variations reliably
     if uk_only:
-        runners = [r for r in runners if r.race.meeting.name.lower().strip() in UK_COURSES]
+        runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
     if horse:
-        def is_match(name, search_term, use_fuzzy):
-            name_l   = name.lower()
-            search_l = search_term.lower()
-            if search_l in name_l:
-                return True
-            if not use_fuzzy:
-                return False
-            if fuzz.partial_ratio(search_l, name_l) >= 75:
-                return True
-            for word in name_l.split():
-                for sword in search_l.split():
-                    if len(word) > 2 and len(sword) > 2:
-                        if jellyfish.soundex(word) == jellyfish.soundex(sword):
-                            return True
-            return False
-        runners = [r for r in runners if is_match(r.horse_name, horse, fuzzy)]
+        if fuzzy:
+            runners = [r for r in runners if _fuzzy_match(r.horse_name, horse)]
+        else:
+            hl = horse.lower()
+            runners = [r for r in runners if hl in r.horse_name.lower()]
 
     tagged_map = {}
     if current_user.is_authenticated:
@@ -453,25 +463,20 @@ def runner_to_dict(r, tagged_map):
 
 
 def build_race_obj(r_data, tagged_map):
-    race           = r_data['race']
-    runners        = r_data['runners']
-    is_result      = (race.race_status or '').lower() == 'result'
-    total_runners  = len(race.runners)  # always the full field from DB
+    race          = r_data['race']
+    runners       = r_data['runners']
+    is_result     = (race.race_status or '').lower() == 'result'
+    total_runners = len(race.runners)
 
     if is_result:
         def pos_key(r):
-            p = r.position or ''
-            try:
-                return int(p)
-            except (ValueError, TypeError):
-                return 999
+            try: return int(r.position or 0)
+            except (ValueError, TypeError): return 999
         runners = sorted(runners, key=pos_key)
     else:
         def num_key(r):
-            try:
-                return int(r.number or 0)
-            except (ValueError, TypeError):
-                return 0
+            try: return int(r.number or 0)
+            except (ValueError, TypeError): return 0
         runners = sorted(runners, key=num_key)
 
     return {
@@ -546,7 +551,7 @@ def run_all_searches():
         except Exception:
             continue
         for r in all_runners:
-            if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES: continue
+            if f.get('uk_only') and not is_uk_course(r.race.meeting.name): continue
             if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():  continue
             if f.get('meeting') and f['meeting'].lower() not in r.race.meeting.name.lower(): continue
             if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():       continue
@@ -555,15 +560,12 @@ def run_all_searches():
             hf = (f.get('horse') or '').strip()
             if hf:
                 use_fuzzy = f.get('fuzzy', True)
-                nl = r.horse_name.lower(); sl = hf.lower()
                 if use_fuzzy:
-                    ok = (sl in nl or fuzz.partial_ratio(sl, nl) >= 75
-                          or any(jellyfish.soundex(w) == jellyfish.soundex(s)
-                                 for w in nl.split() for s in sl.split() if len(w) > 2 and len(s) > 2))
+                    if not _fuzzy_match(r.horse_name, hf):
+                        continue
                 else:
-                    ok = sl in nl
-                if not ok:
-                    continue
+                    if hf.lower() not in r.horse_name.lower():
+                        continue
             matched_ids[r.id] = r
     matched = list(matched_ids.values())
     if matched:
@@ -679,11 +681,9 @@ def delete_override(horse_name):
 def debug_results():
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
-
     import requests as req
     auth = (os.getenv('RACING_API_USER'), os.getenv('RACING_API_KEY'))
     BASE = 'https://api.theracingapi.com/v1'
-
     res = req.get(f'{BASE}/results/today', auth=auth).json()
     result_keys = {}
     for race in res.get('results', []):
@@ -696,7 +696,6 @@ def debug_results():
             'sample_pos':   (runners[0].get('position') or '') if runners else '',
             'sample_sp':    (runners[0].get('sp_dec') or '') if runners else '',
         }
-
     rc = req.get(f'{BASE}/racecards/basic', auth=auth).json()
     racecard_keys = {}
     for racecard in rc.get('racecards', []):
@@ -709,7 +708,6 @@ def debug_results():
             'match_found': key in result_keys,
             'result_data': result_keys.get(key, {})
         }
-
     return jsonify({
         'result_keys':   result_keys,
         'racecard_keys': racecard_keys,
