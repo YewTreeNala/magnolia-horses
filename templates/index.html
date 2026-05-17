@@ -330,11 +330,8 @@
       </div>
       <div class="filter-group">
         <label>Country</label>
-        <label class="uk-toggle-label" id="uk-toggle-label" for="f-uk-only">
-          <input type="checkbox" id="f-uk-only"/>
-          <span class="uk-switch"></span>
-          <span class="uk-toggle-text" id="uk-toggle-text">All countries</span>
-        </label>
+        <button type="button" id="uk-btn" style="width:100%;padding:9px 10px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:44px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--brand);color:#fff;border:0.5px solid var(--brand);font-weight:500">&#127468;&#127463; UK only</button>
+        <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
     </div>
     <div class="btn-row">
@@ -501,16 +498,27 @@ function timeToMins(t) {
 // ── UK toggle ─────────────────────────────────────────────────────────────────
 function syncUKToggle() {
   var cb  = document.getElementById('f-uk-only');
-  var lbl = document.getElementById('uk-toggle-label');
-  var txt = document.getElementById('uk-toggle-text');
+  var btn = document.getElementById('uk-btn');
   if (cb.checked) {
-    lbl.classList.add('active');
-    txt.textContent = 'UK only';
+    btn.style.background  = 'var(--brand)';
+    btn.style.color       = '#fff';
+    btn.style.borderColor = 'var(--brand)';
+    btn.innerHTML = '&#127468;&#127463; UK only';
   } else {
-    lbl.classList.remove('active');
-    txt.textContent = 'All countries';
+    btn.style.background  = 'var(--surface2)';
+    btn.style.color       = 'var(--text2)';
+    btn.style.borderColor = 'var(--border2)';
+    btn.innerHTML = '&#127458; All countries';
   }
 }
+
+document.getElementById('uk-btn').addEventListener('click', function() {
+  var cb = document.getElementById('f-uk-only');
+  cb.checked = !cb.checked;
+  syncUKToggle();
+  saveFilters();
+  runSearch();
+});
 
 document.getElementById('f-uk-only').addEventListener('change', function() {
   syncUKToggle();
@@ -1012,7 +1020,7 @@ function clearFilters() {
   document.getElementById('f-class').value   = '';
   document.getElementById('f-sort').value    = 'meeting';
   document.getElementById('f-fuzzy').checked = true;
-  document.getElementById('f-uk-only').checked = false;
+  document.getElementById('f-uk-only').checked = true;
   syncUKToggle();
   document.getElementById('f-meeting').value = '';
   selectedValues.jockey = selectedValues.trainer = selectedValues.owner = '';
