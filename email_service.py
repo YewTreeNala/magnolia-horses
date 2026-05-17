@@ -19,6 +19,10 @@ UK_COURSES = {
 }
 
 
+def is_uk_course(name):
+    return (name or '').strip().lower() in UK_COURSES
+
+
 def send_email(to_email, to_name, subject, html_body, user_id=None):
     from datetime import datetime as _dt
     status = 'sent'
@@ -84,7 +88,6 @@ def build_combined_email(user_name, runners):
     n         = len(runners)
     n_label   = str(n) + ' runner' + ('s' if n != 1 else '')
 
-    # Group by meeting, sorted by meeting name then time within each
     meetings_order = []
     meetings_map   = {}
     for r in runners:
@@ -189,7 +192,9 @@ def _matches_filters(r, f):
     """Check if a runner matches a saved search filter dict."""
     from rapidfuzz import fuzz
     import jellyfish
-    if f.get('uk_only') and r.race.meeting.name.lower().strip() not in UK_COURSES:
+
+    # uk_only — use consistent helper
+    if f.get('uk_only') and not is_uk_course(r.race.meeting.name):
         return False
     if f.get('colour') and f['colour'].lower() not in (r.colour or '').lower():
         return False
@@ -225,7 +230,6 @@ def _matches_filters(r, f):
 
 
 def _build_combined_for_user(user, all_runners):
-    """Build the combined runner list for a user across favourites and saved searches."""
     import json
     runner_reasons = {}
 
@@ -294,7 +298,6 @@ def send_morning_alerts(app):
 
 
 def send_morning_alerts_for_user(user_id, app):
-    """Send the morning alert email immediately for a single user - used for test sends."""
     from models import db, User, Runner, Race, Meeting
     from datetime import date
 
