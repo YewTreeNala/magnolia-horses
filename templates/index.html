@@ -80,9 +80,9 @@
     .empty-state .empty-icon { font-size: 32px; margin-bottom: 0.5rem; opacity: 0.5; }
 
     .meeting-block { margin-bottom: 1.5rem; }
-    .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 3px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-    .meeting-name { font-size: 15px; font-weight: 500; color: var(--brand); }
-    .meeting-meta { font-size: 12px; color: var(--text2); }
+    .meeting-header { background: var(--surface); border: 0.5px solid rgba(139,58,58,0.2); border-left: 4px solid var(--brand); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 12px; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    .meeting-name { font-size: 22px; font-weight: 700; color: var(--brand); font-family: Georgia, serif; letter-spacing: -0.01em; }
+    .meeting-meta { font-size: 12px; color: var(--text2); white-space: nowrap; flex-shrink: 0; }
 
     .race-block { border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 0.75rem; overflow: hidden; background: var(--surface); }
     .race-block.is-result { border: 2px solid #c49a00; }
@@ -250,7 +250,7 @@
         <label>Horse name</label>
         <div style="display:flex;gap:6px;align-items:stretch">
           <input type="text" id="f-horse" placeholder="e.g. Desert Crown" autocomplete="off" style="flex:1"/>
-          <button type="button" id="fuzzy-btn" style="flex-shrink:0;padding:0 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--brand);background:var(--brand);color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s">&#127518; Fuzzy on</button>
+          <button type="button" id="fuzzy-btn" style="flex-shrink:0;padding:0 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid #6b7c3a;background:#6b7c3a;color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s;min-height:38px">&#127518; Fuzzy on</button>
         </div>
         <div id="fuzzy-hint" style="font-size:11px;color:var(--brand);margin-top:4px">Fuzzy &amp; phonetic on &mdash; finds near-matches and sound-alikes</div>
         <input type="checkbox" id="f-fuzzy" checked style="display:none"/>
@@ -330,7 +330,7 @@
       </div>
       <div class="filter-group">
         <label>Country</label>
-        <button type="button" id="uk-btn" style="width:100%;padding:9px 10px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:44px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--brand);color:#fff;border:0.5px solid var(--brand);font-weight:500">&#127468;&#127463; UK only</button>
+        <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:#6b7c3a;color:#fff;border:0.5px solid #6b7c3a;font-weight:500">&#127468;&#127463; UK only</button>
         <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
     </div>
@@ -500,9 +500,9 @@ function syncUKToggle() {
   var cb  = document.getElementById('f-uk-only');
   var btn = document.getElementById('uk-btn');
   if (cb.checked) {
-    btn.style.background  = 'var(--brand)';
+    btn.style.background  = '#6b7c3a';
     btn.style.color       = '#fff';
-    btn.style.borderColor = 'var(--brand)';
+    btn.style.borderColor = '#6b7c3a';
     btn.innerHTML = '&#127468;&#127463; UK only';
   } else {
     btn.style.background  = 'var(--surface2)';
@@ -804,7 +804,7 @@ function loadOptions() {
 }
 
 // ── Build results ─────────────────────────────────────────────────────────────
-function buildRaceBlock(race, meetingLabel) {
+function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
   var isResult  = race.is_result;
   var totalRnrs = race.total_runners || race.runners.length;
   var meetingTag = meetingLabel
@@ -815,7 +815,7 @@ function buildRaceBlock(race, meetingLabel) {
   var statusBadge = isResult
     ? '<span class="result-badge">&#127942; Result &middot; ' + totalRnrs + ' ran</span>'
     : '<span class="race-badge">' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '') + '</span>';
-  var mName = meetingLabel || '';
+  var mName = meetingLabel || meetingNameOverride || '';
 
   var tableRows   = '';
   var mobileCards = '';
@@ -968,7 +968,7 @@ function renderResults(data) {
         + '<div class="meeting-name">' + escHtml(block.meeting) + '</div>'
         + '<div class="meeting-meta">' + escHtml(block.date || '') + '</div>'
         + '</div></div>';
-      for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null);
+      for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null, block.meeting);
       html += '</div>';
     }
   }
@@ -1046,8 +1046,8 @@ function syncFuzzyBtn() {
   var btn  = document.getElementById('fuzzy-btn');
   var hint = document.getElementById('fuzzy-hint');
   if (cb.checked) {
-    btn.innerHTML = '&#127518; Fuzzy on'; btn.style.background = 'var(--brand)'; btn.style.color = '#fff'; btn.style.borderColor = 'var(--brand)';
-    hint.textContent = 'Fuzzy & phonetic on \u2014 finds near-matches and sound-alikes'; hint.style.color = 'var(--brand)';
+    btn.innerHTML = '&#127518; Fuzzy on'; btn.style.background = '#6b7c3a'; btn.style.color = '#fff'; btn.style.borderColor = '#6b7c3a';
+    hint.textContent = 'Fuzzy & phonetic on \u2014 finds near-matches and sound-alikes'; hint.style.color = '#6b7c3a';
   } else {
     btn.innerHTML = '&#128269; Exact'; btn.style.background = 'var(--surface2)'; btn.style.color = 'var(--text2)'; btn.style.borderColor = 'var(--border2)';
     hint.textContent = 'Exact match \u2014 case-insensitive, must contain the text typed'; hint.style.color = 'var(--text3)';
