@@ -1012,6 +1012,46 @@ function populateMeetingDropdown(data) {
 }
 
 function runSearch() {
+  var horse  = document.getElementById('f-horse').value.trim();
+  var mode   = document.getElementById('f-search-mode').value;
+  var ukOnly = document.getElementById('f-uk-only').checked;
+
+  if (horse && mode === 'ai') {
+    document.getElementById('spinner').classList.add('active');
+    fetch('/api/ai-horse-search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ term: horse, uk_only: ukOnly })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) {
+        document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>AI search failed: ' + escHtml(data.error) + '</div></div>';
+        return Promise.resolve();
+      }
+      if (!data.names || !data.names.length) {
+        document.getElementById('results-area').innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No horses found matching that theme today.</div></div>';
+        return Promise.resolve();
+      }
+      var f = getFilters();
+      var params = new URLSearchParams();
+      if (f.jockey)  params.append('jockey',  f.jockey);
+      if (f.trainer) params.append('trainer', f.trainer);
+      if (f.owner)   params.append('owner',   f.owner);
+      if (f.meeting) params.append('meeting', f.meeting);
+      if (f.colour)  params.append('colour',  f.colour);
+      params.append('sort',     f.sort    || 'meeting');
+      params.append('uk_only',  ukOnly ? 'true' : 'false');
+      params.append('ai_names', data.names.join(','));
+      return fetch('/api/search?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(results) { cacheRunners(results); renderResults(results); populateMeetingDropdown(results); });
+    })
+    .catch(function() { document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not connect to the server.</div></div>'; })
+    .finally(function() { document.getElementById('spinner').classList.remove('active'); });
+    return;
+  }
+
   document.getElementById('spinner').classList.add('active');
   saveFilters();
   var f = getFilters();
@@ -1023,7 +1063,6 @@ function runSearch() {
   if (f.meeting) params.append('meeting', f.meeting);
   if (f.colour)  params.append('colour',  f.colour);
   params.append('sort',    f.sort    || 'meeting');
-  params.append('fuzzy',   f.fuzzy   ? 'true' : 'false');
   params.append('uk_only', f.uk_only ? 'true' : 'false');
   fetch('/api/search?' + params.toString())
     .then(function(r) { return r.json(); })
