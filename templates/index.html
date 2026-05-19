@@ -969,7 +969,7 @@ function runSearch() {
       if (f.colour)  params.append('colour',  f.colour);
       params.append('sort',     f.sort || 'meeting');
       params.append('uk_only',  ukOnly ? 'true' : 'false');
-      params.append('ai_names', encodeURIComponent(data.names.join('|')));
+      params.append('ai_names', data.names.join('|'));
       return fetch('/api/search?' + params.toString())
         .then(function(r) { return r.json(); })
         .then(function(results) { cacheRunners(results); renderResults(results); populateMeetingDropdown(results); });

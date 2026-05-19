@@ -389,7 +389,7 @@ def search():
         runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
     if ai_names:
-        name_set = {n.strip().lower() for n in ai_names.replace('%7C', '|').split('|') if n.strip()}
+        name_set = {n.strip().lower() for n in ai_names.split('|') if n.strip()}
         runners = [r for r in runners if r.horse_name.lower() in name_set]
     elif horse:
         hl = horse.lower()
