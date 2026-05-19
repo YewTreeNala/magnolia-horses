@@ -14,6 +14,7 @@
       --green: #3b6d11; --green-bg: #eaf3de; --red: #a32d2d;
       --gold: #b8860b; --gold-bg: #fdf8e8;
       --blue: #185fa5; --blue-bg: rgba(230,241,251,0.9);
+      --slug: #6b7c3a;
       --radius: 8px; --radius-lg: 12px;
     }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; }
@@ -46,16 +47,6 @@
     .select-search-wrap .dropdown-item:hover, .select-search-wrap .dropdown-item.active { background: var(--brand-light); }
     .select-search-wrap .dropdown-empty { padding: 10px; font-size: 13px; color: var(--text3); }
 
-    /* UK toggle */
-    .uk-toggle-label { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--surface2); border: 0.5px solid var(--border2); border-radius: var(--radius); cursor: pointer; user-select: none; -webkit-user-select: none; font-size: 13px; color: var(--text2); min-height: 44px; transition: background 0.15s, border-color 0.15s; }
-    .uk-toggle-label.active { background: var(--brand-light); border-color: rgba(139,58,58,0.4); color: var(--brand); font-weight: 500; }
-    .uk-toggle-label input[type="checkbox"] { display: none; }
-    .uk-switch { width: 34px; height: 20px; border-radius: 10px; background: var(--border2); position: relative; flex-shrink: 0; transition: background 0.2s; }
-    .uk-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-    .uk-toggle-label.active .uk-switch { background: var(--brand); }
-    .uk-toggle-label.active .uk-switch::after { transform: translateX(14px); }
-    .uk-toggle-text { font-size: 13px; }
-
     .btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; min-height: 44px; }
     .btn-primary:hover { opacity: 0.88; }
@@ -86,13 +77,11 @@
 
     .race-block { border: 0.5px solid var(--border); border-radius: var(--radius); margin-bottom: 0.75rem; overflow: hidden; background: var(--surface); }
     .race-block.is-result { border: 2px solid #c49a00; }
-
     .race-header { background: var(--surface2); padding: 10px 14px; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; border-bottom: 0.5px solid var(--border); }
     .race-header.result { background: linear-gradient(135deg, #c49a00 0%, #a07800 100%); border-bottom: none; padding: 12px 14px; }
     .race-header.result .race-time { color: #fff; font-size: 16px; }
     .race-header.result .race-name { color: #fff; font-weight: 600; }
     .race-header.result .race-details { color: rgba(255,255,255,0.8); }
-
     .race-time { font-size: 15px; font-weight: 500; color: var(--brand); min-width: 44px; flex-shrink: 0; }
     .race-info { flex: 1; min-width: 0; }
     .race-name { font-size: 13px; font-weight: 500; line-height: 1.4; }
@@ -107,7 +96,6 @@
     td { padding: 7px 8px; border-bottom: 0.5px solid var(--border); vertical-align: middle; overflow: hidden; }
     tr:last-child td { border-bottom: none; }
     tbody tr:hover td { background: var(--brand-light); }
-
     .num-cell { font-size: 12px; font-weight: 500; color: var(--text2); text-align: center; }
     .pos-cell { text-align: center; font-weight: 700; font-size: 13px; background: rgba(196,154,0,0.08); }
     .pos-1 { color: #7a5500; background: rgba(196,154,0,0.2) !important; }
@@ -181,7 +169,6 @@
     .modal-close { position: absolute; top: 12px; right: 14px; background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text3); line-height: 1; }
     .modal-close:hover { color: var(--text); }
 
-    /* Tag modal detail grid */
     .tag-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0.75rem 0; padding: 12px; background: var(--surface2); border-radius: var(--radius); border: 0.5px solid var(--border); }
     .tag-detail-field .tdl { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 2px; }
     .tag-detail-field .tdv { font-size: 13px; color: var(--text); }
@@ -238,9 +225,7 @@
 
   <div class="search-panel">
     <div id="saved-searches-bar" style="display:none">
-      <div class="saved-searches-bar" id="saved-chips">
-        <span class="saved-label">Saved:</span>
-      </div>
+      <div class="saved-searches-bar" id="saved-chips"><span class="saved-label">Saved:</span></div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:6px">
         <button id="btn-run-all" style="font-size:12px;font-family:inherit;padding:5px 12px;border-radius:6px;cursor:pointer;background:var(--surface2);color:var(--brand);border:0.5px solid rgba(139,58,58,0.35)">&#9654; Run all saved searches</button>
       </div>
@@ -250,7 +235,7 @@
         <label>Horse name</label>
         <div style="display:flex;gap:6px;align-items:stretch">
           <input type="text" id="f-horse" placeholder="e.g. Desert Crown or 'music themed greys'" autocomplete="off" style="flex:1"/>
-          <button type="button" id="search-mode-btn" style="flex-shrink:0;padding:0 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid #6b7c3a;background:#6b7c3a;color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s;min-height:38px">&#128269; Text Search</button>
+          <button type="button" id="search-mode-btn" style="flex-shrink:0;padding:0 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--slug);background:var(--slug);color:#fff;white-space:nowrap;transition:background 0.15s,color 0.15s;min-height:38px">&#128269; Text Search</button>
           <button type="button" id="search-mode-info" title="Search mode help" style="flex-shrink:0;width:32px;height:38px;padding:0;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--border2);background:var(--surface2);color:var(--text2)">&#9432;</button>
         </div>
         <div id="search-mode-hint" style="font-size:11px;color:var(--text3);margin-top:4px">Text Search: finds horses whose name contains the text typed</div>
@@ -331,7 +316,7 @@
       </div>
       <div class="filter-group">
         <label>Country</label>
-        <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:#6b7c3a;color:#fff;border:0.5px solid #6b7c3a;font-weight:500">&#127468;&#127463; UK only</button>
+        <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
         <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
     </div>
@@ -365,21 +350,23 @@
     <h3>Horse name search modes</h3>
     <div style="margin-bottom:1rem">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="background:#6b7c3a;color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap">&#128269; Text Search</span>
+        <span style="background:var(--slug);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap">&#128269; Text Search</span>
         <span style="font-size:13px;font-weight:500;color:var(--text)">Direct text match</span>
       </div>
-      <p style="font-size:13px;color:var(--text2);line-height:1.6">Finds horses whose name contains exactly what you type. Fast and precise — use when you know part of the horse's name. e.g. typing <em>"Desert"</em> finds Desert Crown, Desert Hero etc.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6">Finds horses whose name contains exactly what you type. Fast and precise. e.g. typing <em>"Desert"</em> finds Desert Crown, Desert Hero etc.</p>
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
         <span style="background:var(--blue);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap">&#10024; AI Search</span>
         <span style="font-size:13px;font-weight:500;color:var(--text)">Semantic / concept match</span>
       </div>
-      <p style="font-size:13px;color:var(--text2);line-height:1.6">Uses AI to find horses whose names are thematically or conceptually related to your search. Great for creative searches — e.g. <em>"music themed"</em> finds Symphony, Maestro, Encore, Jazz; <em>"royal themed"</em> finds Crown Jewel, Palace Guard, King's Man.</p>
-      <p style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5">AI Search takes a few seconds and results are cached for the day — the same search won't cost anything extra if run again.</p>
+      <p style="font-size:13px;color:var(--text2);line-height:1.6">Uses AI to find horses whose names are thematically related to your search. e.g. <em>"music themed"</em> finds Symphony, Maestro, Encore, Jazz; <em>"royal themed"</em> finds Crown Jewel, Palace Guard, King's Man.</p>
+      <p style="font-size:12px;color:var(--text3);margin-top:8px;line-height:1.5">AI Search takes a few seconds. Results are cached for the day so repeated searches are instant.</p>
     </div>
   </div>
 </div>
+
+<!-- Login modal -->
 <div class="modal-overlay" id="login-modal">
   <div class="modal">
     <button class="modal-close" id="login-modal-close">&#215;</button>
@@ -392,7 +379,7 @@
   </div>
 </div>
 
-<!-- Tag modal — merged with horse detail -->
+<!-- Tag modal -->
 <div class="modal-overlay" id="tag-modal">
   <div class="modal">
     <button class="modal-close" id="tag-modal-close">&#215;</button>
@@ -440,14 +427,14 @@
 </div>
 
 <script>
-var IS_LOGGED_IN = {{ 'true' if current_user.is_authenticated else 'false' }};
-var IS_ADMIN     = {{ 'true' if is_admin else 'false' }};
-var STORAGE_KEY  = 'magnolia_filters_v3';
-var taggedMap    = {};
-var pendingHorse = null;
-var savedSearches = [];
-var dropdownData   = { jockey: [], trainer: [], owner: [] };
-var selectedValues = { jockey: '', trainer: '', owner: '' };
+var IS_LOGGED_IN    = {{ 'true' if current_user.is_authenticated else 'false' }};
+var IS_ADMIN        = {{ 'true' if is_admin else 'false' }};
+var STORAGE_KEY     = 'magnolia_filters_v4';
+var taggedMap       = {};
+var pendingHorse    = null;
+var savedSearches   = [];
+var dropdownData    = { jockey: [], trainer: [], owner: [] };
+var selectedValues  = { jockey: '', trainer: '', owner: '' };
 var allRunnersCache = {};
 
 var COLOUR_META = {
@@ -466,19 +453,16 @@ var UK_COURSES_SET = new Set([
   'wincanton','yarmouth','york'
 ]);
 
-function isUKCourse(name) {
-  return UK_COURSES_SET.has((name || '').toLowerCase().trim());
-}
+function isUKCourse(name) { return UK_COURSES_SET.has((name || '').toLowerCase().trim()); }
 
 function escHtml(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function silkSvg(colour, num) {
   var c = COLOUR_META[(colour || '').toLowerCase()] || '#888';
   return '<svg class="silk" viewBox="0 0 20 20"><rect width="20" height="20" fill="' + c + '"/>'
-    + '<text x="10" y="14" text-anchor="middle" font-size="8" font-weight="500" fill="white" font-family="sans-serif">'
-    + escHtml(String(num)) + '</text></svg>';
+    + '<text x="10" y="14" text-anchor="middle" font-size="8" font-weight="500" fill="white" font-family="sans-serif">' + escHtml(String(num)) + '</text></svg>';
 }
 
 function colourChip(colour) {
@@ -512,9 +496,26 @@ function ordinal(n) {
 
 function timeToMins(t) {
   if (!t) return 9999;
-  var parts = t.split(':');
-  if (parts.length !== 2) return 9999;
-  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+  var p = t.split(':');
+  return p.length !== 2 ? 9999 : parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+}
+
+// ── Search mode ───────────────────────────────────────────────────────────────
+function syncSearchModeBtn() {
+  var mode = document.getElementById('f-search-mode').value;
+  var btn  = document.getElementById('search-mode-btn');
+  var hint = document.getElementById('search-mode-hint');
+  if (mode === 'ai') {
+    btn.innerHTML = '&#10024; AI Search';
+    btn.style.background = 'var(--blue)'; btn.style.borderColor = 'var(--blue)'; btn.style.color = '#fff';
+    hint.textContent = 'AI Search: finds horses thematically or conceptually related to your term';
+    hint.style.color = 'var(--blue)';
+  } else {
+    btn.innerHTML = '&#128269; Text Search';
+    btn.style.background = 'var(--slug)'; btn.style.borderColor = 'var(--slug)'; btn.style.color = '#fff';
+    hint.textContent = 'Text Search: finds horses whose name contains the text typed';
+    hint.style.color = 'var(--text3)';
+  }
 }
 
 // ── UK toggle ─────────────────────────────────────────────────────────────────
@@ -522,31 +523,13 @@ function syncUKToggle() {
   var cb  = document.getElementById('f-uk-only');
   var btn = document.getElementById('uk-btn');
   if (cb.checked) {
-    btn.style.background  = '#6b7c3a';
-    btn.style.color       = '#fff';
-    btn.style.borderColor = '#6b7c3a';
+    btn.style.background = 'var(--slug)'; btn.style.borderColor = 'var(--slug)'; btn.style.color = '#fff';
     btn.innerHTML = '&#127468;&#127463; UK only';
   } else {
-    btn.style.background  = 'var(--surface2)';
-    btn.style.color       = 'var(--text2)';
-    btn.style.borderColor = 'var(--border2)';
+    btn.style.background = 'var(--surface2)'; btn.style.borderColor = 'var(--border2)'; btn.style.color = 'var(--text2)';
     btn.innerHTML = '&#127458; All countries';
   }
 }
-
-document.getElementById('uk-btn').addEventListener('click', function() {
-  var cb = document.getElementById('f-uk-only');
-  cb.checked = !cb.checked;
-  syncUKToggle();
-  saveFilters();
-  runSearch();
-});
-
-document.getElementById('f-uk-only').addEventListener('change', function() {
-  syncUKToggle();
-  saveFilters();
-  runSearch();
-});
 
 // ── Saved search matching ─────────────────────────────────────────────────────
 function getMatchingSearches(r, meetingName) {
@@ -554,23 +537,19 @@ function getMatchingSearches(r, meetingName) {
   for (var i = 0; i < savedSearches.length; i++) {
     var f = savedSearches[i].filters;
     if (!f) continue;
-    if (f.uk_only && !isUKCourse(meetingName)) continue;
-    if (f.colour && (r.colour || '').toLowerCase().indexOf(f.colour.toLowerCase()) === -1) continue;
-    if (f.meeting && meetingName.toLowerCase().indexOf(f.meeting.toLowerCase()) === -1) continue;
-    if (f.jockey && (r.jockey || '').toLowerCase() !== f.jockey.toLowerCase()) continue;
-    if (f.trainer && (r.trainer || '').toLowerCase() !== f.trainer.toLowerCase()) continue;
-    if (f.owner && (r.owner || '').toLowerCase() !== f.owner.toLowerCase()) continue;
-    if (f.horse && f.horse.trim()) {
-      var nl = r.name.toLowerCase();
-      var sl = f.horse.trim().toLowerCase();
-      if (nl.indexOf(sl) === -1) continue;
-    }
+    if (f.uk_only  && !isUKCourse(meetingName)) continue;
+    if (f.colour   && (r.colour  || '').toLowerCase().indexOf(f.colour.toLowerCase())  === -1) continue;
+    if (f.meeting  && meetingName.toLowerCase().indexOf(f.meeting.toLowerCase()) === -1) continue;
+    if (f.jockey   && (r.jockey  || '').toLowerCase() !== f.jockey.toLowerCase())  continue;
+    if (f.trainer  && (r.trainer || '').toLowerCase() !== f.trainer.toLowerCase()) continue;
+    if (f.owner    && (r.owner   || '').toLowerCase() !== f.owner.toLowerCase())   continue;
+    if (f.horse && f.horse.trim() && r.name.toLowerCase().indexOf(f.horse.trim().toLowerCase()) === -1) continue;
     matches.push(savedSearches[i].name);
   }
   return matches;
 }
 
-// ── Filter persistence ────────────────────────────────────────────────────────
+// ── Filters ───────────────────────────────────────────────────────────────────
 function getFilters() {
   return {
     horse:   document.getElementById('f-horse').value.trim(),
@@ -595,11 +574,11 @@ function restoreFilters() {
     var saved = localStorage.getItem(STORAGE_KEY);
     if (!saved) return false;
     var f = JSON.parse(saved);
-    if (f.horse)   document.getElementById('f-horse').value   = f.horse;
-    if (f.colour)  document.getElementById('f-colour').value  = f.colour;
-    if (f.type)    document.getElementById('f-type').value    = f.type;
-    if (f.cls)     document.getElementById('f-class').value   = f.cls;
-    if (f.sort)    document.getElementById('f-sort').value    = f.sort;
+    if (f.horse)   document.getElementById('f-horse').value  = f.horse;
+    if (f.colour)  document.getElementById('f-colour').value = f.colour;
+    if (f.type)    document.getElementById('f-type').value   = f.type;
+    if (f.cls)     document.getElementById('f-class').value  = f.cls;
+    if (f.sort)    document.getElementById('f-sort').value   = f.sort;
     if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); }
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
@@ -609,11 +588,11 @@ function restoreFilters() {
 }
 
 function applyFilters(filters) {
-  document.getElementById('f-horse').value    = filters.horse   || '';
-  document.getElementById('f-colour').value   = filters.colour  || '';
-  document.getElementById('f-type').value     = filters.type    || '';
-  document.getElementById('f-class').value    = filters.cls     || '';
-  document.getElementById('f-sort').value     = filters.sort    || 'meeting';
+  document.getElementById('f-horse').value     = filters.horse   || '';
+  document.getElementById('f-colour').value    = filters.colour  || '';
+  document.getElementById('f-type').value      = filters.type    || '';
+  document.getElementById('f-class').value     = filters.cls     || '';
+  document.getElementById('f-sort').value      = filters.sort    || 'meeting';
   document.getElementById('f-uk-only').checked = !!filters.uk_only;
   syncUKToggle();
   selectedValues.jockey  = filters.jockey  || '';
@@ -640,7 +619,6 @@ function openTagModal(horseName) {
   var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, key);
   var r        = allRunnersCache[key] || {};
 
-  // Silk
   var silkWrap = document.getElementById('tag-modal-silk');
   if (r.silk_url) {
     silkWrap.innerHTML = '<img src="' + escHtml(r.silk_url) + '" style="width:28px;height:28px;object-fit:contain;flex-shrink:0" alt="silk">';
@@ -648,25 +626,18 @@ function openTagModal(horseName) {
     var c = COLOUR_META[(r.colour || '').toLowerCase()] || '#888';
     silkWrap.innerHTML = '<svg style="width:28px;height:28px;flex-shrink:0" viewBox="0 0 28 28"><rect width="28" height="28" fill="' + c + '" rx="3"/></svg>';
   }
-
   document.getElementById('tag-modal-horse-name').textContent = horseName;
   document.getElementById('tag-modal-wind').innerHTML = r.wind_surgery ? '<span class="wind-surgery-badge">Wind surgery</span>' : '';
 
-  // Spotlight
   var spDiv = document.getElementById('tag-modal-spotlight');
-  if (r.spotlight) {
-    document.getElementById('tag-modal-spotlight-text').textContent = r.spotlight;
-    spDiv.style.display = 'block';
-  } else {
-    spDiv.style.display = 'none';
-  }
+  if (r.spotlight) { document.getElementById('tag-modal-spotlight-text').textContent = r.spotlight; spDiv.style.display = 'block'; }
+  else { spDiv.style.display = 'none'; }
 
-  // Detail grid
   var fields = [
     ['Age / sex',  r.age ? r.age + 'yo ' + (r.sex || '') : '—'],
-    ['Colour',     r.colour || '—'],
-    ['Weight',     r.weight || '—'],
-    ['Draw',       r.draw   || '—'],
+    ['Colour',     r.colour  || '—'],
+    ['Weight',     r.weight  || '—'],
+    ['Draw',       r.draw    || '—'],
     ['Headgear',   r.headgear ? (r.headgear + (r.headgear_run ? ' (run ' + r.headgear_run + ')' : '')) : 'None'],
     ['Last ran',   r.last_run ? r.last_run + ' days ago' : '—'],
     ['OR',         r.or  || '—'],
@@ -684,10 +655,8 @@ function openTagModal(horseName) {
     gh += '<div class="tag-detail-field' + (fd[2] ? ' full' : '') + '"><span class="tdl">' + fd[0] + '</span><span class="tdv">' + escHtml(String(fd[1])) + '</span></div>';
   }
   document.getElementById('tag-detail-grid').innerHTML = gh;
-
   document.getElementById('tag-notes').value = isTagged ? taggedMap[key] : '';
-  var saveBtn = document.getElementById('tag-modal-save');
-  saveBtn.innerHTML = isTagged ? '&#9829; Update tag' : '&#9825; Tag horse';
+  document.getElementById('tag-modal-save').innerHTML = isTagged ? '&#9829; Update tag' : '&#9825; Tag horse';
   document.getElementById('tag-modal-remove').style.display = isTagged ? 'inline-block' : 'none';
   document.getElementById('tag-modal').classList.add('open');
   setTimeout(function() { document.getElementById('tag-notes').focus(); }, 50);
@@ -695,8 +664,7 @@ function openTagModal(horseName) {
 
 function saveTag() {
   if (!pendingHorse) return;
-  var horseName = pendingHorse;
-  var notes     = document.getElementById('tag-notes').value.trim();
+  var horseName = pendingHorse, notes = document.getElementById('tag-notes').value.trim();
   fetch('/api/tag', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ horse_name: horseName, notes: notes }) })
     .then(function() { taggedMap[horseName.toLowerCase()] = notes; refreshTagButtons(horseName); closeTagModal(); });
 }
@@ -717,7 +685,7 @@ function refreshTagButtons(horseName) {
   var btns     = document.querySelectorAll('.tag-btn[data-horse="' + escHtml(horseName) + '"]');
   for (var i = 0; i < btns.length; i++) {
     btns[i].classList.toggle('tagged', isTagged);
-    btns[i].title   = isTagged ? 'Edit tag / notes' : 'Tag this horse';
+    btns[i].title     = isTagged ? 'Edit tag / notes' : 'Tag this horse';
     btns[i].innerHTML = (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '');
   }
 }
@@ -738,8 +706,7 @@ function loadSavedSearches() {
 }
 
 function renderSavedChips() {
-  var bar   = document.getElementById('saved-searches-bar');
-  var chips = document.getElementById('saved-chips');
+  var bar = document.getElementById('saved-searches-bar'), chips = document.getElementById('saved-chips');
   if (!savedSearches.length) { bar.style.display = 'none'; return; }
   bar.style.display = 'block';
   var html = '<span class="saved-label">Saved:</span>';
@@ -753,8 +720,7 @@ function renderSavedChips() {
 }
 
 function openSaveSearchModal() {
-  var f     = getFilters();
-  var parts = [];
+  var f = getFilters(), parts = [];
   if (f.horse)   parts.push('Horse: '   + f.horse);
   if (f.jockey)  parts.push('Jockey: '  + f.jockey);
   if (f.trainer) parts.push('Trainer: ' + f.trainer);
@@ -782,10 +748,8 @@ function initDropdown(field) {
   var input = document.getElementById('f-' + field);
   var dd    = document.getElementById('dd-' + field);
   var wrap  = document.getElementById('wrap-' + field);
-
   function renderDD(filter) {
-    var q     = (filter || '').toLowerCase();
-    var items = [];
+    var q = (filter || '').toLowerCase(), items = [];
     for (var i = 0; i < dropdownData[field].length; i++) {
       var v = dropdownData[field][i];
       if (!q || v.toLowerCase().indexOf(q) !== -1) items.push(v);
@@ -797,7 +761,6 @@ function initDropdown(field) {
     }
     dd.innerHTML = h;
   }
-
   input.addEventListener('focus', function() { renderDD(input.value); dd.classList.add('open'); });
   input.addEventListener('input', function() { selectedValues[field] = ''; renderDD(input.value); dd.classList.add('open'); });
   dd.addEventListener('mousedown', function(e) {
@@ -806,8 +769,7 @@ function initDropdown(field) {
     selectedValues[field] = item.dataset.value;
     input.value = item.dataset.value;
     dd.classList.remove('open');
-    saveFilters();
-    runSearch();
+    saveFilters(); runSearch();
   });
   document.addEventListener('click', function(e) {
     if (!wrap.contains(e.target)) { dd.classList.remove('open'); if (input.value !== selectedValues[field]) input.value = selectedValues[field]; }
@@ -836,8 +798,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     : '<span class="race-badge">' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '') + '</span>';
   var mName = meetingLabel || meetingNameOverride || '';
 
-  var tableRows   = '';
-  var mobileCards = '';
+  var tableRows = '', mobileCards = '';
 
   for (var i = 0; i < race.runners.length; i++) {
     var r      = race.runners[i];
@@ -848,40 +809,28 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     var tb       = makeTagBtn(rName, isTagged, notes);
     var pos      = r.position || '';
 
-    // Search match badges
     var matchBadges = '';
     if (IS_LOGGED_IN && savedSearches.length) {
       var matches = getMatchingSearches(r, mName);
-      for (var m = 0; m < matches.length; m++) {
-        matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(matches[m]) + '</span>';
-      }
+      for (var m = 0; m < matches.length; m++) matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(matches[m]) + '</span>';
     }
 
-    // Silk
-    var silkHtml;
-    if (r.silk_url) {
-      silkHtml = '<img class="silk-img" src="' + escHtml(r.silk_url) + '" alt="silk" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' + silkSvg(r.colour, r.number || '');
-    } else {
-      silkHtml = silkSvg(r.colour, r.number || '');
-    }
+    var silkHtml = r.silk_url
+      ? '<img class="silk-img" src="' + escHtml(r.silk_url) + '" alt="silk" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' + silkSvg(r.colour, r.number || '')
+      : silkSvg(r.colour, r.number || '');
 
-    // RP spotlight button
-    var spBtn = '';
-    if (r.spotlight) {
-      spBtn = '<div class="spotlight-wrap">'
-        + '<button class="spotlight-btn" data-horse="' + escHtml(rName) + '" title="Click for full details"><span class="rp-logo">RP</span></button>'
-        + '<div class="spotlight-tooltip"><div class="tt-title"><span class="rp-logo">RP</span> Racing Post Spotlight</div>' + escHtml(r.spotlight) + '</div>'
-        + '</div>';
-    }
+    var spBtn = r.spotlight
+      ? '<div class="spotlight-wrap"><button class="spotlight-btn" data-horse="' + escHtml(rName) + '" title="Click for full details"><span class="rp-logo">RP</span></button>'
+        + '<div class="spotlight-tooltip"><div class="tt-title"><span class="rp-logo">RP</span> Racing Post Spotlight</div>' + escHtml(r.spotlight) + '</div></div>'
+      : '';
 
     var windBadge   = r.wind_surgery ? '<span class="wind-surgery-badge" title="Wind surgery">WS</span>' : '';
     var formHtmlStr = formHtml(r.form);
 
-    // Finish position cell
     var posCell = '';
     if (isResult && pos) {
-      var pNum  = parseInt(pos, 10);
-      var pCls  = (pNum === 1) ? 'pos-1' : (pNum === 2) ? 'pos-2' : (pNum === 3) ? 'pos-3' : '';
+      var pNum = parseInt(pos, 10);
+      var pCls = pNum === 1 ? 'pos-1' : pNum === 2 ? 'pos-2' : pNum === 3 ? 'pos-3' : '';
       posCell = '<td class="pos-cell ' + pCls + '">' + escHtml(ordinal(pos)) + '</td>';
     } else {
       posCell = '<td class="pos-cell"></td>';
@@ -897,19 +846,14 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<td><span class="form-str">' + formHtmlStr + '</span></td>'
       + '<td style="font-size:11px;color:var(--text2)">' + escHtml(r.or || '—') + (r.rpr && r.rpr !== '-' ? ' / ' + escHtml(r.rpr) : '') + '</td>'
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
-      + (r.trainer_14_days
-          ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>'
-          : '<br>' + escHtml(r.trainer || '—'))
+      + (r.trainer_14_days ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>' : '<br>' + escHtml(r.trainer || '—'))
       + '</div></td>'
       + '<td><div class="actions-cell">' + tb + matchBadges + '</div></td>'
-      + posCell
-      + '</tr>';
+      + posCell + '</tr>';
 
-    // Mobile card
     var cardWinner = (isResult && pos === '1') ? ' winner' : '';
     mobileCards += '<div class="runner-card' + cardWinner + '">'
-      + '<div class="runner-card-top">'
-      + '<span class="runner-card-num">' + escHtml(r.number || '—') + '</span>'
+      + '<div class="runner-card-top"><span class="runner-card-num">' + escHtml(r.number || '—') + '</span>'
       + (isResult && pos ? '<span class="runner-card-pos">' + escHtml(ordinal(pos)) + '</span>' : '')
       + silkHtml
       + '<span class="runner-card-name horse-name-link" data-horse="' + escHtml(rName) + '">' + escHtml(rName) + '</span>'
@@ -924,33 +868,22 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '</div></div>';
   }
 
-  var posHeader = isResult
-    ? '<th class="pos-th" style="width:52px">Finish</th>'
-    : '<th style="width:52px"></th>';
+  var posHeader = isResult ? '<th class="pos-th" style="width:52px">Finish</th>' : '<th style="width:52px"></th>';
 
   return '<div class="race-block' + blockClass + '">'
-    + '<div class="race-header' + headerClass + '">'
-    + '<span class="race-time">' + escHtml(race.time || '') + '</span>'
+    + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race.class || '')
     + ' &middot; ' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '')
     + (race.going_detailed ? ' &middot; ' + escHtml(race.going_detailed) : '')
     + (race.weather ? ' &middot; &#127751; ' + escHtml(race.weather) : '')
-    + '</div></div>'
-    + meetingTag + statusBadge + '</div>'
+    + '</div></div>' + meetingTag + statusBadge + '</div>'
     + '<div class="table-wrap"><table><thead><tr>'
-    + '<th style="width:30px">#</th>'
-    + '<th style="width:22%">Horse</th>'
-    + '<th style="width:28px">RP</th>'
-    + '<th style="width:90px">Colour</th>'
-    + '<th style="width:60px">Form</th>'
-    + '<th style="width:55px">OR/RPR</th>'
-    + '<th style="width:20%">Jockey / trainer</th>'
-    + '<th></th>'
-    + posHeader
+    + '<th style="width:30px">#</th><th style="width:22%">Horse</th><th style="width:28px">RP</th>'
+    + '<th style="width:90px">Colour</th><th style="width:60px">Form</th><th style="width:55px">OR/RPR</th>'
+    + '<th style="width:20%">Jockey / trainer</th><th></th>' + posHeader
     + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
-    + '<div class="runner-cards">' + mobileCards + '</div>'
-    + '</div>';
+    + '<div class="runner-cards">' + mobileCards + '</div></div>';
 }
 
 function renderResults(data) {
@@ -961,8 +894,7 @@ function renderResults(data) {
   }
   var totalRunners = 0, totalRaces = 0, ms = {};
   for (var i = 0; i < data.length; i++) {
-    ms[data[i].meeting] = 1;
-    totalRaces += data[i].races.length;
+    ms[data[i].meeting] = 1; totalRaces += data[i].races.length;
     for (var j = 0; j < data[i].races.length; j++) totalRunners += data[i].races[j].runners.length;
   }
   var totalMeetings = Object.keys(ms).length;
@@ -971,22 +903,13 @@ function renderResults(data) {
 
   if (sortMode === 'time') {
     var allRaces = [];
-    for (var a = 0; a < data.length; a++) {
-      for (var b = 0; b < data[a].races.length; b++) {
-        allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
-      }
-    }
+    for (var a = 0; a < data.length; a++) for (var b = 0; b < data[a].races.length; b++) allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
     allRaces.sort(function(x, y) { return timeToMins(x.race.time) - timeToMins(y.race.time); });
-    for (var c = 0; c < allRaces.length; c++) {
-      html += '<div class="meeting-block">' + buildRaceBlock(allRaces[c].race, allRaces[c].meeting) + '</div>';
-    }
+    for (var c = 0; c < allRaces.length; c++) html += '<div class="meeting-block">' + buildRaceBlock(allRaces[c].race, allRaces[c].meeting) + '</div>';
   } else {
     for (var d = 0; d < data.length; d++) {
       var block = data[d];
-      html += '<div class="meeting-block"><div class="meeting-header"><div>'
-        + '<div class="meeting-name">' + escHtml(block.meeting) + '</div>'
-        + '<div class="meeting-meta">' + escHtml(block.date || '') + '</div>'
-        + '</div></div>';
+      html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>';
       for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null, block.meeting);
       html += '</div>';
     }
@@ -995,12 +918,8 @@ function renderResults(data) {
 }
 
 function populateMeetingDropdown(data) {
-  var sel = document.getElementById('f-meeting');
-  var current = sel.value;
-  var seen = {}, meetings = [];
-  for (var i = 0; i < data.length; i++) {
-    if (!seen[data[i].meeting]) { seen[data[i].meeting] = 1; meetings.push(data[i].meeting); }
-  }
+  var sel = document.getElementById('f-meeting'), current = sel.value, seen = {}, meetings = [];
+  for (var i = 0; i < data.length; i++) if (!seen[data[i].meeting]) { seen[data[i].meeting] = 1; meetings.push(data[i].meeting); }
   meetings.sort();
   sel.innerHTML = '<option value="">All meetings</option>';
   for (var j = 0; j < meetings.length; j++) {
@@ -1011,6 +930,14 @@ function populateMeetingDropdown(data) {
   }
 }
 
+function cacheRunners(data) {
+  for (var i = 0; i < data.length; i++)
+    for (var j = 0; j < data[i].races.length; j++)
+      for (var k = 0; k < data[i].races[j].runners.length; k++)
+        allRunnersCache[data[i].races[j].runners[k].name.toLowerCase()] = data[i].races[j].runners[k];
+}
+
+// ── Run search ────────────────────────────────────────────────────────────────
 function runSearch() {
   var horse  = document.getElementById('f-horse').value.trim();
   var mode   = document.getElementById('f-search-mode').value;
@@ -1040,7 +967,7 @@ function runSearch() {
       if (f.owner)   params.append('owner',   f.owner);
       if (f.meeting) params.append('meeting', f.meeting);
       if (f.colour)  params.append('colour',  f.colour);
-      params.append('sort',     f.sort    || 'meeting');
+      params.append('sort',     f.sort || 'meeting');
       params.append('uk_only',  ukOnly ? 'true' : 'false');
       params.append('ai_names', data.names.join(','));
       return fetch('/api/search?' + params.toString())
@@ -1052,6 +979,7 @@ function runSearch() {
     return;
   }
 
+  // Text search
   document.getElementById('spinner').classList.add('active');
   saveFilters();
   var f = getFilters();
@@ -1072,21 +1000,20 @@ function runSearch() {
 }
 
 function clearFilters() {
-  document.getElementById('f-horse').value   = '';
-  document.getElementById('f-colour').value  = '';
-  document.getElementById('f-type').value    = '';
-  document.getElementById('f-class').value   = '';
-  document.getElementById('f-sort').value    = 'meeting';
-  document.getElementById('f-fuzzy').checked = true;
+  document.getElementById('f-horse').value     = '';
+  document.getElementById('f-colour').value    = '';
+  document.getElementById('f-type').value      = '';
+  document.getElementById('f-class').value     = '';
+  document.getElementById('f-sort').value      = 'meeting';
   document.getElementById('f-uk-only').checked = true;
-  syncUKToggle();
-  document.getElementById('f-meeting').value = '';
+  document.getElementById('f-meeting').value   = '';
+  document.getElementById('f-search-mode').value = 'text';
+  syncUKToggle(); syncSearchModeBtn();
   selectedValues.jockey = selectedValues.trainer = selectedValues.owner = '';
   document.getElementById('f-jockey').value  = '';
   document.getElementById('f-trainer').value = '';
   document.getElementById('f-owner').value   = '';
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  syncFuzzyBtn();
   runSearch();
 }
 
@@ -1099,43 +1026,26 @@ function autoSyncIfNeeded() {
   }).catch(function() {});
 }
 
-// ── Search mode toggle ────────────────────────────────────────────────────────
-function syncSearchModeBtn() {
-  var mode = document.getElementById('f-search-mode').value;
-  var btn  = document.getElementById('search-mode-btn');
-  var hint = document.getElementById('search-mode-hint');
-  if (mode === 'ai') {
-    btn.innerHTML    = '&#10024; AI Search';
-    btn.style.background  = 'var(--blue)';
-    btn.style.borderColor = 'var(--blue)';
-    btn.style.color       = '#fff';
-    hint.textContent = 'AI Search: finds horses thematically or conceptually related to your term';
-    hint.style.color = 'var(--blue)';
-  } else {
-    btn.innerHTML    = '&#128269; Text Search';
-    btn.style.background  = '#6b7c3a';
-    btn.style.borderColor = '#6b7c3a';
-    btn.style.color       = '#fff';
-    hint.textContent = 'Text Search: finds horses whose name contains the text typed';
-    hint.style.color = 'var(--text3)';
-  }
-}
-
-function cacheRunners(data) {
-  for (var i = 0; i < data.length; i++) {
-    var block = data[i];
-    for (var j = 0; j < block.races.length; j++) {
-      var race = block.races[j];
-      for (var k = 0; k < race.runners.length; k++) {
-        allRunnersCache[race.runners[k].name.toLowerCase()] = race.runners[k];
-      }
-    }
-  }
-}
-
 // ── Event wiring ──────────────────────────────────────────────────────────────
 document.getElementById('btn-search').addEventListener('click', runSearch);
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
+
+document.getElementById('search-mode-btn').addEventListener('click', function() {
+  var el = document.getElementById('f-search-mode');
+  el.value = (el.value === 'text') ? 'ai' : 'text';
+  syncSearchModeBtn();
+});
+
+document.getElementById('search-mode-info').addEventListener('click', function() { document.getElementById('search-info-modal').classList.add('open'); });
+document.getElementById('search-info-close').addEventListener('click', function() { document.getElementById('search-info-modal').classList.remove('open'); });
+document.getElementById('search-info-modal').addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+
+document.getElementById('uk-btn').addEventListener('click', function() {
+  var cb = document.getElementById('f-uk-only');
+  cb.checked = !cb.checked;
+  syncUKToggle(); saveFilters(); runSearch();
+});
+document.getElementById('f-uk-only').addEventListener('change', function() { syncUKToggle(); saveFilters(); runSearch(); });
 
 var saveBtn = document.getElementById('btn-save-search');
 if (saveBtn) saveBtn.addEventListener('click', openSaveSearchModal);
@@ -1143,12 +1053,8 @@ if (saveBtn) saveBtn.addEventListener('click', openSaveSearchModal);
 var syncBtn = document.getElementById('sync-btn');
 if (syncBtn) {
   syncBtn.addEventListener('click', function() {
-    syncBtn.textContent = 'Syncing...';
-    syncBtn.classList.add('syncing');
-    fetch('/api/sync', { method: 'POST' })
-      .then(function() { return loadOptions(); })
-      .then(function() { return runSearch(); })
-      .catch(function() {})
+    syncBtn.textContent = 'Syncing...'; syncBtn.classList.add('syncing');
+    fetch('/api/sync', { method: 'POST' }).then(function() { return loadOptions(); }).then(function() { return runSearch(); }).catch(function() {})
       .finally(function() { syncBtn.innerHTML = '&#8635; Sync now'; syncBtn.classList.remove('syncing'); });
   });
 }
@@ -1159,12 +1065,9 @@ document.getElementById('save-search-close').addEventListener('click', function(
 document.getElementById('save-search-name').addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmSaveSearch(); });
 
 document.getElementById('results-area').addEventListener('click', function(e) {
-  var tagBtn = e.target.closest('.tag-btn');
-  if (tagBtn) { openTagModal(tagBtn.dataset.horse); return; }
-  var spBtn = e.target.closest('.spotlight-btn');
-  if (spBtn) { openTagModal(spBtn.dataset.horse); return; }
-  var link = e.target.closest('.horse-name-link');
-  if (link) { openTagModal(link.dataset.horse); return; }
+  var tagBtn = e.target.closest('.tag-btn'); if (tagBtn) { openTagModal(tagBtn.dataset.horse); return; }
+  var spBtn  = e.target.closest('.spotlight-btn'); if (spBtn)  { openTagModal(spBtn.dataset.horse);  return; }
+  var link   = e.target.closest('.horse-name-link'); if (link) { openTagModal(link.dataset.horse);   return; }
 });
 
 document.getElementById('tag-modal-save').addEventListener('click', saveTag);
@@ -1179,10 +1082,7 @@ document.getElementById('save-search-modal').addEventListener('click', function(
 
 document.getElementById('saved-chips').addEventListener('click', function(e) {
   var del = e.target.closest('.chip-del');
-  if (del) {
-    fetch('/api/saved-searches/' + del.dataset.id, { method: 'DELETE' }).then(function() { return loadSavedSearches(); });
-    return;
-  }
+  if (del) { fetch('/api/saved-searches/' + del.dataset.id, { method: 'DELETE' }).then(function() { return loadSavedSearches(); }); return; }
   var chip = e.target.closest('.saved-search-chip');
   if (chip) {
     var chipId = parseInt(chip.dataset.id);
@@ -1195,34 +1095,14 @@ document.getElementById('saved-chips').addEventListener('click', function(e) {
 var runAllBtn = document.getElementById('btn-run-all');
 if (runAllBtn) {
   runAllBtn.addEventListener('click', function() {
-    runAllBtn.textContent = 'Running...';
-    runAllBtn.disabled = true;
+    runAllBtn.textContent = 'Running...'; runAllBtn.disabled = true;
     document.getElementById('spinner').classList.add('active');
-    fetch('/api/run-all-searches')
-      .then(function(r) { return r.json(); })
+    fetch('/api/run-all-searches').then(function(r) { return r.json(); })
       .then(function(data) { cacheRunners(data); renderResults(data); populateMeetingDropdown(data); })
       .catch(function() { document.getElementById('results-area').innerHTML = '<div class="empty-state"><div>Could not run searches.</div></div>'; })
       .finally(function() { runAllBtn.innerHTML = '&#9654; Run all saved searches'; runAllBtn.disabled = false; document.getElementById('spinner').classList.remove('active'); });
   });
 }
-
-document.getElementById('search-mode-btn').addEventListener('click', function() {
-  var modeEl = document.getElementById('f-search-mode');
-  modeEl.value = (modeEl.value === 'text') ? 'ai' : 'text';
-  syncSearchModeBtn();
-});
-
-document.getElementById('search-mode-info').addEventListener('click', function() {
-  document.getElementById('search-info-modal').classList.add('open');
-});
-
-document.getElementById('search-info-close').addEventListener('click', function() {
-  document.getElementById('search-info-modal').classList.remove('open');
-});
-
-document.getElementById('search-info-modal').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.remove('open');
-});
 
 var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort'];
 for (var ci = 0; ci < changeIds.length; ci++) {
@@ -1230,12 +1110,8 @@ for (var ci = 0; ci < changeIds.length; ci++) {
 }
 document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
 
-initDropdown('jockey');
-initDropdown('trainer');
-initDropdown('owner');
-restoreFilters();
-syncSearchModeBtn();
-syncUKToggle();
+initDropdown('jockey'); initDropdown('trainer'); initDropdown('owner');
+restoreFilters(); syncSearchModeBtn(); syncUKToggle();
 
 autoSyncIfNeeded()
   .then(function() { return loadOptions(); })
