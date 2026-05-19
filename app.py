@@ -6,8 +6,6 @@ from dotenv import load_dotenv
 from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog
 from sync import sync_todays_races
 from email_service import send_morning_alerts
-from rapidfuzz import fuzz
-import jellyfish
 import json
 import os
 from datetime import datetime, date
@@ -67,8 +65,6 @@ scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minut
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.start()
 
-
-# ── Helper ─────────────────────────────────────────────────────────────────────
 
 def is_admin():
     return current_user.is_authenticated and current_user.email == ADMIN_EMAIL
@@ -140,11 +136,9 @@ def logout():
 def my_horses():
     tagged   = TaggedHorse.query.filter_by(user_id=current_user.id).order_by(TaggedHorse.horse_name).all()
     searches = SavedSearch.query.filter_by(user_id=current_user.id).order_by(SavedSearch.name).all()
-
     today        = date.today().strftime('%Y-%m-%d')
     tagged_names = [t.horse_name.lower() for t in tagged]
     tagged_notes = {t.horse_name.lower(): t.notes for t in tagged}
-
     running_today = []
     if tagged_names:
         runners = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all()
@@ -162,7 +156,6 @@ def my_horses():
                     'notes':      tagged_notes.get(r.horse_name.lower(), ''),
                     'position':   r.position or '',
                 })
-
     searches_display = []
     for s in searches:
         try:
@@ -184,7 +177,6 @@ def my_horses():
             'alert':   s.alert,
             'filters': s.filters,
         })
-
     return render_template('my_horses.html', tagged=tagged,
                            running_today=running_today, searches=searches_display)
 
@@ -370,21 +362,6 @@ def options():
     })
 
 
-def _fuzzy_match(name, search_term):
-    name_l   = name.lower()
-    search_l = search_term.lower()
-    if search_l in name_l:
-        return True
-    if fuzz.partial_ratio(search_l, name_l) >= 75:
-        return True
-    for word in name_l.split():
-        for sword in search_l.split():
-            if len(word) > 2 and len(sword) > 2:
-                if jellyfish.soundex(word) == jellyfish.soundex(sword):
-                    return True
-    return False
-
-
 @app.route('/api/search')
 def search():
     horse   = request.args.get('horse',   '').strip()
@@ -394,8 +371,9 @@ def search():
     meeting = request.args.get('meeting', '').strip()
     owner   = request.args.get('owner',   '').strip()
     sort    = request.args.get('sort',    'meeting').strip()
-    fuzzy   = request.args.get('fuzzy',   'true').strip().lower() != 'false'
-    uk_only = request.args.get('uk_only', 'false').strip().lower() == 'true'
+    uk_only = request.args.get('uk_only', 'true').strip().lower() == 'true'
+    # ai_names: comma-separated list of horse names returned by AI search
+    ai_names = request.args.get('ai_names', '').strip()
 
     today = date.today().strftime('%Y-%m-%d')
     query = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today)
@@ -405,20 +383,20 @@ def search():
     if colour:  query = query.filter(Runner.colour.ilike(f'%{colour}%'))
     if meeting: query = query.filter(Meeting.name.ilike(f'%{meeting}%'))
     if owner:   query = query.filter(Runner.owner == owner)
-    if uk_only: query = query.filter(Meeting.name.in_([c.title() for c in UK_COURSES] + list(UK_COURSES)))
 
     runners = query.order_by(Meeting.name, Race.time, Runner.number).all()
 
-    # UK filter as post-process to handle case variations reliably
     if uk_only:
         runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
-    if horse:
-        if fuzzy:
-            runners = [r for r in runners if _fuzzy_match(r.horse_name, horse)]
-        else:
-            hl = horse.lower()
-            runners = [r for r in runners if hl in r.horse_name.lower()]
+    if ai_names:
+        # Filter to AI-matched names (exact, case-insensitive)
+        name_set = {n.strip().lower() for n in ai_names.split(',') if n.strip()}
+        runners = [r for r in runners if r.horse_name.lower() in name_set]
+    elif horse:
+        # Plain text contains match
+        hl = horse.lower()
+        runners = [r for r in runners if hl in r.horse_name.lower()]
 
     tagged_map = {}
     if current_user.is_authenticated:
@@ -431,34 +409,114 @@ def search():
         return jsonify(sort_by_meeting(runners, tagged_map))
 
 
+# ── AI horse name search ───────────────────────────────────────────────────────
+
+# Simple in-memory cache: { "date|term": ["Horse Name", ...] }
+_ai_cache = {}
+
+@app.route('/api/ai-horse-search', methods=['POST'])
+def ai_horse_search():
+    data       = request.get_json() or {}
+    term       = (data.get('term') or '').strip()
+    uk_only    = data.get('uk_only', True)
+
+    if not term:
+        return jsonify({'error': 'term required'}), 400
+
+    today = date.today().strftime('%Y-%m-%d')
+    cache_key = f"{today}|{term.lower()}|{'uk' if uk_only else 'all'}"
+
+    if cache_key in _ai_cache:
+        return jsonify({'names': _ai_cache[cache_key], 'cached': True})
+
+    # Fetch all today's horse names
+    q = db.session.query(Runner.horse_name).join(Race).join(Meeting).filter(Meeting.date == today)
+    all_names = [r[0] for r in q.all()]
+
+    if uk_only:
+        uk_runners = db.session.query(Runner.horse_name).join(Race).join(Meeting)\
+            .filter(Meeting.date == today)\
+            .filter(Meeting.name.in_([c for c in UK_COURSES])).all()
+        # Use post-filter for case consistency
+        uk_set = set()
+        for r in db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all():
+            if is_uk_course(r.race.meeting.name):
+                uk_set.add(r.horse_name)
+        all_names = list(uk_set)
+
+    if not all_names:
+        return jsonify({'names': [], 'cached': False})
+
+    # Call Anthropic API
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+        names_text = '\n'.join(all_names)
+        prompt = f"""You are helping search for horse names based on a conceptual theme.
+
+Search theme: "{term}"
+
+Here is the list of today's horse names:
+{names_text}
+
+Return ONLY the horse names from the list above that match the theme "{term}" — including names that are thematically related, conceptually linked, or share relevant vocabulary.
+
+For example:
+- "music related" would match: Symphony, Encore, Rhythm, Maestro, Jazz, Overture
+- "royal/crown themed" would match: Crown Jewel, Palace Guard, Royal Decree, King's Man
+- "weather related" would match: Storm Front, Lightning Strike, Fair Wind, Thunder Roll
+
+Return ONLY the matching names, one per line, exactly as they appear in the list. Return nothing else — no explanation, no numbering, no punctuation."""
+
+        message = client.messages.create(
+            model='claude-sonnet-4-20250514',
+            max_tokens=1000,
+            messages=[{'role': 'user', 'content': prompt}]
+        )
+
+        raw = message.content[0].text.strip()
+        matched = [line.strip() for line in raw.split('\n') if line.strip()]
+
+        # Validate — only return names that actually exist in today's list
+        valid_set = {n.lower(): n for n in all_names}
+        matched = [valid_set[m.lower()] for m in matched if m.lower() in valid_set]
+
+        _ai_cache[cache_key] = matched
+        return jsonify({'names': matched, 'cached': False})
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 def runner_to_dict(r, tagged_map):
     return {
-        'number':         r.number,
-        'name':           r.horse_name,
-        'colour':         r.colour,
-        'age':            r.age,
-        'sex':            r.sex,
-        'draw':           r.draw or '',
-        'trainer':        r.trainer,
-        'jockey':         r.jockey,
-        'owner':          r.owner,
-        'form':           r.form,
-        'weight':         r.weight,
-        'or':             r.official_rating,
-        'rpr':            r.rpr or '',
-        'ts':             r.ts or '',
-        'odds':           r.odds,
-        'headgear':       r.headgear or '',
-        'headgear_run':   r.headgear_run or '',
-        'last_run':       r.last_run or '',
-        'position':       r.position or '',
-        'silk_url':       r.silk_url or '',
-        'spotlight':      r.spotlight or '',
-        'comment':        r.comment or '',
-        'wind_surgery':   r.wind_surgery or '',
+        'number':          r.number,
+        'name':            r.horse_name,
+        'colour':          r.colour,
+        'age':             r.age,
+        'sex':             r.sex,
+        'draw':            r.draw or '',
+        'trainer':         r.trainer,
+        'jockey':          r.jockey,
+        'owner':           r.owner,
+        'form':            r.form,
+        'weight':          r.weight,
+        'or':              r.official_rating,
+        'rpr':             r.rpr or '',
+        'ts':              r.ts or '',
+        'odds':            r.odds,
+        'headgear':        r.headgear or '',
+        'headgear_run':    r.headgear_run or '',
+        'last_run':        r.last_run or '',
+        'position':        r.position or '',
+        'silk_url':        r.silk_url or '',
+        'spotlight':       r.spotlight or '',
+        'comment':         r.comment or '',
+        'wind_surgery':    r.wind_surgery or '',
         'trainer_14_days': r.trainer_14_days or '',
-        'tagged':         r.horse_name.lower() in tagged_map,
-        'notes':          tagged_map.get(r.horse_name.lower(), ''),
+        'tagged':          r.horse_name.lower() in tagged_map,
+        'notes':           tagged_map.get(r.horse_name.lower(), ''),
     }
 
 
@@ -558,14 +616,8 @@ def run_all_searches():
             if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():       continue
             if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():         continue
             hf = (f.get('horse') or '').strip()
-            if hf:
-                use_fuzzy = f.get('fuzzy', True)
-                if use_fuzzy:
-                    if not _fuzzy_match(r.horse_name, hf):
-                        continue
-                else:
-                    if hf.lower() not in r.horse_name.lower():
-                        continue
+            if hf and hf.lower() not in r.horse_name.lower():
+                continue
             matched_ids[r.id] = r
     matched = list(matched_ids.values())
     if matched:
@@ -673,8 +725,6 @@ def delete_override(horse_name):
         db.session.commit()
     return jsonify({'status': 'ok'})
 
-
-# ── Debug ──────────────────────────────────────────────────────────────────────
 
 @app.route('/api/debug-results')
 @login_required
