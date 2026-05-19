@@ -478,7 +478,7 @@ For example:
 Return ONLY the matching names, one per line, exactly as they appear in the list. Return nothing else — no explanation, no numbering, no punctuation."""
 
         message = client.messages.create(
-            model='claude-sonnet-4-20250514',
+            model='claude-sonnet-4-5',
             max_tokens=1000,
             messages=[{'role': 'user', 'content': prompt}]
         )
