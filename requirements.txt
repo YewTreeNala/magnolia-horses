@@ -9,3 +9,4 @@ rapidfuzz
 jellyfish
 gunicorn
 psycopg2-binary
+anthropic
