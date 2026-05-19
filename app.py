@@ -10,7 +10,7 @@ import json
 import os
 from datetime import datetime, date
 
-load_dotenv()
+load_dotenv(override=False)
 
 ADMIN_EMAIL = 'mark@ukedwards.co.uk'
 
