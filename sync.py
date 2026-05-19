@@ -51,7 +51,7 @@ def expand_colour(code):
 def _parse_results(res_json):
     results_by_key = {}
     for race in res_json.get("results", []):
-        course = (race.get("course") or "").strip().lower()
+        course = _strip_country((race.get("course") or "").strip()).lower()
         off    = (race.get("off") or "").strip()
         key    = f"{course}_{off}"
         runners = {}
