@@ -10,7 +10,7 @@ import json
 import os
 from datetime import datetime, date
 
-load_dotenv(override=False)
+load_dotenv()
 
 ADMIN_EMAIL = 'mark@ukedwards.co.uk'
 
@@ -24,10 +24,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
-
-
-
-
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -79,17 +75,6 @@ def is_admin():
 @app.route('/')
 def index():
     return render_template('index.html', is_admin=is_admin())
-
-@app.route('/api/debug-env')
-@login_required
-def debug_env():
-    if not is_admin():
-        return jsonify({'error': 'Forbidden'}), 403
-    return jsonify({
-        'ANTHROPIC_API_KEY': 'SET' if os.environ.get('ANTHROPIC_API_KEY') else 'MISSING',
-        'RACING_API_USER':   'SET' if os.environ.get('RACING_API_USER') else 'MISSING',
-        'DATABASE_URL':      'SET' if os.environ.get('DATABASE_URL') else 'MISSING',
-    })
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -404,7 +389,7 @@ def search():
         runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
     if ai_names:
-        name_set = {n.strip().lower() for n in ai_names.split(',') if n.strip()}
+        name_set = {n.strip().lower() for n in ai_names.replace('%7C', '|').split('|') if n.strip()}
         runners = [r for r in runners if r.horse_name.lower() in name_set]
     elif horse:
         hl = horse.lower()
@@ -478,7 +463,7 @@ For example:
 Return ONLY the matching names, one per line, exactly as they appear in the list. Return nothing else — no explanation, no numbering, no punctuation."""
 
         message = client.messages.create(
-            model='claude-sonnet-4-5',
+            model='claude-sonnet-4-20250514',
             max_tokens=1000,
             messages=[{'role': 'user', 'content': prompt}]
         )
