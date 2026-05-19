@@ -364,15 +364,14 @@ def options():
 
 @app.route('/api/search')
 def search():
-    horse   = request.args.get('horse',   '').strip()
-    trainer = request.args.get('trainer', '').strip()
-    jockey  = request.args.get('jockey',  '').strip()
-    colour  = request.args.get('colour',  '').strip()
-    meeting = request.args.get('meeting', '').strip()
-    owner   = request.args.get('owner',   '').strip()
-    sort    = request.args.get('sort',    'meeting').strip()
-    uk_only = request.args.get('uk_only', 'true').strip().lower() == 'true'
-    # ai_names: comma-separated list of horse names returned by AI search
+    horse    = request.args.get('horse',    '').strip()
+    trainer  = request.args.get('trainer',  '').strip()
+    jockey   = request.args.get('jockey',   '').strip()
+    colour   = request.args.get('colour',   '').strip()
+    meeting  = request.args.get('meeting',  '').strip()
+    owner    = request.args.get('owner',    '').strip()
+    sort     = request.args.get('sort',     'meeting').strip()
+    uk_only  = request.args.get('uk_only',  'true').strip().lower() == 'true'
     ai_names = request.args.get('ai_names', '').strip()
 
     today = date.today().strftime('%Y-%m-%d')
@@ -390,11 +389,9 @@ def search():
         runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
     if ai_names:
-        # Filter to AI-matched names (exact, case-insensitive)
         name_set = {n.strip().lower() for n in ai_names.split(',') if n.strip()}
         runners = [r for r in runners if r.horse_name.lower() in name_set]
     elif horse:
-        # Plain text contains match
         hl = horse.lower()
         runners = [r for r in runners if hl in r.horse_name.lower()]
 
@@ -411,48 +408,44 @@ def search():
 
 # ── AI horse name search ───────────────────────────────────────────────────────
 
-# Simple in-memory cache: { "date|term": ["Horse Name", ...] }
 _ai_cache = {}
 
 @app.route('/api/ai-horse-search', methods=['POST'])
 def ai_horse_search():
-    data       = request.get_json() or {}
-    term       = (data.get('term') or '').strip()
-    uk_only    = data.get('uk_only', True)
+    data    = request.get_json() or {}
+    term    = (data.get('term') or '').strip()
+    uk_only = data.get('uk_only', True)
 
     if not term:
         return jsonify({'error': 'term required'}), 400
 
-    today = date.today().strftime('%Y-%m-%d')
+    api_key = os.environ.get('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'ANTHROPIC_API_KEY not configured on server'}), 500
+
+    today     = date.today().strftime('%Y-%m-%d')
     cache_key = f"{today}|{term.lower()}|{'uk' if uk_only else 'all'}"
 
     if cache_key in _ai_cache:
         return jsonify({'names': _ai_cache[cache_key], 'cached': True})
 
-    # Fetch all today's horse names
-    q = db.session.query(Runner.horse_name).join(Race).join(Meeting).filter(Meeting.date == today)
-    all_names = [r[0] for r in q.all()]
+    # Fetch horse names
+    all_runners = db.session.query(Runner).join(Race).join(Meeting)\
+        .filter(Meeting.date == today).all()
 
     if uk_only:
-        uk_runners = db.session.query(Runner.horse_name).join(Race).join(Meeting)\
-            .filter(Meeting.date == today)\
-            .filter(Meeting.name.in_([c for c in UK_COURSES])).all()
-        # Use post-filter for case consistency
-        uk_set = set()
-        for r in db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all():
-            if is_uk_course(r.race.meeting.name):
-                uk_set.add(r.horse_name)
-        all_names = list(uk_set)
+        all_runners = [r for r in all_runners if is_uk_course(r.race.meeting.name)]
+
+    all_names = list({r.horse_name for r in all_runners})
 
     if not all_names:
         return jsonify({'names': [], 'cached': False})
 
-    # Call Anthropic API
     try:
         import anthropic
-        client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+        client = anthropic.Anthropic(api_key=api_key)
 
-        names_text = '\n'.join(all_names)
+        names_text = '\n'.join(sorted(all_names))
         prompt = f"""You are helping search for horse names based on a conceptual theme.
 
 Search theme: "{term}"
@@ -475,12 +468,12 @@ Return ONLY the matching names, one per line, exactly as they appear in the list
             messages=[{'role': 'user', 'content': prompt}]
         )
 
-        raw = message.content[0].text.strip()
+        raw     = message.content[0].text.strip()
         matched = [line.strip() for line in raw.split('\n') if line.strip()]
 
-        # Validate — only return names that actually exist in today's list
+        # Validate against actual names
         valid_set = {n.lower(): n for n in all_names}
-        matched = [valid_set[m.lower()] for m in matched if m.lower() in valid_set]
+        matched   = [valid_set[m.lower()] for m in matched if m.lower() in valid_set]
 
         _ai_cache[cache_key] = matched
         return jsonify({'names': matched, 'cached': False})
