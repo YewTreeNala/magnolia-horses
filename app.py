@@ -25,6 +25,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
 
+
+
+
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -75,6 +79,17 @@ def is_admin():
 @app.route('/')
 def index():
     return render_template('index.html', is_admin=is_admin())
+
+@app.route('/api/debug-env')
+@login_required
+def debug_env():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    return jsonify({
+        'ANTHROPIC_API_KEY': 'SET' if os.environ.get('ANTHROPIC_API_KEY') else 'MISSING',
+        'RACING_API_USER':   'SET' if os.environ.get('RACING_API_USER') else 'MISSING',
+        'DATABASE_URL':      'SET' if os.environ.get('DATABASE_URL') else 'MISSING',
+    })
 
 
 @app.route('/register', methods=['GET', 'POST'])
