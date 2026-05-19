@@ -155,12 +155,13 @@ def sync_todays_races(app):
             existing_runners = {r.horse_name.lower(): r for r in race.runners}
 
             for r in racecard.get("runners", []):
-                horse_name = r.get("horse") or ""
-                horse_key  = horse_name.strip().lower()
+                horse_name         = r.get("horse") or ""
+                horse_key          = horse_name.strip().lower()
+                horse_key_stripped = _strip_country(horse_name).strip().lower()
 
                 colour = overrides.get(horse_key) or expand_colour(r.get("colour") or "")
 
-                result   = result_runners.get(horse_key, {})
+                result   = result_runners.get(horse_key_stripped, {})
                 position = result.get("position", "")
                 sp_dec   = result.get("sp_dec", "") or str(r.get("sp_dec") or "")
 
