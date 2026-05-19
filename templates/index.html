@@ -582,7 +582,6 @@ function getFilters() {
     type:    document.getElementById('f-type').value,
     cls:     document.getElementById('f-class').value,
     sort:    document.getElementById('f-sort').value,
-    fuzzy:   document.getElementById('f-fuzzy').checked,
     uk_only: document.getElementById('f-uk-only').checked
   };
 }
@@ -601,7 +600,6 @@ function restoreFilters() {
     if (f.type)    document.getElementById('f-type').value    = f.type;
     if (f.cls)     document.getElementById('f-class').value   = f.cls;
     if (f.sort)    document.getElementById('f-sort').value    = f.sort;
-    if (f.fuzzy   !== undefined) document.getElementById('f-fuzzy').checked   = f.fuzzy;
     if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); }
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
@@ -616,7 +614,6 @@ function applyFilters(filters) {
   document.getElementById('f-type').value     = filters.type    || '';
   document.getElementById('f-class').value    = filters.cls     || '';
   document.getElementById('f-sort').value     = filters.sort    || 'meeting';
-  document.getElementById('f-fuzzy').checked  = filters.fuzzy !== false;
   document.getElementById('f-uk-only').checked = !!filters.uk_only;
   syncUKToggle();
   selectedValues.jockey  = filters.jockey  || '';
