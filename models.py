@@ -56,8 +56,8 @@ class Race(db.Model):
     race_class     = db.Column(db.String(50))
     prize          = db.Column(db.String(50))
     race_status    = db.Column(db.String(20),  default='')
-    going_detailed = db.Column(db.String(100), default='')
-    weather        = db.Column(db.String(100), default='')
+    going_detailed = db.Column(db.Text, default='')
+    weather        = db.Column(db.Text, default='')
     runners        = db.relationship('Runner', backref='race', lazy=True)
 
 
