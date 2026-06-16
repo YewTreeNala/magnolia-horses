@@ -327,4 +327,4 @@ def send_morning_alerts_for_user(user_id, app):
         )
         if ok:
             return {'status': 'sent', 'message': 'Test email sent to ' + user.email + ' with ' + str(n) + ' runners'}
-        return {'status': 'failed', 'message': 'Email send failed - check SendGrid API key'}
+        return {'status': 'failed', 'message': 'Email send failed - check Railway app logs for details'}
