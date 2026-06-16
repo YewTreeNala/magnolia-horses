@@ -789,9 +789,7 @@ function loadOptions() {
 function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
   var isResult  = race.is_result;
   var totalRnrs = race.total_runners || race.runners.length;
-  var meetingTag = meetingLabel
-    ? '<span style="font-size:11px;color:' + (isResult ? 'rgba(255,255,255,0.85)' : 'var(--text2)') + ';margin-left:auto;flex-shrink:0">' + escHtml(meetingLabel) + '</span>'
-    : '';
+  var meetingTag = ''; // now shown inline next to time
   var headerClass = isResult ? ' result' : '';
   var blockClass  = isResult ? ' is-result' : '';
   var statusBadge = isResult
@@ -872,7 +870,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
   var posHeader = isResult ? '<th class="pos-th" style="width:52px">Finish</th>' : '<th style="width:52px"></th>';
 
   return '<div class="race-block' + blockClass + '">'
-    + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + '</span>'
+    + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race['class'] || '')
     + ' &middot; ' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '')
