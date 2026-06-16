@@ -787,7 +787,7 @@ function loadOptions() {
 
 // ── Build results ─────────────────────────────────────────────────────────────
 function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
-  var isResult  = race.is_result;
+  var isResult  = race.is_result || (race.runners && race.runners.some(function(r) { return r.position && r.position !== ''; }));
   var totalRnrs = race.total_runners || race.runners.length;
   var meetingTag = ''; // now shown inline next to time
   var headerClass = isResult ? ' result' : '';
