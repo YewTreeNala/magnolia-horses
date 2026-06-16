@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog
-from sync import sync_todays_races
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField
+from sync import sync_todays_races, sync_horse_history, backfill_horse_history
 from email_service import send_morning_alerts
 import json
 import os
@@ -63,6 +63,7 @@ def sync_and_alert(app):
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
+scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=23, minute=0)
 scheduler.start()
 
 
@@ -389,7 +390,7 @@ def search():
         runners = [r for r in runners if is_uk_course(r.race.meeting.name)]
 
     if ai_names:
-        name_set = {n.strip().lower() for n in ai_names.split('|') if n.strip()}
+        name_set = {n.strip().lower() for n in ai_names.replace('%7C', '|').split('|') if n.strip()}
         runners = [r for r in runners if r.horse_name.lower() in name_set]
     elif horse:
         hl = horse.lower()
@@ -761,6 +762,80 @@ def debug_results():
             'unmatched': sum(1 for v in racecard_keys.values() if not v['match_found']),
         }
     })
+
+
+
+# ── Horse history API ──────────────────────────────────────────────────────────
+
+@app.route('/api/horse-history/<horse_id>')
+def horse_history(horse_id):
+    runs = HorseRun.query.filter_by(horse_id=horse_id)        .order_by(HorseRun.date.desc()).all()
+    if not runs:
+        return jsonify([])
+    result = []
+    for run in runs:
+        field = [{
+            'horse_id':   f.horse_id,
+            'horse_name': f.horse_name,
+            'position':   f.position,
+            'sp':         f.sp,
+            'sp_dec':     f.sp_dec,
+            'jockey':     f.jockey,
+            'trainer':    f.trainer,
+            'weight':     f.weight,
+            'btn':        f.btn,
+            'or':         f.official_rating,
+            'silk_url':   f.silk_url,
+        } for f in sorted(run.field, key=lambda x: int(x.position) if x.position.isdigit() else 999)]
+        result.append({
+            'race_id':    run.race_id,
+            'date':       run.date,
+            'course':     run.course,
+            'race_name':  run.race_name,
+            'type':       run.race_type,
+            'class':      run.race_class,
+            'pattern':    run.pattern,
+            'dist':       run.dist,
+            'going':      run.going,
+            'surface':    run.surface,
+            'position':   run.position,
+            'sp':         run.sp,
+            'sp_dec':     run.sp_dec,
+            'jockey':     run.jockey,
+            'trainer':    run.trainer,
+            'weight':     run.weight,
+            'btn':        run.btn,
+            'ovr_btn':    run.ovr_btn,
+            'or':         run.official_rating,
+            'prize':      run.prize,
+            'comment':    run.comment,
+            'field':      field,
+        })
+    return jsonify(result)
+
+
+@app.route('/api/admin/backfill-history', methods=['POST'])
+@login_required
+def admin_backfill_history():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    import threading
+    t = threading.Thread(target=backfill_horse_history, args=(app,))
+    t.daemon = True
+    t.start()
+    return jsonify({'status': 'started', 'message': 'Backfill running in background — check sync log'})
+
+
+@app.route('/api/admin/sync-history', methods=['POST'])
+@login_required
+def admin_sync_history():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    import threading
+    t = threading.Thread(target=sync_horse_history, args=(app,))
+    t.daemon = True
+    t.start()
+    return jsonify({'status': 'started', 'message': 'History sync running in background — check sync log'})
 
 
 if __name__ == '__main__':

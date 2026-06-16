@@ -1,8 +1,9 @@
 import re
+import time
 import requests
 import os
 from datetime import datetime
-from models import db, Meeting, Race, Runner, ColourOverride, SyncLog
+from models import db, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField
 
 BASE_URL = "https://api.theracingapi.com/v1"
 
@@ -25,7 +26,7 @@ def _log(level, message):
 
 
 def _strip_country(name):
-    """Remove trailing country code e.g. 'Ryebridge (IRE)' -> 'Ryebridge'"""
+    """Remove trailing country/surface code e.g. 'Cork (IRE)' -> 'Cork'"""
     return re.sub(r'\s*\([^)]{2,4}\)\s*$', '', name).strip()
 
 
@@ -158,6 +159,7 @@ def sync_todays_races(app):
                 horse_name         = r.get("horse") or ""
                 horse_key          = horse_name.strip().lower()
                 horse_key_stripped = _strip_country(horse_name).strip().lower()
+                horse_id           = r.get("horse_id") or ""
 
                 colour = overrides.get(horse_key) or expand_colour(r.get("colour") or "")
 
@@ -176,6 +178,7 @@ def sync_todays_races(app):
                     wind = "1"
 
                 fields = {
+                    "horse_id":        horse_id,
                     "colour":          colour,
                     "draw":            str(r.get("draw") or ""),
                     "age":             str(r.get("age") or ""),
@@ -226,4 +229,253 @@ def sync_todays_races(app):
                 db.session.delete(meeting)
 
         _log("INFO", f"Sync complete — {len(seen_keys)} meetings, {result_writes} position writes")
+        db.session.commit()
+
+
+def sync_horse_history(app):
+    """End-of-day job: fetch and store full race history for every horse seen today."""
+    with app.app_context():
+        _log("INFO", "Horse history sync started")
+
+        from datetime import date
+        today = date.today().strftime('%Y-%m-%d')
+
+        # Collect all unique horse_ids from today's runners
+        rows = db.session.query(Runner.horse_id, Runner.horse_name,
+                                Runner.colour, Runner.age, Runner.sex,
+                                Runner.trainer, Runner.owner)\
+            .join(Race).join(Meeting)\
+            .filter(Meeting.date == today)\
+            .filter(Runner.horse_id != '')\
+            .all()
+
+        seen = {}
+        for row in rows:
+            if row.horse_id not in seen:
+                seen[row.horse_id] = row
+
+        _log("INFO", f"Horse history: {len(seen)} unique horses to process")
+
+        fetched = 0
+        errors  = 0
+
+        for horse_id, row in seen.items():
+            try:
+                # Upsert HorseProfile
+                profile = HorseProfile.query.get(horse_id)
+                if not profile:
+                    profile = HorseProfile(horse_id=horse_id)
+                    db.session.add(profile)
+                profile.name       = row.horse_name
+                profile.colour     = row.colour
+                profile.sex        = row.sex
+                profile.trainer    = row.trainer
+                profile.owner      = row.owner
+                profile.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                db.session.flush()
+
+                # Fetch history from API
+                resp = requests.get(
+                    f"{BASE_URL}/racecards/{horse_id}/results",
+                    auth=get_auth(),
+                    timeout=10
+                )
+
+                if resp.status_code != 200:
+                    errors += 1
+                    continue
+
+                results = resp.json().get("results", [])
+
+                for race in results:
+                    race_id = race.get("race_id") or ""
+                    if not race_id:
+                        continue
+
+                    # Find this horse's own run in the field
+                    my_run = next(
+                        (r for r in race.get("runners", []) if r.get("horse_id") == horse_id),
+                        {}
+                    )
+
+                    # Upsert HorseRun
+                    existing_run = HorseRun.query.filter_by(
+                        horse_id=horse_id, race_id=race_id
+                    ).first()
+
+                    if existing_run:
+                        run = existing_run
+                    else:
+                        run = HorseRun(horse_id=horse_id, race_id=race_id)
+                        db.session.add(run)
+
+                    run.date      = race.get("date") or ""
+                    run.course    = race.get("course") or ""
+                    run.race_name = race.get("race_name") or ""
+                    run.race_type = race.get("type") or ""
+                    run.race_class = race.get("class") or ""
+                    run.pattern   = race.get("pattern") or ""
+                    run.dist      = race.get("dist") or ""
+                    run.going     = race.get("going") or ""
+                    run.surface   = race.get("surface") or ""
+                    run.position  = str(my_run.get("position") or "")
+                    run.sp        = my_run.get("sp") or ""
+                    run.sp_dec    = str(my_run.get("sp_dec") or "")
+                    run.jockey    = my_run.get("jockey") or ""
+                    run.trainer   = my_run.get("trainer") or ""
+                    run.weight    = my_run.get("weight") or ""
+                    run.btn       = str(my_run.get("btn") or "")
+                    run.ovr_btn   = str(my_run.get("ovr_btn") or "")
+                    run.official_rating = str(my_run.get("or") or "")
+                    run.prize     = str(my_run.get("prize") or "")
+                    run.comment   = my_run.get("comment") or ""
+                    db.session.flush()
+
+                    # Replace field runners
+                    HorseRunField.query.filter_by(run_id=run.id).delete()
+                    for fr in race.get("runners", []):
+                        field_row = HorseRunField(
+                            run_id     = run.id,
+                            horse_id   = fr.get("horse_id") or "",
+                            horse_name = fr.get("horse") or "",
+                            position   = str(fr.get("position") or ""),
+                            sp         = fr.get("sp") or "",
+                            sp_dec     = str(fr.get("sp_dec") or ""),
+                            jockey     = fr.get("jockey") or "",
+                            trainer    = fr.get("trainer") or "",
+                            weight     = fr.get("weight") or "",
+                            btn        = str(fr.get("btn") or ""),
+                            official_rating = str(fr.get("or") or ""),
+                            silk_url   = fr.get("silk_url") or "",
+                        )
+                        db.session.add(field_row)
+
+                db.session.commit()
+                fetched += 1
+                time.sleep(0.5)
+
+            except Exception as e:
+                errors += 1
+                _log("WARN", f"Horse history error for {horse_id}: {e}")
+                db.session.rollback()
+                continue
+
+        _log("INFO", f"Horse history sync complete — {fetched} horses fetched, {errors} errors")
+        db.session.commit()
+
+
+def backfill_horse_history(app):
+    """One-time backfill: fetch history for all horses ever stored."""
+    with app.app_context():
+        _log("INFO", "Backfill started")
+
+        rows = db.session.query(Runner.horse_id, Runner.horse_name,
+                                Runner.colour, Runner.sex,
+                                Runner.trainer, Runner.owner)\
+            .filter(Runner.horse_id != '')\
+            .distinct(Runner.horse_id).all()
+
+        _log("INFO", f"Backfill: {len(rows)} unique horses found")
+
+        fetched = 0
+        errors  = 0
+
+        for row in rows:
+            horse_id = row.horse_id
+            if not horse_id:
+                continue
+            try:
+                profile = HorseProfile.query.get(horse_id)
+                if not profile:
+                    profile = HorseProfile(horse_id=horse_id)
+                    db.session.add(profile)
+                profile.name       = row.horse_name
+                profile.colour     = row.colour
+                profile.sex        = row.sex
+                profile.trainer    = row.trainer
+                profile.owner      = row.owner
+                profile.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                db.session.flush()
+
+                resp = requests.get(
+                    f"{BASE_URL}/racecards/{horse_id}/results",
+                    auth=get_auth(),
+                    timeout=10
+                )
+                if resp.status_code != 200:
+                    errors += 1
+                    continue
+
+                results = resp.json().get("results", [])
+                for race in results:
+                    race_id = race.get("race_id") or ""
+                    if not race_id:
+                        continue
+
+                    my_run = next(
+                        (r for r in race.get("runners", []) if r.get("horse_id") == horse_id),
+                        {}
+                    )
+
+                    existing_run = HorseRun.query.filter_by(
+                        horse_id=horse_id, race_id=race_id
+                    ).first()
+
+                    if existing_run:
+                        run = existing_run
+                    else:
+                        run = HorseRun(horse_id=horse_id, race_id=race_id)
+                        db.session.add(run)
+
+                    run.date      = race.get("date") or ""
+                    run.course    = race.get("course") or ""
+                    run.race_name = race.get("race_name") or ""
+                    run.race_type = race.get("type") or ""
+                    run.race_class = race.get("class") or ""
+                    run.pattern   = race.get("pattern") or ""
+                    run.dist      = race.get("dist") or ""
+                    run.going     = race.get("going") or ""
+                    run.surface   = race.get("surface") or ""
+                    run.position  = str(my_run.get("position") or "")
+                    run.sp        = my_run.get("sp") or ""
+                    run.sp_dec    = str(my_run.get("sp_dec") or "")
+                    run.jockey    = my_run.get("jockey") or ""
+                    run.trainer   = my_run.get("trainer") or ""
+                    run.weight    = my_run.get("weight") or ""
+                    run.btn       = str(my_run.get("btn") or "")
+                    run.ovr_btn   = str(my_run.get("ovr_btn") or "")
+                    run.official_rating = str(my_run.get("or") or "")
+                    run.prize     = str(my_run.get("prize") or "")
+                    run.comment   = my_run.get("comment") or ""
+                    db.session.flush()
+
+                    HorseRunField.query.filter_by(run_id=run.id).delete()
+                    for fr in race.get("runners", []):
+                        field_row = HorseRunField(
+                            run_id     = run.id,
+                            horse_id   = fr.get("horse_id") or "",
+                            horse_name = fr.get("horse") or "",
+                            position   = str(fr.get("position") or ""),
+                            sp         = fr.get("sp") or "",
+                            sp_dec     = str(fr.get("sp_dec") or ""),
+                            jockey     = fr.get("jockey") or "",
+                            trainer    = fr.get("trainer") or "",
+                            weight     = fr.get("weight") or "",
+                            btn        = str(fr.get("btn") or ""),
+                            official_rating = str(fr.get("or") or ""),
+                            silk_url   = fr.get("silk_url") or "",
+                        )
+                        db.session.add(field_row)
+
+                db.session.commit()
+                fetched += 1
+                time.sleep(0.5)
+
+            except Exception as e:
+                errors += 1
+                _log("WARN", f"Backfill error for {horse_id}: {e}")
+                db.session.rollback()
+                continue
+
+        _log("INFO", f"Backfill complete — {fetched} horses, {errors} errors")
         db.session.commit()
