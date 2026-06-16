@@ -1095,6 +1095,17 @@ document.getElementById('saved-chips').addEventListener('click', function(e) {
 var runAllBtn = document.getElementById('btn-run-all');
 if (runAllBtn) {
   runAllBtn.addEventListener('click', function() {
+    // Clear all filters before running
+    document.getElementById('f-horse').value   = '';
+    document.getElementById('f-jockey').value  = '';
+    document.getElementById('f-trainer').value = '';
+    document.getElementById('f-owner').value   = '';
+    document.getElementById('f-colour').value  = '';
+    document.getElementById('f-meeting').value = '';
+    document.getElementById('f-type').value    = '';
+    document.getElementById('f-class').value   = '';
+    selectedValues = { jockey: '', trainer: '', owner: '' };
+
     runAllBtn.textContent = 'Running...'; runAllBtn.disabled = true;
     document.getElementById('spinner').classList.add('active');
     fetch('/api/run-all-searches').then(function(r) { return r.json(); })
