@@ -3,6 +3,7 @@ import requests
 from datetime import datetime
 
 RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+_last_email_error = ''
 FROM_EMAIL     = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
 SITE_URL       = os.getenv('SITE_URL', 'https://magnoliahorses.com')
 
@@ -48,8 +49,11 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
         if response.status_code == 200 or response.status_code == 201:
             print(f'[Email] Sent to {to_email}: {subject}')
         else:
-            print(f'[Email] Failed ({response.status_code}): {response.text}')
+            error_detail = f'Email failed ({response.status_code}): {response.text[:300]}'
+            print(f'[Email] {error_detail}')
             status = 'failed'
+            global _last_email_error
+            _last_email_error = error_detail
 
     if user_id is not None:
         try:
@@ -327,4 +331,4 @@ def send_morning_alerts_for_user(user_id, app):
         )
         if ok:
             return {'status': 'sent', 'message': 'Test email sent to ' + user.email + ' with ' + str(n) + ' runners'}
-        return {'status': 'failed', 'message': 'Email send failed - check Railway app logs for details'}
+        return {'status': 'failed', 'message': _last_email_error or 'Email send failed'}
