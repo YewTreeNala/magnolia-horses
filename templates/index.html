@@ -1257,7 +1257,7 @@ function renderHistoryField(field, run) {
     html += '<tr style="border-bottom:0.5px solid var(--border);' + rowBg + '">';
     html += '<td style="padding:6px 10px;' + posCls + '">' + escHtml(posLabel(fr.position)) + '</td>';
     html += '<td style="padding:6px 10px;font-weight:' + (isHero ? '600' : '400') + ';color:' + (isHero ? 'var(--brand)' : 'var(--text)') + '">';
-    if (fr.silk_url) html += '<img src="' + escHtml(fr.silk_url) + '" style="height:14px;margin-right:5px;vertical-align:middle" onerror="this.style.display='none'">';
+    if (fr.silk_url) html += '<img src="' + escHtml(fr.silk_url) + '" style="height:14px;margin-right:5px;vertical-align:middle" onerror="this.style.display=\'none\'">';
     html += escHtml(fr.horse_name || '') + '</td>';
     html += '<td style="padding:6px 10px;color:var(--text2)">' + escHtml(fr.sp || '—') + '</td>';
     html += '<td style="padding:6px 10px;color:var(--text2)">' + escHtml(fr.jockey || '—') + '</td>';
