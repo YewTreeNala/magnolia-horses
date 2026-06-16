@@ -165,6 +165,7 @@ def sync_todays_races(app):
 
                 result   = result_runners.get(horse_key_stripped, {})
                 position = result.get("position", "")
+                sp_frac  = result.get("sp", "")
                 sp_dec   = result.get("sp_dec", "") or str(r.get("sp_dec") or "")
 
                 t14 = r.get("trainer_14_days") or {}
@@ -208,6 +209,8 @@ def sync_todays_races(app):
                     if position:
                         runner.position = position
                         result_writes += 1
+                    if sp_frac:
+                        runner.sp = sp_frac
                     if sp_dec:
                         runner.odds = sp_dec
                 else:
@@ -216,6 +219,7 @@ def sync_todays_races(app):
                         horse_name=horse_name,
                         number=str(r.get("number") or ""),
                         position=position,
+                        sp=sp_frac,
                         odds=sp_dec,
                         **fields
                     )

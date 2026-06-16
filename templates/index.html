@@ -830,7 +830,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     if (isResult && pos) {
       var pNum = parseInt(pos, 10);
       var pCls = pNum === 1 ? 'pos-1' : pNum === 2 ? 'pos-2' : pNum === 3 ? 'pos-3' : '';
-      posCell = '<td class="pos-cell ' + pCls + '">' + escHtml(ordinal(pos)) + '</td>';
+      var spStr = r.sp ? ' <span style="font-size:10px;font-weight:400;opacity:0.85">@ ' + escHtml(r.sp) + '</span>' : '';
+      posCell = '<td class="pos-cell ' + pCls + '">' + escHtml(ordinal(pos)) + spStr + '</td>';
     } else {
       posCell = '<td class="pos-cell"></td>';
     }

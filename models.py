@@ -80,6 +80,7 @@ class Runner(db.Model):
     rpr             = db.Column(db.String(20),  default='')
     ts              = db.Column(db.String(20),  default='')
     odds            = db.Column(db.String(20))
+    sp              = db.Column(db.String(20),  default='')
     headgear        = db.Column(db.String(20),  default='')
     headgear_run    = db.Column(db.String(20),  default='')
     last_run        = db.Column(db.String(20),  default='')

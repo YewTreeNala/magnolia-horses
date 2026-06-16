@@ -510,6 +510,7 @@ def runner_to_dict(r, tagged_map):
         'wind_surgery':    r.wind_surgery or '',
         'trainer_14_days': r.trainer_14_days or '',
         'horse_id':        r.horse_id or '',
+        'sp':              r.sp or '',
         'tagged':          r.horse_name.lower() in tagged_map,
         'notes':           tagged_map.get(r.horse_name.lower(), ''),
     }
