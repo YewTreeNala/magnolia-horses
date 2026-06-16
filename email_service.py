@@ -2,9 +2,9 @@ import os
 import requests
 from datetime import datetime
 
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
-FROM_EMAIL       = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
-SITE_URL         = os.getenv('SITE_URL', 'https://magnoliahorses.com')
+RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+FROM_EMAIL     = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
+SITE_URL       = os.getenv('SITE_URL', 'https://magnoliahorses.com')
 
 UK_COURSES = {
     'ascot', 'ayr', 'bath', 'beverley', 'brighton', 'carlisle', 'catterick',
@@ -27,25 +27,25 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
     from datetime import datetime as _dt
     status = 'sent'
 
-    if not SENDGRID_API_KEY:
+    if not RESEND_API_KEY:
         print(f'[Email] No API key - would have sent to {to_email}: {subject}')
         status = 'no_api_key'
     else:
         payload = {
-            'personalizations': [{'to': [{'email': to_email, 'name': to_name}]}],
-            'from':    {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
+            'from':    f'Magnolia Horses <{FROM_EMAIL}>',
+            'to':      [to_email],
             'subject': subject,
-            'content': [{'type': 'text/html', 'value': html_body}]
+            'html':    html_body,
         }
         response = requests.post(
-            'https://api.sendgrid.com/v3/mail/send',
+            'https://api.resend.com/emails',
             json=payload,
             headers={
-                'Authorization': f'Bearer {SENDGRID_API_KEY}',
+                'Authorization': f'Bearer {RESEND_API_KEY}',
                 'Content-Type': 'application/json'
             }
         )
-        if response.status_code == 202:
+        if response.status_code == 200 or response.status_code == 201:
             print(f'[Email] Sent to {to_email}: {subject}')
         else:
             print(f'[Email] Failed ({response.status_code}): {response.text}')
