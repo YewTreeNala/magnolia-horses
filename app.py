@@ -518,7 +518,7 @@ def runner_to_dict(r, tagged_map):
 def build_race_obj(r_data, tagged_map):
     race          = r_data['race']
     runners       = r_data['runners']
-    is_result     = (race.race_status or '').lower() == 'result'
+    is_result     = (race.race_status or '').lower() == 'result' or                     any(r.position for r in runners)
     total_runners = len(race.runners)
 
     if is_result:
