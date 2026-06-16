@@ -874,7 +874,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
   return '<div class="race-block' + blockClass + '">'
     + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
-    + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race.class || '')
+    + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race['class'] || '')
     + ' &middot; ' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '')
     + (race.going_detailed ? ' &middot; ' + escHtml(race.going_detailed) : '')
     + (race.weather ? ' &middot; &#127751; ' + escHtml(race.weather) : '')
@@ -1184,12 +1184,12 @@ function renderHistoryRuns(runs) {
     var posNum  = parseInt(run.position, 10);
     var posCls  = posNum === 1 ? 'color:#3b6d11;font-weight:600' : posNum <= 3 ? 'color:#185fa5;font-weight:600' : 'color:var(--text2)';
     var patBadge = run.pattern ? '<span style="font-size:10px;background:#f5ece8;color:var(--brand);border:0.5px solid rgba(139,58,58,0.2);border-radius:4px;padding:1px 6px;margin-left:5px">' + escHtml(run.pattern) + '</span>' : '';
-    var clsBadge = run.class  ? '<span style="font-size:10px;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:4px">Cls ' + escHtml(run.class) + '</span>' : '';
+    var clsBadge = run['class'] ? '<span style="font-size:10px;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border);border-radius:4px;padding:1px 6px;margin-left:4px">Cls ' + escHtml(run['class']) + '</span>' : '';
 
     html += '<div class="history-run" id="hrun-' + i + '" style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">';
 
     // Run header — clickable to expand field
-    html += '<div class="history-run-header" onclick="toggleHistoryField(' + i + ')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff;transition:background 0.1s" onmouseover="this.style.background='var(--brand-light)'" onmouseout="this.style.background='#fff'">';
+    html += '<div class="history-run-header" onclick="toggleHistoryField(' + i + ')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff;transition:background 0.1s">';
     html += '<div style="min-width:80px;font-size:12px;color:var(--text3)">' + escHtml(run.date || '') + '</div>';
     html += '<div style="flex:1;min-width:0">';
     html += '<div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(run.course || '') + ' <span style="color:var(--text2);font-weight:400">' + escHtml(run.dist || '') + '</span>' + patBadge + clsBadge + '</div>';
