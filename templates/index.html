@@ -724,8 +724,9 @@ function renderSavedChips() {
 }
 
 var editingSearchId = null;
+var editingAsAdmin   = false;
 
-function openSaveSearchModal(prefillName, prefillAlert, editId) {
+function openSaveSearchModal(prefillName, prefillAlert, editId, asAdmin, ownerLabel) {
   var f = getFilters(), parts = [];
   if (f.horse)   parts.push((f.ai_mode ? 'Horse (AI theme): ' : 'Horse: ') + f.horse);
   if (f.jockey)  parts.push('Jockey: '  + f.jockey);
@@ -734,11 +735,14 @@ function openSaveSearchModal(prefillName, prefillAlert, editId) {
   if (f.meeting) parts.push('Meeting: ' + f.meeting);
   if (f.owner)   parts.push('Owner: '   + f.owner);
   if (f.uk_only) parts.push('UK only');
-  document.getElementById('save-search-summary').textContent = parts.length ? parts.join(', ') : 'All runners for today';
+  var summaryText = parts.length ? parts.join(', ') : 'All runners for today';
+  if (asAdmin && ownerLabel) summaryText = 'Editing for ' + ownerLabel + ' — ' + summaryText;
+  document.getElementById('save-search-summary').textContent = summaryText;
 
   editingSearchId = editId || null;
+  editingAsAdmin  = !!asAdmin;
   var titleEl = document.getElementById('save-search-title');
-  if (titleEl) titleEl.textContent = editingSearchId ? 'Update saved search' : 'Save search';
+  if (titleEl) titleEl.textContent = editingSearchId ? (editingAsAdmin ? 'Update user\'s saved search' : 'Update saved search') : 'Save search';
   var btnEl = document.getElementById('save-search-confirm');
   if (btnEl) btnEl.textContent = editingSearchId ? 'Update' : 'Save';
 
@@ -752,7 +756,8 @@ function confirmSaveSearch() {
   var name  = document.getElementById('save-search-name').value.trim();
   var alert = document.getElementById('save-search-alert').checked;
   if (!name) { document.getElementById('save-search-name').focus(); return; }
-  var url    = editingSearchId ? ('/api/saved-searches/' + editingSearchId) : '/api/saved-searches';
+  var url    = '/api/saved-searches';
+  if (editingSearchId) url = (editingAsAdmin ? '/api/admin/saved-searches/' : '/api/saved-searches/') + editingSearchId;
   var method = editingSearchId ? 'PUT' : 'POST';
   fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, filters: getFilters(), alert: alert }) })
     .then(function(r) { return r.json(); })
@@ -760,6 +765,12 @@ function confirmSaveSearch() {
       if (data.error) { window.alert(data.error); return; }
       document.getElementById('save-search-modal').classList.remove('open');
       editingSearchId = null;
+      var wasAdmin = editingAsAdmin;
+      editingAsAdmin = false;
+      if (wasAdmin) {
+        window.location.href = '/admin/users';
+        return;
+      }
       return loadSavedSearches();
     });
 }
@@ -1140,9 +1151,28 @@ initDropdown('jockey'); initDropdown('trainer'); initDropdown('owner');
 restoreFilters(); syncSearchModeBtn(); syncUKToggle();
 
 function checkEditSearchParam() {
-  var params = new URLSearchParams(window.location.search);
-  var editId = params.get('edit_search');
+  var params  = new URLSearchParams(window.location.search);
+  var editId  = params.get('edit_search');
+  var isAdmin = params.get('admin') === '1';
   if (!editId) return;
+
+  // clean the URL immediately so refreshing doesn't re-trigger edit mode
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  if (isAdmin) {
+    fetch('/api/admin/saved-searches/' + editId)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) { window.alert('Could not load that search: ' + data.error); return; }
+        applyFilters(data.filters);
+        runSearch();
+        var ownerLabel = data.user_name + ' (' + data.user_email + ')';
+        setTimeout(function() { openSaveSearchModal(data.name, data.alert, data.id, true, ownerLabel); }, 200);
+      })
+      .catch(function() { window.alert('Could not load that search.'); });
+    return;
+  }
+
   var match = null;
   for (var i = 0; i < savedSearches.length; i++) {
     if (String(savedSearches[i].id) === String(editId)) { match = savedSearches[i]; break; }
@@ -1152,9 +1182,6 @@ function checkEditSearchParam() {
   saveFilters();
   runSearch();
   setTimeout(function() { openSaveSearchModal(match.name, match.alert, match.id); }, 200);
-  // clean the URL so refreshing doesn't re-trigger edit mode
-  var cleanUrl = window.location.pathname;
-  window.history.replaceState({}, document.title, cleanUrl);
 }
 
 autoSyncIfNeeded()

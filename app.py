@@ -216,6 +216,7 @@ def admin_users():
             if f.get('meeting'): parts.append(f"Meeting: {f['meeting']}")
             if f.get('uk_only'): parts.append('UK only')
             searches.append({
+                'id':      s.id,
                 'name':    s.name,
                 'summary': ', '.join(parts) if parts else 'All runners',
                 'alert':   s.alert,
@@ -345,6 +346,59 @@ def update_saved_search(search_id):
 @login_required
 def delete_saved_search(search_id):
     s = SavedSearch.query.filter_by(id=search_id, user_id=current_user.id).first()
+    if s:
+        db.session.delete(s)
+        db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+# ── Admin: manage other users' saved searches ──────────────────────────────────
+
+@app.route('/api/admin/saved-searches/<int:search_id>', methods=['GET'])
+@login_required
+def admin_get_saved_search(search_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    s = SavedSearch.query.get(search_id)
+    if not s:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify({
+        'id': s.id, 'name': s.name, 'filters': json.loads(s.filters),
+        'alert': s.alert, 'user_id': s.user_id,
+        'user_name': s.user.name, 'user_email': s.user.email
+    })
+
+
+@app.route('/api/admin/saved-searches/<int:search_id>', methods=['PUT'])
+@login_required
+def admin_update_saved_search(search_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    s = SavedSearch.query.get(search_id)
+    if not s:
+        return jsonify({'error': 'not found'}), 404
+    data    = request.get_json() or {}
+    name    = (data.get('name') or '').strip()
+    filters = data.get('filters', {})
+    alert   = data.get('alert', False)
+    if not name:
+        return jsonify({'error': 'name required'}), 400
+    clash = SavedSearch.query.filter_by(user_id=s.user_id, name=name).first()
+    if clash and clash.id != s.id:
+        return jsonify({'error': 'a saved search with that name already exists for this user'}), 400
+    s.name    = name
+    s.filters = json.dumps(filters)
+    s.alert   = alert
+    db.session.commit()
+    return jsonify({'status': 'updated', 'id': s.id})
+
+
+@app.route('/api/admin/saved-searches/<int:search_id>', methods=['DELETE'])
+@login_required
+def admin_delete_saved_search(search_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    s = SavedSearch.query.get(search_id)
     if s:
         db.session.delete(s)
         db.session.commit()

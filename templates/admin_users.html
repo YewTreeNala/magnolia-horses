@@ -43,6 +43,11 @@
     .alert-off { color: var(--text3); font-size: 11px; white-space: nowrap; }
     .no-searches { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 6px; }
     .divider { border: none; border-top: 0.5px solid var(--border); margin: 0.75rem 0 0; }
+    .btn-sm { border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; border: 0.5px solid; }
+    .btn-edit { background: transparent; color: var(--brand); border-color: rgba(139,58,58,0.3); }
+    .btn-edit:hover { background: var(--brand-light); }
+    .btn-del { background: transparent; color: #a32d2d; border-color: #a32d2d; }
+    .btn-del:hover { background: #fcebeb; }
   </style>
 </head>
 <body>
@@ -85,7 +90,7 @@
     <hr class="divider"/>
     <div class="searches-list">
       {% for s in u.searches %}
-      <div class="search-row">
+      <div class="search-row" id="admin-srow-{{ s.id }}">
         <span class="search-name">{{ s.name }}</span>
         <span class="search-summary">{{ s.summary }}</span>
         {% if s.alert %}
@@ -93,6 +98,8 @@
         {% else %}
           <span class="alert-off">Alert off</span>
         {% endif %}
+        <a class="btn-sm btn-edit" href="/?edit_search={{ s.id }}&admin=1" style="text-decoration:none">Edit</a>
+        <button class="btn-sm btn-del" onclick="adminDeleteSearch({{ s.id }}, 'admin-srow-{{ s.id }}')">Remove</button>
       </div>
       {% endfor %}
     </div>
@@ -102,5 +109,15 @@
   </div>
   {% endfor %}
 </div>
+<script>
+function adminDeleteSearch(searchId, rowId) {
+  if (!confirm('Remove this saved search for this user?')) return;
+  fetch('/api/admin/saved-searches/' + searchId, { method: 'DELETE' })
+    .then(function() {
+      var row = document.getElementById(rowId);
+      if (row) row.remove();
+    });
+}
+</script>
 </body>
 </html>
