@@ -318,6 +318,29 @@ def save_search():
     return jsonify({'status': 'saved', 'id': s.id})
 
 
+@app.route('/api/saved-searches/<int:search_id>', methods=['PUT'])
+@login_required
+def update_saved_search(search_id):
+    s = SavedSearch.query.filter_by(id=search_id, user_id=current_user.id).first()
+    if not s:
+        return jsonify({'error': 'not found'}), 404
+    data    = request.get_json() or {}
+    name    = (data.get('name') or '').strip()
+    filters = data.get('filters', {})
+    alert   = data.get('alert', False)
+    if not name:
+        return jsonify({'error': 'name required'}), 400
+    # If renaming to a name already used by a different saved search, block it
+    clash = SavedSearch.query.filter_by(user_id=current_user.id, name=name).first()
+    if clash and clash.id != s.id:
+        return jsonify({'error': 'a saved search with that name already exists'}), 400
+    s.name    = name
+    s.filters = json.dumps(filters)
+    s.alert   = alert
+    db.session.commit()
+    return jsonify({'status': 'updated', 'id': s.id})
+
+
 @app.route('/api/saved-searches/<int:search_id>', methods=['DELETE'])
 @login_required
 def delete_saved_search(search_id):

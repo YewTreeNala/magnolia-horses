@@ -410,7 +410,7 @@
 <div class="modal-overlay" id="save-search-modal">
   <div class="modal">
     <button class="modal-close" id="save-search-close">&#215;</button>
-    <h3>Save this search</h3>
+    <h3 id="save-search-title">Save this search</h3>
     <p id="save-search-summary" style="font-size:12px;color:var(--text3);margin-bottom:0.75rem"></p>
     <div class="modal-field">
       <label for="save-search-name">Search name</label>
@@ -596,6 +596,8 @@ function applyFilters(filters) {
   document.getElementById('f-class').value     = filters.cls     || '';
   document.getElementById('f-sort').value      = filters.sort    || 'meeting';
   document.getElementById('f-uk-only').checked = !!filters.uk_only;
+  document.getElementById('f-search-mode').value = filters.ai_mode ? 'ai' : 'text';
+  if (typeof syncSearchModeBtn === 'function') syncSearchModeBtn();
   syncUKToggle();
   selectedValues.jockey  = filters.jockey  || '';
   selectedValues.trainer = filters.trainer || '';
@@ -721,9 +723,11 @@ function renderSavedChips() {
   chips.innerHTML = html;
 }
 
-function openSaveSearchModal() {
+var editingSearchId = null;
+
+function openSaveSearchModal(prefillName, prefillAlert, editId) {
   var f = getFilters(), parts = [];
-  if (f.horse)   parts.push('Horse: '   + f.horse);
+  if (f.horse)   parts.push((f.ai_mode ? 'Horse (AI theme): ' : 'Horse: ') + f.horse);
   if (f.jockey)  parts.push('Jockey: '  + f.jockey);
   if (f.trainer) parts.push('Trainer: ' + f.trainer);
   if (f.colour)  parts.push('Colour: '  + f.colour);
@@ -731,8 +735,15 @@ function openSaveSearchModal() {
   if (f.owner)   parts.push('Owner: '   + f.owner);
   if (f.uk_only) parts.push('UK only');
   document.getElementById('save-search-summary').textContent = parts.length ? parts.join(', ') : 'All runners for today';
-  document.getElementById('save-search-name').value    = '';
-  document.getElementById('save-search-alert').checked = false;
+
+  editingSearchId = editId || null;
+  var titleEl = document.getElementById('save-search-title');
+  if (titleEl) titleEl.textContent = editingSearchId ? 'Update saved search' : 'Save search';
+  var btnEl = document.getElementById('save-search-confirm');
+  if (btnEl) btnEl.textContent = editingSearchId ? 'Update' : 'Save';
+
+  document.getElementById('save-search-name').value    = prefillName || '';
+  document.getElementById('save-search-alert').checked = !!prefillAlert;
   document.getElementById('save-search-modal').classList.add('open');
   setTimeout(function() { document.getElementById('save-search-name').focus(); }, 50);
 }
@@ -741,8 +752,16 @@ function confirmSaveSearch() {
   var name  = document.getElementById('save-search-name').value.trim();
   var alert = document.getElementById('save-search-alert').checked;
   if (!name) { document.getElementById('save-search-name').focus(); return; }
-  fetch('/api/saved-searches', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, filters: getFilters(), alert: alert }) })
-    .then(function() { document.getElementById('save-search-modal').classList.remove('open'); return loadSavedSearches(); });
+  var url    = editingSearchId ? ('/api/saved-searches/' + editingSearchId) : '/api/saved-searches';
+  var method = editingSearchId ? 'PUT' : 'POST';
+  fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, filters: getFilters(), alert: alert }) })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.error) { window.alert(data.error); return; }
+      document.getElementById('save-search-modal').classList.remove('open');
+      editingSearchId = null;
+      return loadSavedSearches();
+    });
 }
 
 // ── Dropdowns ─────────────────────────────────────────────────────────────────
@@ -1055,7 +1074,7 @@ document.getElementById('uk-btn').addEventListener('click', function() {
 document.getElementById('f-uk-only').addEventListener('change', function() { syncUKToggle(); saveFilters(); runSearch(); });
 
 var saveBtn = document.getElementById('btn-save-search');
-if (saveBtn) saveBtn.addEventListener('click', openSaveSearchModal);
+if (saveBtn) saveBtn.addEventListener('click', function() { openSaveSearchModal(); });
 
 var syncBtn = document.getElementById('sync-btn');
 if (syncBtn) {
@@ -1120,11 +1139,29 @@ document.getElementById('f-horse').addEventListener('keydown', function(e) { if 
 initDropdown('jockey'); initDropdown('trainer'); initDropdown('owner');
 restoreFilters(); syncSearchModeBtn(); syncUKToggle();
 
+function checkEditSearchParam() {
+  var params = new URLSearchParams(window.location.search);
+  var editId = params.get('edit_search');
+  if (!editId) return;
+  var match = null;
+  for (var i = 0; i < savedSearches.length; i++) {
+    if (String(savedSearches[i].id) === String(editId)) { match = savedSearches[i]; break; }
+  }
+  if (!match) return;
+  applyFilters(match.filters);
+  saveFilters();
+  runSearch();
+  setTimeout(function() { openSaveSearchModal(match.name, match.alert, match.id); }, 200);
+  // clean the URL so refreshing doesn't re-trigger edit mode
+  var cleanUrl = window.location.pathname;
+  window.history.replaceState({}, document.title, cleanUrl);
+}
+
 autoSyncIfNeeded()
   .then(function() { return loadOptions(); })
   .then(function() { return loadTags(); })
   .then(function() { return loadSavedSearches(); })
-  .then(function() { runSearch(); });
+  .then(function() { checkEditSearchParam(); return runSearch(); });
 </script>
 
 <!-- Horse History Modal -->
