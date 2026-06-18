@@ -164,7 +164,7 @@ def my_horses():
         except Exception:
             f = {}
         parts = []
-        if f.get('horse'):   parts.append(f"Horse: {f['horse']}")
+        if f.get('horse'):   parts.append(f"Horse (AI theme): {f['horse']}" if f.get('ai_mode') else f"Horse: {f['horse']}")
         if f.get('jockey'):  parts.append(f"Jockey: {f['jockey']}")
         if f.get('trainer'): parts.append(f"Trainer: {f['trainer']}")
         if f.get('colour'):  parts.append(f"Colour: {f['colour']}")
@@ -209,7 +209,7 @@ def admin_users():
             except Exception:
                 f = {}
             parts = []
-            if f.get('horse'):   parts.append(f"Horse: {f['horse']}")
+            if f.get('horse'):   parts.append(f"Horse (AI theme): {f['horse']}" if f.get('ai_mode') else f"Horse: {f['horse']}")
             if f.get('jockey'):  parts.append(f"Jockey: {f['jockey']}")
             if f.get('trainer'): parts.append(f"Trainer: {f['trainer']}")
             if f.get('colour'):  parts.append(f"Colour: {f['colour']}")
@@ -411,43 +411,42 @@ def search():
 
 _ai_cache = {}
 
-@app.route('/api/ai-horse-search', methods=['POST'])
-def ai_horse_search():
-    data    = request.get_json() or {}
-    term    = (data.get('term') or '').strip()
-    uk_only = data.get('uk_only', True)
-
+def resolve_ai_theme(term, uk_only=True, all_runners=None):
+    """Resolve an AI search theme to a list of matching horse names for today.
+    Shared by the interactive AI search endpoint, run-all-searches, and the
+    morning email job. Returns a list of horse names (possibly empty) or
+    raises an exception on failure (caller decides how to handle).
+    """
+    term = (term or '').strip()
     if not term:
-        return jsonify({'error': 'term required'}), 400
+        return []
 
     api_key = os.environ.get('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
     if not api_key:
-        return jsonify({'error': 'ANTHROPIC_API_KEY not configured on server'}), 500
+        raise RuntimeError('ANTHROPIC_API_KEY not configured on server')
 
     today     = date.today().strftime('%Y-%m-%d')
     cache_key = f"{today}|{term.lower()}|{'uk' if uk_only else 'all'}"
 
     if cache_key in _ai_cache:
-        return jsonify({'names': _ai_cache[cache_key], 'cached': True})
+        return _ai_cache[cache_key]
 
-    # Fetch horse names
-    all_runners = db.session.query(Runner).join(Race).join(Meeting)\
-        .filter(Meeting.date == today).all()
-
-    if uk_only:
-        all_runners = [r for r in all_runners if is_uk_course(r.race.meeting.name)]
+    if all_runners is None:
+        all_runners = db.session.query(Runner).join(Race).join(Meeting)\
+            .filter(Meeting.date == today).all()
+        if uk_only:
+            all_runners = [r for r in all_runners if is_uk_course(r.race.meeting.name)]
 
     all_names = list({r.horse_name for r in all_runners})
-
     if not all_names:
-        return jsonify({'names': [], 'cached': False})
+        _ai_cache[cache_key] = []
+        return []
 
-    try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
+    import anthropic
+    client = anthropic.Anthropic(api_key=api_key)
 
-        names_text = '\n'.join(sorted(all_names))
-        prompt = f"""You are helping search for horse names based on a conceptual theme.
+    names_text = '\n'.join(sorted(all_names))
+    prompt = f"""You are helping search for horse names based on a conceptual theme.
 
 Search theme: "{term}"
 
@@ -463,22 +462,38 @@ For example:
 
 Return ONLY the matching names, one per line, exactly as they appear in the list. Return nothing else — no explanation, no numbering, no punctuation."""
 
-        message = client.messages.create(
-            model='claude-sonnet-4-5',
-            max_tokens=1000,
-            messages=[{'role': 'user', 'content': prompt}]
-        )
+    message = client.messages.create(
+        model='claude-sonnet-4-5',
+        max_tokens=1000,
+        messages=[{'role': 'user', 'content': prompt}]
+    )
 
-        raw     = message.content[0].text.strip()
-        matched = [line.strip() for line in raw.split('\n') if line.strip()]
+    raw     = message.content[0].text.strip()
+    matched = [line.strip() for line in raw.split('\n') if line.strip()]
 
-        # Validate against actual names
-        valid_set = {n.lower(): n for n in all_names}
-        matched   = [valid_set[m.lower()] for m in matched if m.lower() in valid_set]
+    valid_set = {n.lower(): n for n in all_names}
+    matched   = [valid_set[m.lower()] for m in matched if m.lower() in valid_set]
 
-        _ai_cache[cache_key] = matched
-        return jsonify({'names': matched, 'cached': False})
+    _ai_cache[cache_key] = matched
+    return matched
 
+
+@app.route('/api/ai-horse-search', methods=['POST'])
+def ai_horse_search():
+    data    = request.get_json() or {}
+    term    = (data.get('term') or '').strip()
+    uk_only = data.get('uk_only', True)
+
+    if not term:
+        return jsonify({'error': 'term required'}), 400
+
+    today     = date.today().strftime('%Y-%m-%d')
+    cache_key = f"{today}|{term.lower()}|{'uk' if uk_only else 'all'}"
+    cached    = cache_key in _ai_cache
+
+    try:
+        names = resolve_ai_theme(term, uk_only=uk_only)
+        return jsonify({'names': names, 'cached': cached})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -604,6 +619,20 @@ def run_all_searches():
             f = json.loads(saved.filters)
         except Exception:
             continue
+
+        ai_names_set = None
+        hf = (f.get('horse') or '').strip()
+        if hf and f.get('ai_mode'):
+            try:
+                uk_only_pref = f.get('uk_only', True)
+                pool = all_runners
+                if uk_only_pref:
+                    pool = [r for r in pool if is_uk_course(r.race.meeting.name)]
+                resolved = resolve_ai_theme(hf, uk_only=uk_only_pref, all_runners=pool)
+                ai_names_set = {n.lower() for n in resolved}
+            except Exception:
+                continue  # skip this search if AI resolution fails
+
         for r in all_runners:
             if f.get('uk_only') and not is_uk_course(r.race.meeting.name): continue
             if f.get('colour')  and f['colour'].lower()  not in (r.colour or '').lower():  continue
@@ -611,9 +640,12 @@ def run_all_searches():
             if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():       continue
             if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():       continue
             if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():         continue
-            hf = (f.get('horse') or '').strip()
-            if hf and hf.lower() not in r.horse_name.lower():
-                continue
+            if hf:
+                if ai_names_set is not None:
+                    if r.horse_name.lower() not in ai_names_set:
+                        continue
+                elif hf.lower() not in r.horse_name.lower():
+                    continue
             matched_ids[r.id] = r
     matched = list(matched_ids.values())
     if matched:

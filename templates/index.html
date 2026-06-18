@@ -554,6 +554,7 @@ function getMatchingSearches(r, meetingName) {
 function getFilters() {
   return {
     horse:   document.getElementById('f-horse').value.trim(),
+    ai_mode: document.getElementById('f-search-mode').value === 'ai',
     jockey:  selectedValues.jockey,
     trainer: selectedValues.trainer,
     owner:   selectedValues.owner,
@@ -799,6 +800,12 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
 
   var tableRows = '', mobileCards = '';
 
+  // Build set of today's co-runner horse_ids for this race (for history popup highlighting)
+  var coRunnerIds = race.runners
+    .filter(function(x) { return x.horse_id; })
+    .map(function(x) { return x.horse_id; });
+  var coRunnerIdsJson = JSON.stringify(coRunnerIds);
+
   for (var i = 0; i < race.runners.length; i++) {
     var r      = race.runners[i];
     var rName  = r.name || '';
@@ -843,7 +850,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
       + '<td>' + spBtn + '</td>'
       + '<td>' + colourChip(r.colour) + '</td>'
-      + '<td><span class="form-str form-str-link" data-horseid="' + escHtml(r.horse_id || '') + '" data-horsename="' + escHtml(rName) + '" title="Click to view race history" style="cursor:pointer">' + formHtmlStr + (r.horse_id ? ' <span style="font-size:9px;color:var(--brand)">&#9654;</span>' : '') + '</span></td>'
+      + '<td><span class="form-str form-str-link" data-horseid="' + escHtml(r.horse_id || '') + '" data-horsename="' + escHtml(rName) + '" data-corunners=\'' + coRunnerIdsJson + '\'' + ' title="Click to view race history" style="cursor:pointer">' + formHtmlStr + (r.horse_id ? ' <span style="font-size:9px;color:var(--brand)">&#9654;</span>' : '') + '</span></td>'
       + '<td style="font-size:11px;color:var(--text2)">' + escHtml(r.or || '—') + (r.rpr && r.rpr !== '-' ? ' / ' + escHtml(r.rpr) : '') + '</td>'
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
       + (r.trainer_14_days ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>' : '<br>' + escHtml(r.trainer || '—'))
@@ -1140,7 +1147,8 @@ autoSyncIfNeeded()
 
 // ── Horse History ─────────────────────────────────────────────────────────────
 
-function openHistoryModal(horseId, horseName) {
+function openHistoryModal(horseId, horseName, coRunners) {
+  coRunners = coRunners || [];
   document.getElementById('history-horse-name').textContent = horseName;
   document.getElementById('history-horse-sub').textContent  = 'Race history';
   document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Loading...</div>';
@@ -1148,7 +1156,7 @@ function openHistoryModal(horseId, horseName) {
 
   fetch('/api/horse-history/' + horseId)
     .then(function(r) { return r.json(); })
-    .then(function(runs) { renderHistoryRuns(runs); })
+    .then(function(runs) { renderHistoryRuns(runs, coRunners); })
     .catch(function() {
       document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Could not load history.</div>';
     });
@@ -1170,7 +1178,8 @@ function posLabel(p) {
   return n + s;
 }
 
-function renderHistoryRuns(runs) {
+function renderHistoryRuns(runs, coRunners) {
+  coRunners = coRunners || [];
   var body = document.getElementById('history-body');
   if (!runs || !runs.length) {
     body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">No history available yet — history builds up after each racing day.</div>';
@@ -1217,7 +1226,7 @@ function renderHistoryRuns(runs) {
 
     // Expandable field
     html += '<div id="hfield-' + i + '" style="display:none;border-top:0.5px solid var(--border)">';
-    html += renderHistoryField(run.field, run);
+    html += renderHistoryField(run.field, run, coRunners);
     html += '</div>';
 
     html += '</div>'; // end run
@@ -1235,7 +1244,8 @@ function toggleHistoryField(idx) {
   arrow.innerHTML  = open ? '&#9660;' : '&#9650;';
 }
 
-function renderHistoryField(field, run) {
+function renderHistoryField(field, run, coRunners) {
+  coRunners = coRunners || [];
   if (!field || !field.length) return '<div style="padding:10px 14px;font-size:12px;color:var(--text3)">Field not available.</div>';
 
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
@@ -1244,7 +1254,7 @@ function renderHistoryField(field, run) {
   html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Horse</th>';
   html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">SP</th>';
   html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Jockey</th>';
-  html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Btn</th>';
+  html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Lengths</th>';
   html += '</tr></thead><tbody>';
 
   for (var i = 0; i < field.length; i++) {
@@ -1255,9 +1265,12 @@ function renderHistoryField(field, run) {
     var rowBg  = isHero ? 'background:var(--brand-light)' : (i % 2 === 0 ? '' : 'background:var(--surface2)');
     html += '<tr style="border-bottom:0.5px solid var(--border);' + rowBg + '">';
     html += '<td style="padding:6px 10px;' + posCls + '">' + escHtml(posLabel(fr.position)) + '</td>';
+    var inThisRace = !isHero && coRunners.indexOf(fr.horse_id) !== -1;
     html += '<td style="padding:6px 10px;font-weight:' + (isHero ? '600' : '400') + ';color:' + (isHero ? 'var(--brand)' : 'var(--text)') + '">';
     if (fr.silk_url) html += '<img src="' + escHtml(fr.silk_url) + '" style="height:14px;margin-right:5px;vertical-align:middle" onerror="this.style.display=\'none\'">';
-    html += escHtml(fr.horse_name || '') + '</td>';
+    html += escHtml(fr.horse_name || '');
+    if (inThisRace) html += ' <span style="font-size:10px;background:#e6f1fb;color:#185fa5;border:0.5px solid rgba(24,95,165,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">Today</span>';
+    html += '</td>';
     html += '<td style="padding:6px 10px;color:var(--text2)">' + escHtml(fr.sp || '—') + '</td>';
     html += '<td style="padding:6px 10px;color:var(--text2)">' + escHtml(fr.jockey || '—') + '</td>';
     html += '<td style="padding:6px 10px;color:var(--text3)">' + escHtml(fr.btn && fr.btn !== '0' ? fr.btn : '') + '</td>';
@@ -1272,9 +1285,11 @@ function renderHistoryField(field, run) {
 document.getElementById('results-area').addEventListener('click', function(e) {
   var el = e.target.closest('.form-str-link');
   if (!el) return;
-  var horseId   = el.getAttribute('data-horseid');
-  var horseName = el.getAttribute('data-horsename');
-  if (horseId) openHistoryModal(horseId, horseName);
+  var horseId    = el.getAttribute('data-horseid');
+  var horseName  = el.getAttribute('data-horsename');
+  var coRunners  = [];
+  try { coRunners = JSON.parse(el.getAttribute('data-corunners') || '[]'); } catch(e) {}
+  if (horseId) openHistoryModal(horseId, horseName, coRunners);
 });
 
 </script>

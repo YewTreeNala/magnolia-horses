@@ -192,8 +192,12 @@ def build_combined_email(user_name, runners):
     )
 
 
-def _matches_filters(r, f):
-    """Check if a runner matches a saved search filter dict."""
+def _matches_filters(r, f, ai_names_set=None):
+    """Check if a runner matches a saved search filter dict.
+    If ai_names_set is provided (a lowercase set of resolved AI theme names),
+    the horse filter is matched against that set instead of substring/fuzzy
+    matching — used for saved searches created via AI search.
+    """
     from rapidfuzz import fuzz
     import jellyfish
 
@@ -212,24 +216,28 @@ def _matches_filters(r, f):
         return False
     hf = (f.get('horse') or '').strip()
     if hf:
-        use_fuzzy = f.get('fuzzy', True)
-        nl = r.horse_name.lower()
-        sl = hf.lower()
-        if use_fuzzy:
-            match = (
-                sl in nl
-                or fuzz.partial_ratio(sl, nl) >= 75
-                or any(
-                    jellyfish.soundex(w) == jellyfish.soundex(s)
-                    for w in nl.split()
-                    for s in sl.split()
-                    if len(w) > 2 and len(s) > 2
-                )
-            )
+        if ai_names_set is not None:
+            if r.horse_name.lower() not in ai_names_set:
+                return False
         else:
-            match = sl in nl
-        if not match:
-            return False
+            use_fuzzy = f.get('fuzzy', False)  # match site search behaviour by default
+            nl = r.horse_name.lower()
+            sl = hf.lower()
+            if use_fuzzy:
+                match = (
+                    sl in nl
+                    or fuzz.partial_ratio(sl, nl) >= 75
+                    or any(
+                        jellyfish.soundex(w) == jellyfish.soundex(s)
+                        for w in nl.split()
+                        for s in sl.split()
+                        if len(w) > 2 and len(s) > 2
+                    )
+                )
+            else:
+                match = sl in nl
+            if not match:
+                return False
     return True
 
 
@@ -250,8 +258,24 @@ def _build_combined_for_user(user, all_runners):
             f = json.loads(saved.filters)
         except Exception:
             continue
+
+        ai_names_set = None
+        hf = (f.get('horse') or '').strip()
+        if hf and f.get('ai_mode'):
+            try:
+                from app import resolve_ai_theme
+                uk_only_pref = f.get('uk_only', True)
+                pool = all_runners
+                if uk_only_pref:
+                    pool = [r for r in pool if is_uk_course(r.race.meeting.name)]
+                resolved = resolve_ai_theme(hf, uk_only=uk_only_pref, all_runners=pool)
+                ai_names_set = {n.lower() for n in resolved}
+            except Exception as e:
+                print(f'[Email] AI theme resolution failed for search "{saved.name}": {e}')
+                continue  # skip this search, keep other matches in the email
+
         for r in all_runners:
-            if _matches_filters(r, f):
+            if _matches_filters(r, f, ai_names_set=ai_names_set):
                 runner_reasons.setdefault(r.id, {'runner': r, 'reasons': []})
                 runner_reasons[r.id]['reasons'].append('Search: ' + saved.name)
 
