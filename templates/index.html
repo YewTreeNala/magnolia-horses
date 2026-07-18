@@ -1420,6 +1420,8 @@ function handleRaceHeaderClick(el) {
     .then(function(results) {
       window._allRaceData    = results[0];
       window._cachedResults  = results[1];
+      cacheRunners(results[0]);  // cache full field for detail modal
+      cacheRunners(results[1]);
       openRacePopup(raceKey, '');
     })
     .catch(function() {})
@@ -1495,7 +1497,7 @@ function openRacePopup(raceKey, highlightHorse) {
     } else {
       rows += '<td style="padding:7px 10px;width:36px;font-size:12px;color:var(--text3)">' + escHtml(r.number || '') + '</td>';
     }
-    rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + escHtml(r.name || '') + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + '<span style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)" onclick="openTagModal(' + JSON.stringify(r.name || '') + ')">' + escHtml(r.name || '') + '</span>' + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
@@ -1542,6 +1544,7 @@ function handleEmailDeepLink(race, horse) {
       // Render saved-search results in the panel
       window._cachedResults = searchData;
       cacheRunners(searchData);
+      cacheRunners(allData);  // also cache full field for detail modal
       renderResults(searchData);
       populateMeetingDropdown(searchData);
 
