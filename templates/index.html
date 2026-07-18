@@ -909,7 +909,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
 
   var _raceKey = ((meetingLabel || meetingNameOverride || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || ''));
   return '<div class="race-block' + blockClass + '" data-race-key="' + escHtml(_raceKey) + '">'
-    + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
+    + '<div class="race-header' + headerClass + '" style="cursor:pointer" title="View full field" onclick="handleRaceHeaderClick(this)">'<span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race['class'] || '')
     + ' &middot; ' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '')
@@ -977,7 +977,8 @@ function cacheRunners(data) {
 
 // ── Run search ────────────────────────────────────────────────────────────────
 function runSearch() {
-  var horse  = document.getElementById('f-horse').value.trim();
+function runSearch() {
+  window._allRaceData = null;  // clear cached full field on new search
   var mode   = document.getElementById('f-search-mode').value;
   var ukOnly = document.getElementById('f-uk-only').checked;
 
@@ -1133,7 +1134,7 @@ document.getElementById('saved-chips').addEventListener('click', function(e) {
 var runAllBtn = document.getElementById('btn-run-all');
 if (runAllBtn) {
   runAllBtn.addEventListener('click', function() {
-    runAllBtn.textContent = 'Running...'; runAllBtn.disabled = true;
+    window._allRaceData = null; runAllBtn.textContent = 'Running...'; runAllBtn.disabled = true;
     document.getElementById('spinner').classList.add('active');
     fetch('/api/run-all-searches').then(function(r) { return r.json(); })
       .then(function(data) { cacheRunners(data); renderResults(data); populateMeetingDropdown(data); })
@@ -1388,6 +1389,33 @@ document.getElementById('race-popup-modal').addEventListener('click', function(e
   if (e.target === this) closeRacePopup();
 });
 
+
+function handleRaceHeaderClick(el) {
+  // Walk up to the race-block to get its data-race-key
+  var block = el.closest ? el.closest('[data-race-key]') : el.parentElement;
+  while (block && !block.getAttribute('data-race-key')) block = block.parentElement;
+  if (!block) return;
+  var raceKey = block.getAttribute('data-race-key');
+  if (!raceKey) return;
+
+  // If we already have full race data (from deep-link), use it directly
+  if (window._allRaceData) {
+    openRacePopup(raceKey, '');
+    return;
+  }
+
+  // Otherwise fetch all runners then open the popup
+  document.getElementById('spinner').classList.add('active');
+  fetch('/api/search?uk_only=false')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      window._allRaceData = data;
+      openRacePopup(raceKey, '');
+    })
+    .catch(function() {})
+    .finally(function() { document.getElementById('spinner').classList.remove('active'); });
+}
+
 function openRacePopup(raceKey, highlightHorse) {
   // Find the race data from the cached runners
   var target = null;
@@ -1411,6 +1439,19 @@ function openRacePopup(raceKey, highlightHorse) {
   var race     = target.race;
   var isResult = race.is_result || (race.runners && race.runners.some(function(r) { return r.position && r.position !== ''; }));
   var hl       = (highlightHorse || '').toLowerCase();
+  // Build name->reason lookup from saved search results
+  var _reasonMap = {};
+  if (window._cachedResults) {
+    for (var _m = 0; _m < window._cachedResults.length; _m++) {
+      var _mt = window._cachedResults[_m];
+      for (var _rc = 0; _rc < _mt.races.length; _rc++) {
+        for (var _ri = 0; _ri < _mt.races[_rc].runners.length; _ri++) {
+          var _rr = _mt.races[_rc].runners[_ri];
+          if (_rr.match_reason) _reasonMap[(_rr.name || '').toLowerCase()] = _rr.match_reason;
+        }
+      }
+    }
+  }
 
   var titleEl = document.getElementById('race-popup-title');
   var subEl   = document.getElementById('race-popup-sub');
@@ -1448,6 +1489,12 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
+    var _reason = _reasonMap[(r.name || '').toLowerCase()] || '';
+    if (_reason) {
+      rows += '<td style="padding:7px 10px">' + '<span class="search-match-badge">&#128269; ' + escHtml(_reason) + '</span>'</td>';
+    } else {
+      rows += '<td></td>';
+    }
     rows += '</tr>';
   }
 
@@ -1458,7 +1505,7 @@ function openRacePopup(raceKey, highlightHorse) {
   document.getElementById('race-popup-body').innerHTML =
     '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">'
     + posHeader
-    + '<th style="' + th + '">Horse</th><th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th>'
+    + '<th style="' + th + '">Horse</th><th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th><th style="' + th + '">Match</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
 
   document.getElementById('race-popup-modal').classList.add('open');
