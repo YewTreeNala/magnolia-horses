@@ -1396,10 +1396,10 @@ document.getElementById('race-popup-modal').addEventListener('click', function(e
 function openRacePopup(raceKey, highlightHorse) {
   // Find the race data from the cached runners
   var target = null;
-  if (window._cachedResults) {
-    for (var m = 0; m < window._cachedResults.length; m++) {
-      var meeting = window._cachedResults[m];
-      for (var rc = 0; rc < meeting.races.length; rc++) {
+  var _raceSource = window._allRaceData || window._cachedResults;
+  if (_raceSource) {
+    for (var m = 0; m < _raceSource.length; m++) {
+      var meeting = _raceSource[m];
         var race = meeting.races[rc];
         var rKey = (meeting.meeting || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || '');
         if (rKey === raceKey) {
@@ -1478,14 +1478,24 @@ function handleEmailDeepLink() {
   window.history.replaceState({}, document.title, window.location.pathname);
 
   // Run all saved searches to populate results
+  // Run all saved searches to populate the visible results panel
   document.getElementById('spinner').classList.add('active');
-  fetch('/api/run-all-searches')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      window._cachedResults = data;
-      cacheRunners(data);
-      renderResults(data);
-      populateMeetingDropdown(data);
+  Promise.all([
+    fetch('/api/run-all-searches').then(function(r) { return r.json(); }),
+    fetch('/api/search?uk_only=false').then(function(r) { return r.json(); })
+  ])
+    .then(function(results) {
+      var searchData = results[0];
+      var allData    = results[1];
+
+      // Render saved-search results in the panel
+      window._cachedResults = searchData;
+      cacheRunners(searchData);
+      renderResults(searchData);
+      populateMeetingDropdown(searchData);
+
+      // Store full race data (all runners) for the popup
+      window._allRaceData = allData;
 
       // Scroll to the target race block
       setTimeout(function() {
