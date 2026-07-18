@@ -846,9 +846,16 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     var pos      = r.position || '';
 
     var matchBadges = '';
-    if (IS_LOGGED_IN && savedSearches.length) {
-      var matches = getMatchingSearches(r, mName);
-      for (var m = 0; m < matches.length; m++) matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(matches[m]) + '</span>';
+    if (IS_LOGGED_IN) {
+      if (r.match_reason) {
+        // match_reason comes from run-all-searches — use it directly
+        var _reasons = r.match_reason.split(' & ');
+        for (var m = 0; m < _reasons.length; m++) matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(_reasons[m]) + '</span>';
+      } else if (savedSearches.length) {
+        // fall back to client-side matching for regular searches
+        var matches = getMatchingSearches(r, mName);
+        for (var m = 0; m < matches.length; m++) matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(matches[m]) + '</span>';
+      }
     }
 
     var silkHtml = r.silk_url
