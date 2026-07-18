@@ -750,7 +750,16 @@ def run_all_searches():
     all_runners = db.session.query(Runner).join(Race).join(Meeting).filter(Meeting.date == today).all()
     tagged_map  = {t.horse_name.lower(): t.notes or ''
                    for t in TaggedHorse.query.filter_by(user_id=current_user.id).all()}
-    matched_ids = {}
+    matched_ids  = {}  # id -> runner
+    match_reasons = {}  # id -> [reason, ...]
+
+    # Favourites
+    tagged_names = set(tagged_map.keys())
+    for r in all_runners:
+        if r.horse_name.lower() in tagged_names:
+            matched_ids[r.id] = r
+            match_reasons.setdefault(r.id, []).append('Favourite')
+
     for saved in searches:
         try:
             f = json.loads(saved.filters)
@@ -768,7 +777,7 @@ def run_all_searches():
                 resolved = resolve_ai_theme(hf, uk_only=uk_only_pref, all_runners=pool)
                 ai_names_set = {n.lower() for n in resolved}
             except Exception:
-                continue  # skip this search if AI resolution fails
+                continue
 
         for r in all_runners:
             if f.get('uk_only') and not is_uk_course(r.race.meeting.name): continue
@@ -784,10 +793,22 @@ def run_all_searches():
                 elif hf.lower() not in r.horse_name.lower():
                     continue
             matched_ids[r.id] = r
+            match_reasons.setdefault(r.id, []).append('Search: ' + saved.name)
+
     matched = list(matched_ids.values())
-    if matched:
-        return jsonify(sort_by_meeting(matched, tagged_map))
-    return jsonify([])
+    if not matched:
+        return jsonify([])
+
+    # Attach reasons to runner dicts via tagged_map augmented with reason
+    # We pass reasons through by temporarily enriching tagged_map notes
+    result = sort_by_meeting(matched, tagged_map)
+    # Walk result and inject match_reason per runner
+    for meeting in result:
+        for race in meeting.get('races', []):
+            for runner in race.get('runners', []):
+                rid = next((r.id for r in matched if r.horse_name == runner['name']), None)
+                runner['match_reason'] = ' & '.join(match_reasons.get(rid, [])) if rid else ''
+    return jsonify(result)
 
 
 @app.route('/api/sync', methods=['POST'])
