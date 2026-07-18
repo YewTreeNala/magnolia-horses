@@ -1393,7 +1393,13 @@ function closeRacePopup() {
 }
 
 document.getElementById('race-popup-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeRacePopup();
+  if (e.target === this) { closeRacePopup(); return; }
+  var horseLink = e.target.closest ? e.target.closest('.popup-horse-link') : null;
+  if (!horseLink) horseLink = (e.target.classList && e.target.classList.contains('popup-horse-link')) ? e.target : null;
+  if (horseLink) {
+    var horseName = horseLink.getAttribute('data-horse');
+    if (horseName) openTagModal(horseName);
+  }
 });
 
 
@@ -1497,7 +1503,7 @@ function openRacePopup(raceKey, highlightHorse) {
     } else {
       rows += '<td style="padding:7px 10px;width:36px;font-size:12px;color:var(--text3)">' + escHtml(r.number || '') + '</td>';
     }
-    rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + '<span style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)" onclick="openTagModal(' + JSON.stringify(r.name || '') + ')">' + escHtml(r.name || '') + '</span>' + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + '<span class="popup-horse-link" data-horse="' + escHtml(r.name || '') + '" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)">' + escHtml(r.name || '') + '</span>' + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
