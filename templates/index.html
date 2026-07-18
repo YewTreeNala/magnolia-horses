@@ -1189,13 +1189,9 @@ autoSyncIfNeeded()
   .then(function() { return loadOptions(); })
   .then(function() { return loadTags(); })
   .then(function() { return loadSavedSearches(); })
-  .then(function() { return loadSavedSearches(); })
   .then(function() {
     checkEditSearchParam();
-    var params = new URLSearchParams(window.location.search);
-    window._deepLinkRace  = params.get('race')  || '';
-    window._deepLinkHorse = params.get('horse') || '';
-    if (!window._deepLinkRace) runSearch();
+    if (!new URLSearchParams(window.location.search).get('race')) runSearch();
   });
 </script>
 
@@ -1468,10 +1464,11 @@ function openRacePopup(raceKey, highlightHorse) {
   document.getElementById('race-popup-modal').classList.add('open');
 }
 
-function handleEmailDeepLink() {
-  var race  = window._deepLinkRace  || '';
-  var horse = window._deepLinkHorse || '';
+function handleEmailDeepLink(race, horse) {
+  race  = race  || '';
+  horse = horse || '';
   if (!race) return;
+
 
   // Run all saved searches to populate results
   // Run all saved searches to populate results
@@ -1511,7 +1508,11 @@ function handleEmailDeepLink() {
 
 
 // Trigger deep-link handling after this script block loads
-if (window._deepLinkRace) { handleEmailDeepLink(); }
+// Trigger deep-link if race param present in URL
+(function() {
+  var _dlParams = new URLSearchParams(window.location.search);
+  if (_dlParams.get('race')) { handleEmailDeepLink(_dlParams.get('race'), _dlParams.get('horse') || ''); }
+})();
 </script>
 </body>
 </html>
