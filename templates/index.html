@@ -907,7 +907,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
 
   var posHeader = isResult ? '<th class="pos-th" style="width:52px">Finish</th>' : '<th style="width:52px"></th>';
 
-  return '<div class="race-block' + blockClass + '">'
+  var _raceKey = ((meetingLabel || meetingNameOverride || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || ''));
+  return '<div class="race-block' + blockClass + '" data-race-key="' + escHtml(_raceKey) + '">'
     + '<div class="race-header' + headerClass + '"><span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race['class'] || '')
@@ -1188,7 +1189,15 @@ autoSyncIfNeeded()
   .then(function() { return loadOptions(); })
   .then(function() { return loadTags(); })
   .then(function() { return loadSavedSearches(); })
-  .then(function() { checkEditSearchParam(); return runSearch(); });
+  .then(function() {
+    checkEditSearchParam();
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('race')) {
+      handleEmailDeepLink();
+    } else {
+      runSearch();
+    }
+  });
 </script>
 
 <!-- Horse History Modal -->
@@ -1355,6 +1364,143 @@ document.getElementById('results-area').addEventListener('click', function(e) {
   try { coRunners = JSON.parse(el.getAttribute('data-corunners') || '[]'); } catch(e) {}
   if (horseId) openHistoryModal(horseId, horseName, coRunners);
 });
+
+</script>
+
+<!-- Race Popup Modal (email deep-link) -->
+<div class="modal-overlay" id="race-popup-modal" style="z-index:700;align-items:flex-start;padding-top:3vh">
+  <div style="background:#fff;border-radius:12px;width:100%;max-width:860px;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;border:0.5px solid var(--border)">
+    <div style="display:flex;align-items:center;padding:14px 18px;border-bottom:0.5px solid var(--border);flex-shrink:0;background:var(--brand)">
+      <div>
+        <div id="race-popup-title" style="font-size:17px;font-weight:600;color:#fff;font-family:Georgia,serif"></div>
+        <div id="race-popup-sub" style="font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px"></div>
+      </div>
+      <button onclick="closeRacePopup()" style="margin-left:auto;background:none;border:none;font-size:22px;cursor:pointer;color:rgba(255,255,255,0.8);line-height:1">&#215;</button>
+    </div>
+    <div id="race-popup-body" style="overflow-y:auto;flex:1"></div>
+  </div>
+</div>
+
+<script>
+
+// ── Email deep-link race popup ─────────────────────────────────────────────────
+
+function closeRacePopup() {
+  document.getElementById('race-popup-modal').classList.remove('open');
+}
+
+document.getElementById('race-popup-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeRacePopup();
+});
+
+function openRacePopup(raceKey, highlightHorse) {
+  // Find the race data from the cached runners
+  var target = null;
+  if (window._cachedResults) {
+    for (var m = 0; m < window._cachedResults.length; m++) {
+      var meeting = window._cachedResults[m];
+      for (var rc = 0; rc < meeting.races.length; rc++) {
+        var race = meeting.races[rc];
+        var rKey = (meeting.meeting || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || '');
+        if (rKey === raceKey) {
+          target = { race: race, meeting: meeting.meeting };
+          break;
+        }
+      }
+      if (target) break;
+    }
+  }
+  if (!target) return;
+
+  var race     = target.race;
+  var isResult = race.is_result || (race.runners && race.runners.some(function(r) { return r.position && r.position !== ''; }));
+  var hl       = (highlightHorse || '').toLowerCase();
+
+  var titleEl = document.getElementById('race-popup-title');
+  var subEl   = document.getElementById('race-popup-sub');
+  titleEl.textContent = target.meeting + ' ' + race.time;
+  subEl.textContent   = (race.name || '') + (race.distance ? '  ·  ' + race.distance : '') + (race.going_detailed ? '  ·  ' + race.going_detailed : '');
+
+  var rows = '';
+  var runners = (race.runners || []).slice();
+  if (isResult) {
+    runners.sort(function(a, b) {
+      var pa = parseInt(a.position, 10) || 999;
+      var pb = parseInt(b.position, 10) || 999;
+      return pa - pb;
+    });
+  } else {
+    runners.sort(function(a, b) { return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0); });
+  }
+
+  for (var i = 0; i < runners.length; i++) {
+    var r        = runners[i];
+    var isMatch  = hl && r.name && r.name.toLowerCase() === hl;
+    var rowBg    = isMatch ? 'background:var(--brand-light)' : (i % 2 === 0 ? '' : 'background:var(--surface2)');
+    var posNum   = parseInt(r.position, 10);
+    var posCls   = posNum === 1 ? 'color:#3b6d11;font-weight:600' : posNum <= 3 ? 'color:#185fa5;font-weight:600' : 'color:var(--text2)';
+    var silkHtml = r.silk_url ? '<img src="' + escHtml(r.silk_url) + '" style="height:16px;margin-right:5px;vertical-align:middle" onerror="this.style.display=\'none\'">' : '';
+    var spStr    = '';
+    if (isResult && r.sp) spStr = ' <span style="font-size:10px;color:var(--text3)">@ ' + escHtml(r.sp) + '</span>';
+    rows += '<tr style="border-bottom:0.5px solid var(--border);' + rowBg + '">';
+    if (isResult) {
+      rows += '<td style="padding:7px 10px;width:60px;' + posCls + '">' + escHtml(ordinal(r.position)) + spStr + '</td>';
+    } else {
+      rows += '<td style="padding:7px 10px;width:36px;font-size:12px;color:var(--text3)">' + escHtml(r.number || '') + '</td>';
+    }
+    rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + escHtml(r.name || '') + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
+    rows += '</tr>';
+  }
+
+  var posHeader = isResult ? '<th style="width:60px;padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Finish</th>'
+                           : '<th style="width:36px;padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">#</th>';
+  var th = 'padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em';
+
+  document.getElementById('race-popup-body').innerHTML =
+    '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">'
+    + posHeader
+    + '<th style="' + th + '">Horse</th><th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th>'
+    + '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+  document.getElementById('race-popup-modal').classList.add('open');
+}
+
+function handleEmailDeepLink() {
+  var params = new URLSearchParams(window.location.search);
+  var race   = params.get('race');
+  var horse  = params.get('horse');
+  if (!race) return;
+
+  // Clean URL immediately
+  window.history.replaceState({}, document.title, window.location.pathname);
+
+  // Run all saved searches to populate results
+  document.getElementById('spinner').classList.add('active');
+  fetch('/api/run-all-searches')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      window._cachedResults = data;
+      cacheRunners(data);
+      renderResults(data);
+      populateMeetingDropdown(data);
+
+      // Scroll to the target race block
+      setTimeout(function() {
+        var el = document.querySelector('[data-race-key="' + race + '"]');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(function() { openRacePopup(race, horse); }, 400);
+        } else {
+          openRacePopup(race, horse);
+        }
+      }, 150);
+    })
+    .catch(function() {})
+    .finally(function() { document.getElementById('spinner').classList.remove('active'); });
+}
 
 </script>
 </body>

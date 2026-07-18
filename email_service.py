@@ -87,7 +87,7 @@ def _badge(reason):
     )
 
 
-def build_combined_email(user_name, runners):
+def build_combined_email(user_name, runners, token=''):
     today_str = datetime.now().strftime('%A %d %B %Y')
     n         = len(runners)
     n_label   = str(n) + ' runner' + ('s' if n != 1 else '')
@@ -109,13 +109,26 @@ def build_combined_email(user_name, runners):
     for meeting_name in meetings_order:
         rows = ''
         for r in meetings_map[meeting_name]:
+            import urllib.parse
+            race_key   = urllib.parse.quote(meeting_name.lower().replace(' ', '') + '_' + (r['time'] or ''))
+            horse_enc  = urllib.parse.quote(r['horse_name'] or '')
+            if token:
+                deep_link = (SITE_URL + '/auth/email?token=' + token
+                             + '&race=' + race_key + '&horse=' + horse_enc)
+                time_cell  = ('<a href="' + deep_link + '" style="color:#8b3a3a;font-weight:600;text-decoration:none">'
+                              + (r['time'] or '') + '</a>')
+                horse_cell = ('<a href="' + deep_link + '" style="color:#2a1f14;font-weight:600;text-decoration:none">'
+                              + (r['horse_name'] or '') + '</a>')
+            else:
+                time_cell  = r['time'] or ''
+                horse_cell = r['horse_name'] or ''
             rows += (
                 '<tr style="border-bottom:1px solid #f0e8e4;">'
-                '<td style="padding:7px 10px;color:#8b3a3a;font-weight:600;white-space:nowrap;width:56px">'
-                + (r['time'] or '') +
+                '<td style="padding:7px 10px;white-space:nowrap;width:56px">'
+                + time_cell +
                 '</td>'
-                '<td style="padding:7px 10px;font-weight:600;color:#2a1f14">'
-                + (r['horse_name'] or '') +
+                '<td style="padding:7px 10px">'
+                + horse_cell +
                 '</td>'
                 '<td style="padding:7px 10px;color:#6b5a48;font-size:12px">'
                 + (r['jockey'] or '-') +
@@ -315,9 +328,14 @@ def send_morning_alerts(app):
             n       = len(combined)
             subject = ('Magnolia Horses: ' + str(n) + ' runner' +
                        ('s' if n != 1 else '') + ' to follow today')
+            try:
+                from app import _make_email_token
+                email_token = _make_email_token(user.id)
+            except Exception:
+                email_token = ''
             send_email(
                 user.email, user.name, subject,
-                build_combined_email(user.name, combined),
+                build_combined_email(user.name, combined, token=email_token),
                 user_id=user.id
             )
             alerts_sent += 1
@@ -348,9 +366,14 @@ def send_morning_alerts_for_user(user_id, app):
         n       = len(combined)
         subject = ('[Test] Magnolia Horses: ' + str(n) + ' runner' +
                    ('s' if n != 1 else '') + ' to follow today')
+        try:
+            from app import _make_email_token
+            email_token = _make_email_token(user.id)
+        except Exception:
+            email_token = ''
         ok = send_email(
             user.email, user.name, subject,
-            build_combined_email(user.name, combined),
+            build_combined_email(user.name, combined, token=email_token),
             user_id=user_id
         )
         if ok:

@@ -8,6 +8,10 @@ from sync import sync_todays_races, sync_horse_history, backfill_horse_history
 from email_service import send_morning_alerts
 import json
 import os
+import hmac
+import hashlib
+import base64
+import time
 from datetime import datetime, date
 
 load_dotenv()
@@ -130,6 +134,62 @@ def login():
 def logout():
     logout_user()
     return redirect(url_for('index'))
+
+
+# ── Email deep-link auth ───────────────────────────────────────────────────────
+
+def _make_email_token(user_id):
+    """Generate a 25-hour HMAC token for email deep-links."""
+    ts      = int(time.time())
+    secret  = (os.getenv('SECRET_KEY') or 'change-this-in-production').encode()
+    payload = f'{user_id}|{ts}'
+    sig     = hmac.new(secret, payload.encode(), hashlib.sha256).digest()
+    sig_b64 = base64.urlsafe_b64encode(sig).decode().rstrip('=')
+    token   = base64.urlsafe_b64encode(payload.encode()).decode().rstrip('=') + '.' + sig_b64
+    return token
+
+
+def _verify_email_token(token, max_age=90000):
+    """Verify token and return user_id, or None if invalid/expired."""
+    try:
+        parts = token.split('.')
+        if len(parts) != 2:
+            return None
+        padding   = '=' * (4 - len(parts[0]) % 4)
+        payload   = base64.urlsafe_b64decode(parts[0] + padding).decode()
+        user_id, ts = payload.split('|')
+        if time.time() - int(ts) > max_age:
+            return None
+        secret  = (os.getenv('SECRET_KEY') or 'change-this-in-production').encode()
+        sig     = hmac.new(secret, payload.encode(), hashlib.sha256).digest()
+        sig_b64 = base64.urlsafe_b64encode(sig).decode().rstrip('=')
+        if not hmac.compare_digest(sig_b64, parts[1]):
+            return None
+        return int(user_id)
+    except Exception:
+        return None
+
+
+@app.route('/auth/email')
+def email_auth():
+    token     = request.args.get('token', '')
+    race      = request.args.get('race', '')
+    horse     = request.args.get('horse', '')
+    user_id   = _verify_email_token(token)
+    if not user_id:
+        flash('This link has expired. Please log in.', 'error')
+        return redirect(url_for('login'))
+    user = User.query.get(user_id)
+    if not user:
+        flash('User not found.', 'error')
+        return redirect(url_for('login'))
+    login_user(user, remember=False)
+    # Redirect to home with race/horse params (token stripped for cleanliness)
+    params = []
+    if race:  params.append(f'race={race}')
+    if horse: params.append(f'horse={horse}')
+    dest = '/?' + '&'.join(params) if params else '/'
+    return redirect(dest)
 
 
 @app.route('/my-horses')
