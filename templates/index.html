@@ -1404,12 +1404,15 @@ function handleRaceHeaderClick(el) {
     return;
   }
 
-  // Otherwise fetch all runners then open the popup
+  // Fetch full field + run-all-searches (for match reasons) in parallel
   document.getElementById('spinner').classList.add('active');
-  fetch('/api/search?uk_only=false')
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-      window._allRaceData = data;
+  Promise.all([
+    fetch('/api/search?uk_only=false').then(function(r) { return r.json(); }),
+    fetch('/api/run-all-searches').then(function(r) { return r.json(); })
+  ])
+    .then(function(results) {
+      window._allRaceData    = results[0];
+      window._cachedResults  = results[1];
       openRacePopup(raceKey, '');
     })
     .catch(function() {})
