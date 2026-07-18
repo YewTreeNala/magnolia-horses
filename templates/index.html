@@ -909,7 +909,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
 
   var _raceKey = ((meetingLabel || meetingNameOverride || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || ''));
   return '<div class="race-block' + blockClass + '" data-race-key="' + escHtml(_raceKey) + '">'
-    + '<div class="race-header' + headerClass + '" style="cursor:pointer" title="View full field" onclick="handleRaceHeaderClick(this)">'<span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
+    + '<div class="race-header' + headerClass + '" style="cursor:pointer" title="View full field" onclick="handleRaceHeaderClick(this)">'
+    + '<span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
     + '<div class="race-info"><div class="race-name">' + escHtml(race.name || '') + '</div>'
     + '<div class="race-details">' + escHtml(String(race.distance || '')) + ' &middot; ' + escHtml(race['class'] || '')
     + ' &middot; ' + totalRnrs + ' runner' + (totalRnrs !== 1 ? 's' : '')
