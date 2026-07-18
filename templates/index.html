@@ -1491,7 +1491,7 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
     var _reason = _reasonMap[(r.name || '').toLowerCase()] || '';
     if (_reason) {
-      rows += '<td style="padding:7px 10px">' + '<span class="search-match-badge">&#128269; ' + escHtml(_reason) + '</span>'</td>';
+      rows += '<td style="padding:7px 10px">' + '<span class="search-match-badge">&#128269; ' + escHtml(_reason) + '</span></td>';
     } else {
       rows += '<td></td>';
     }
