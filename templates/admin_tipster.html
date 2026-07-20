@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tipster Admin — Magnolia Horses</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --surface: #fff; --surface2: #f5f1eb;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --green: #3b6d11; --green-bg: #eaf3de;
+      --red: #a32d2d; --red-bg: #fcebeb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 15px; padding: 0 1rem 3rem; }
+    .page { max-width: 860px; margin: 0 auto; }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .admin-tag { font-size: 11px; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 20px; }
+    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
+    .nav-links a { color: var(--brand); text-decoration: none; }
+    .nav-links a:hover { text-decoration: underline; }
+    .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
+    .panel-title { font-size: 16px; font-weight: 500; color: var(--brand); margin-bottom: 0.75rem; }
+    .panel-sub { font-size: 13px; color: var(--text2); margin-bottom: 1rem; line-height: 1.6; }
+    .btn { border-radius: var(--radius); padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: inherit; border: none; }
+    .btn-primary { background: var(--brand); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); }
+    .btn-secondary:hover { background: var(--surface2); }
+    .result-box { margin-top: 1rem; padding: 10px 14px; border-radius: var(--radius); font-size: 13px; line-height: 1.6; }
+    .result-box.success { background: var(--green-bg); color: var(--green); border: 0.5px solid rgba(59,109,17,0.2); }
+    .result-box.error   { background: var(--red-bg); color: var(--red); border: 0.5px solid rgba(163,45,45,0.2); }
+    .result-box.info    { background: #e6f1fb; color: #185fa5; border: 0.5px solid rgba(24,95,165,0.2); }
+    textarea { width: 100%; padding: 10px; font-size: 13px; font-family: monospace; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; resize: vertical; min-height: 120px; }
+    textarea:focus { border-color: var(--brand); }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: var(--text2); }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-header">
+    <div>
+      <span class="brand-name">Magnolia Horses</span>
+      <span class="admin-tag">Admin</span>
+    </div>
+    <div class="nav-links">
+      <a href="/">Search</a>
+      <a href="/tipster">Tipster</a>
+      <a href="/admin/users">Users</a>
+      <a href="/admin/colours">Colours</a>
+      <a href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <div style="font-size:20px;font-weight:500;margin-bottom:1.25rem">Tipster admin</div>
+
+  <!-- Status panel -->
+  <div class="panel">
+    <div class="panel-title">Current status</div>
+    <div id="status-container">
+      <div style="color:var(--text3);font-size:13px">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Backfill panel -->
+  <div class="panel">
+    <div class="panel-title">Backfill historical tips</div>
+    <div class="panel-sub">
+      Run the backfill to load the 6-month Turn Of Foot message history into the database.
+      This is safe to run multiple times — duplicate message IDs are skipped automatically.
+      After backfill, the system will attempt to auto-settle any tips where race results are already stored.
+    </div>
+    <div id="backfill-result"></div>
+    <button class="btn btn-primary" id="btn-backfill" onclick="runBackfill()">Run backfill now</button>
+  </div>
+
+  <!-- Settle panel -->
+  <div class="panel">
+    <div class="panel-title">Settle pending tips</div>
+    <div class="panel-sub">
+      Attempts to match unsettled tips against race results already in the database.
+      Runs automatically after each sync, but you can trigger it manually here.
+    </div>
+    <div id="settle-result"></div>
+    <button class="btn btn-primary" id="btn-settle" onclick="runSettle()">Settle pending tips</button>
+  </div>
+
+  <!-- Manual tip panel -->
+  <div class="panel">
+    <div class="panel-title">Parse a message manually</div>
+    <div class="panel-sub">
+      Paste a raw Turn Of Foot message below to parse and store it immediately.
+      Set the race date if the message was posted the night before for next-day racing.
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px">Race date (YYYY-MM-DD)</label>
+      <input type="text" id="manual-race-date" placeholder="e.g. 2026-07-20" style="padding:7px 10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);outline:none;width:200px"/>
+    </div>
+    <div style="margin-bottom:8px">
+      <label style="font-size:11px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px">Message text</label>
+      <textarea id="manual-text" placeholder="Paste the Turn Of Foot message here..."></textarea>
+    </div>
+    <div id="manual-result"></div>
+    <button class="btn btn-primary" id="btn-manual" onclick="parseManual()">Parse and store</button>
+  </div>
+</div>
+
+<script>
+function loadStatus() {
+  Promise.all([
+    fetch('/api/tipster/stats').then(function(r){return r.json();}),
+  ]).then(function(results) {
+    var stats = results[0];
+    var html = '';
+    if (stats.error) {
+      html = '<div style="color:var(--text3);font-size:13px">No tipster data yet.</div>';
+    } else {
+      html += '<div class="detail-row"><span class="detail-label">Total tips stored</span><span>' + stats.total_bets + '</span></div>';
+      html += '<div class="detail-row"><span class="detail-label">Settled</span><span>' + (stats.total_bets - stats.unsettled) + '</span></div>';
+      html += '<div class="detail-row"><span class="detail-label">Unsettled</span><span>' + stats.unsettled + '</span></div>';
+      html += '<div class="detail-row"><span class="detail-label">Overall P&L</span><span>' + (stats.profit_pts >= 0 ? '+' : '') + stats.profit_pts.toFixed(2) + 'pts (' + (stats.roi_pct >= 0 ? '+' : '') + stats.roi_pct + '% ROI)</span></div>';
+    }
+    document.getElementById('status-container').innerHTML = html;
+  }).catch(function() {
+    document.getElementById('status-container').innerHTML = '<div style="color:var(--text3);font-size:13px">Could not load status.</div>';
+  });
+}
+
+function runBackfill() {
+  var btn = document.getElementById('btn-backfill');
+  var res = document.getElementById('backfill-result');
+  btn.textContent = 'Running...'; btn.disabled = true;
+  res.innerHTML = '<div class="result-box info">Backfill running — this may take a moment...</div>';
+
+  fetch('/api/admin/backfill-tips', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({messages: []})  // empty = use embedded history in server
+  })
+    .then(function(r){return r.json();})
+    .then(function(d) {
+      if (d.status === 'ok') {
+        res.innerHTML = '<div class="result-box success">Backfill complete — ' + d.created + ' tips created.</div>';
+        loadStatus();
+      } else {
+        res.innerHTML = '<div class="result-box error">' + (d.error || 'Unknown error') + '</div>';
+      }
+    })
+    .catch(function() {
+      res.innerHTML = '<div class="result-box error">Could not reach server.</div>';
+    })
+    .finally(function() { btn.textContent = 'Run backfill now'; btn.disabled = false; });
+}
+
+function runSettle() {
+  var btn = document.getElementById('btn-settle');
+  var res = document.getElementById('settle-result');
+  btn.textContent = 'Settling...'; btn.disabled = true;
+  res.innerHTML = '';
+
+  fetch('/api/admin/settle-tips', {method: 'POST'})
+    .then(function(r){return r.json();})
+    .then(function(d) {
+      res.innerHTML = '<div class="result-box success">Settled ' + d.settled + ' tip(s).</div>';
+      loadStatus();
+    })
+    .catch(function() {
+      res.innerHTML = '<div class="result-box error">Could not reach server.</div>';
+    })
+    .finally(function() { btn.textContent = 'Settle pending tips'; btn.disabled = false; });
+}
+
+function parseManual() {
+  var btn    = document.getElementById('btn-manual');
+  var res    = document.getElementById('manual-result');
+  var text   = document.getElementById('manual-text').value.trim();
+  var rdate  = document.getElementById('manual-race-date').value.trim();
+  if (!text) { res.innerHTML = '<div class="result-box error">Please paste a message first.</div>'; return; }
+
+  btn.textContent = 'Parsing...'; btn.disabled = true;
+  res.innerHTML = '';
+
+  fetch('/webhook/tipster', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      tipster: 'Turn Of Foot',
+      text: text,
+      datetime: new Date().toISOString().replace('T',' ').slice(0,19),
+      race_date: rdate || new Date().toISOString().slice(0,10),
+      message_id: 0
+    })
+  })
+    .then(function(r){return r.json();})
+    .then(function(d) {
+      if (d.status === 'ok') {
+        var tips = (d.tips || []).map(function(t){ return t.horse + ' @ ' + t.odds; }).join(', ');
+        res.innerHTML = '<div class="result-box success">Created ' + d.tips_created + ' tip(s): ' + tips + '</div>';
+        document.getElementById('manual-text').value = '';
+      } else {
+        res.innerHTML = '<div class="result-box info">Status: ' + d.status + (d.reason ? ' — ' + d.reason : '') + '</div>';
+      }
+    })
+    .catch(function() {
+      res.innerHTML = '<div class="result-box error">Could not reach server.</div>';
+    })
+    .finally(function() { btn.textContent = 'Parse and store'; btn.disabled = false; });
+}
+
+loadStatus();
+</script>
+</body>
+</html>

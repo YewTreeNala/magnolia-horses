@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
 from sync import sync_todays_races, sync_horse_history, backfill_horse_history
 from email_service import send_morning_alerts
 import json
@@ -63,11 +63,17 @@ def sync_and_alert(app):
     sync_todays_races(app)
     send_morning_alerts(app)
 
+def sync_and_settle(app):
+    sync_todays_races(app)
+    with app.app_context():
+        _settle_pending_tips()
+
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=23, minute=0)
+scheduler.add_job(func=lambda: sync_and_settle(app), trigger='cron', hour=22, minute=0)
 scheduler.start()
 
 
@@ -817,6 +823,7 @@ def manual_sync():
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
     sync_todays_races(app)
+    _settle_pending_tips()
     return jsonify({'status': 'ok'})
 
 
@@ -859,6 +866,21 @@ def send_test_email():
     result = send_morning_alerts_for_user(current_user.id, app)
     return jsonify(result)
 
+
+
+
+@app.route('/tipster')
+@login_required
+def tipster_page():
+    return render_template('tipster.html', is_admin=is_admin())
+
+
+@app.route('/admin/tipster')
+@login_required
+def admin_tipster():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_tipster.html')
 
 @app.route('/admin/colours')
 def admin_colours():
@@ -1028,6 +1050,316 @@ def admin_sync_history():
     t.daemon = True
     t.start()
     return jsonify({'status': 'started', 'message': 'History sync running in background — check sync log'})
+
+
+
+# ── Tipster webhook ────────────────────────────────────────────────────────────
+
+TIPSTER_WEBHOOK_SECRET = os.getenv('TIPSTER_WEBHOOK_SECRET', '')
+
+def _get_or_create_tipster(name):
+    t = Tipster.query.filter_by(name=name).first()
+    if not t:
+        t = Tipster(name=name, created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        db.session.add(t)
+        db.session.flush()
+    return t
+
+
+def _settle_pending_tips():
+    """Try to settle any unsettled tips from today's race results."""
+    from tip_parser import settle_tip as _settle
+    unsettled = Tip.query.filter_by(settled=False).all()
+    settled_count = 0
+    for tip in unsettled:
+        # Find a matching runner in the DB by horse name + course + race date
+        runner = db.session.query(Runner).join(Race).join(Meeting).filter(
+            Runner.horse_name.ilike(f'%{tip.horse_name}%'),
+            Meeting.date == (tip.race_date or date.today().strftime('%Y-%m-%d')),
+        ).first()
+        if not runner:
+            continue
+        if not runner.position:
+            continue  # race not yet run
+        # Settle
+        sp_dec = 0.0
+        try:
+            sp_dec = float(runner.odds or 0)
+        except Exception:
+            pass
+        result = _settle(tip, runner.position, sp_dec)
+        tr = tip.result
+        if not tr:
+            tr = TipResult(tip_id=tip.id)
+            db.session.add(tr)
+        tr.position    = runner.position
+        tr.sp          = runner.sp or runner.odds or ''
+        tr.sp_dec      = sp_dec
+        tr.result_type = result['result_type']
+        tr.win_pts     = result['win_pts']
+        tr.place_pts   = result['place_pts']
+        tr.total_pts   = result['total_pts']
+        tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        tip.settled    = True
+        settled_count += 1
+    if settled_count:
+        db.session.commit()
+    return settled_count
+
+
+@app.route('/webhook/tipster', methods=['POST'])
+def tipster_webhook():
+    from tip_parser import parse_message
+    import hashlib
+
+    # Verify shared secret
+    secret = request.headers.get('X-Webhook-Secret', '')
+    if TIPSTER_WEBHOOK_SECRET and secret != TIPSTER_WEBHOOK_SECRET:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    data = request.get_json() or {}
+    tipster_name = data.get('tipster', 'Turn Of Foot')
+    raw_text     = data.get('text', '').strip()
+    msg_id       = data.get('message_id', 0)
+    msg_datetime = data.get('datetime', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    race_date    = data.get('race_date', date.today().strftime('%Y-%m-%d'))
+
+    if not raw_text:
+        return jsonify({'status': 'ignored', 'reason': 'empty text'})
+
+    tips = parse_message(raw_text)
+    if not tips:
+        return jsonify({'status': 'ignored', 'reason': 'no tips found'})
+
+    tipster = _get_or_create_tipster(tipster_name)
+
+    # Check for duplicate (same message_id already stored)
+    if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
+        return jsonify({'status': 'duplicate'})
+
+    created_tips = []
+    uncertain_tips = []
+
+    for t in tips:
+        tip = Tip(
+            tipster_id       = tipster.id,
+            horse_name       = t['horse_name'],
+            tip_date         = msg_datetime[:10],
+            tip_datetime     = msg_datetime,
+            course           = t.get('course', ''),
+            race_time        = t.get('race_time', ''),
+            race_date        = race_date,
+            bet_type         = t.get('bet_type', 'ew'),
+            stake_pts        = t.get('stake_pts', 0.5),
+            odds             = t.get('odds', ''),
+            odds_dec         = t.get('odds_dec', 0.0),
+            each_way_places  = t.get('each_way_places', 4),
+            each_way_fraction= t.get('each_way_fraction', 5),
+            reasoning        = t.get('reasoning', ''),
+            raw_message      = raw_text,
+            telegram_msg_id  = msg_id,
+            uncertain        = t.get('uncertain', False),
+            created_at       = datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        )
+        db.session.add(tip)
+        db.session.flush()
+
+        # Try to link to HorseProfile
+        profile = HorseProfile.query.filter(
+            HorseProfile.name.ilike(f'%{t["horse_name"]}%')
+        ).first()
+        if profile:
+            tip.horse_id = profile.horse_id
+
+        created_tips.append({'horse': t['horse_name'], 'odds': t['odds']})
+        if t.get('uncertain'):
+            uncertain_tips.append(t)
+
+    db.session.commit()
+
+    # Email admin about uncertain tips
+    if uncertain_tips:
+        try:
+            from email_service import send_email
+            body = '<br>'.join([
+                f"<b>{t.get('horse_name') or 'Unknown'}</b> — {t.get('uncertain_reason','')}<br>"
+                f"<pre>{raw_text[:500]}</pre>"
+                for t in uncertain_tips
+            ])
+            send_email(
+                ADMIN_EMAIL, 'Admin',
+                f'Magnolia Horses: {len(uncertain_tips)} uncertain tip(s) need review',
+                f'<html><body><p>The following tips from Turn Of Foot could not be fully parsed:</p>{body}</body></html>'
+            )
+        except Exception as e:
+            print(f'[Tipster] Email error: {e}')
+
+    return jsonify({'status': 'ok', 'tips_created': len(created_tips), 'tips': created_tips})
+
+
+@app.route('/api/tipster/tips')
+@login_required
+def get_tips():
+    tipster_name = request.args.get('tipster', 'Turn Of Foot')
+    page         = int(request.args.get('page', 1))
+    per_page     = int(request.args.get('per_page', 50))
+    tipster = Tipster.query.filter_by(name=tipster_name).first()
+    if not tipster:
+        return jsonify({'tips': [], 'total': 0})
+    q = Tip.query.filter_by(tipster_id=tipster.id).order_by(Tip.tip_datetime.desc())
+    total = q.count()
+    tips  = q.offset((page-1)*per_page).limit(per_page).all()
+    return jsonify({
+        'total': total,
+        'tips': [{
+            'id':           t.id,
+            'horse_name':   t.horse_name,
+            'tip_date':     t.tip_date,
+            'course':       t.course,
+            'race_time':    t.race_time,
+            'bet_type':     t.bet_type,
+            'stake_pts':    t.stake_pts,
+            'odds':         t.odds,
+            'each_way_places': t.each_way_places,
+            'reasoning':    t.reasoning,
+            'uncertain':    t.uncertain,
+            'settled':      t.settled,
+            'result': {
+                'position':    t.result.position,
+                'sp':          t.result.sp,
+                'result_type': t.result.result_type,
+                'win_pts':     t.result.win_pts,
+                'place_pts':   t.result.place_pts,
+                'total_pts':   t.result.total_pts,
+            } if t.result else None,
+        } for t in tips]
+    })
+
+
+@app.route('/api/tipster/stats')
+@login_required
+def get_tipster_stats():
+    tipster_name = request.args.get('tipster', 'Turn Of Foot')
+    tipster = Tipster.query.filter_by(name=tipster_name).first()
+    if not tipster:
+        return jsonify({'error': 'not found'}), 404
+
+    settled = db.session.query(TipResult).join(Tip).filter(
+        Tip.tipster_id == tipster.id
+    ).all()
+
+    total_pts_staked = 0.0
+    total_pts_return = 0.0
+    wins = places = losses = 0
+
+    for r in settled:
+        tip = r.tip
+        staked = tip.stake_pts * (2 if tip.bet_type == 'ew' else 1)
+        total_pts_staked += staked
+        total_pts_return += staked + r.total_pts
+        if r.result_type == 'win':    wins   += 1
+        elif r.result_type == 'place': places += 1
+        else:                          losses += 1
+
+    total_bets   = len(settled)
+    profit_pts   = round(total_pts_return - total_pts_staked, 2)
+    roi_pct      = round(profit_pts / total_pts_staked * 100, 1) if total_pts_staked else 0.0
+
+    # Monthly breakdown
+    monthly = {}
+    for r in settled:
+        month = (r.tip.tip_date or '')[:7]  # YYYY-MM
+        if month not in monthly:
+            monthly[month] = {'staked': 0.0, 'return': 0.0, 'bets': 0}
+        staked = r.tip.stake_pts * (2 if r.tip.bet_type == 'ew' else 1)
+        monthly[month]['staked'] += staked
+        monthly[month]['return'] += staked + r.total_pts
+        monthly[month]['bets']   += 1
+
+    monthly_list = sorted([
+        {
+            'month':   k,
+            'bets':    v['bets'],
+            'staked':  round(v['staked'], 2),
+            'profit':  round(v['return'] - v['staked'], 2),
+            'roi':     round((v['return'] - v['staked']) / v['staked'] * 100, 1) if v['staked'] else 0.0,
+        }
+        for k, v in monthly.items()
+    ], key=lambda x: x['month'])
+
+    return jsonify({
+        'tipster':      tipster_name,
+        'total_bets':   total_bets,
+        'wins':         wins,
+        'places':       places,
+        'losses':       losses,
+        'unsettled':    Tip.query.filter_by(tipster_id=tipster.id, settled=False).count(),
+        'staked_pts':   round(total_pts_staked, 2),
+        'profit_pts':   profit_pts,
+        'roi_pct':      roi_pct,
+        'monthly':      monthly_list,
+    })
+
+
+@app.route('/api/admin/settle-tips', methods=['POST'])
+@login_required
+def admin_settle_tips():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    count = _settle_pending_tips()
+    return jsonify({'status': 'ok', 'settled': count})
+
+
+@app.route('/api/admin/backfill-tips', methods=['POST'])
+@login_required
+def admin_backfill_tips():
+    """Accept a JSON array of pre-parsed tip dicts for backfill.
+    If messages is empty, uses the embedded historical message list."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    from tip_parser import parse_message
+    from backfill_tips import MESSAGES as EMBEDDED_MESSAGES
+    data = request.get_json() or {}
+    messages = data.get('messages') or EMBEDDED_MESSAGES
+    tipster  = _get_or_create_tipster('Turn Of Foot')
+    created  = 0
+    for msg in messages:
+        raw_text     = msg.get('text', '')
+        msg_datetime = msg.get('datetime', '')
+        race_date    = msg.get('race_date', msg_datetime[:10] if msg_datetime else '')
+        msg_id       = msg.get('message_id', 0)
+        if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
+            continue
+        tips = parse_message(raw_text)
+        for t in tips:
+            if t.get('uncertain') and not t.get('horse_name'):
+                continue  # skip fully unparseable
+            tip = Tip(
+                tipster_id=tipster.id,
+                horse_name=t['horse_name'],
+                tip_date=msg_datetime[:10],
+                tip_datetime=msg_datetime,
+                course=t.get('course',''),
+                race_time=t.get('race_time',''),
+                race_date=race_date,
+                bet_type=t.get('bet_type','ew'),
+                stake_pts=t.get('stake_pts',0.5),
+                odds=t.get('odds',''),
+                odds_dec=t.get('odds_dec',0.0),
+                each_way_places=t.get('each_way_places',4),
+                each_way_fraction=t.get('each_way_fraction',5),
+                reasoning=t.get('reasoning',''),
+                raw_message=raw_text,
+                telegram_msg_id=msg_id,
+                uncertain=t.get('uncertain',False),
+                created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            )
+            db.session.add(tip)
+            created += 1
+        db.session.flush()
+    db.session.commit()
+    _settle_pending_tips()
+    return jsonify({'status': 'ok', 'created': created})
 
 
 if __name__ == '__main__':
