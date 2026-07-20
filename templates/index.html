@@ -986,6 +986,7 @@ function cacheRunners(data) {
 // ── Run search ────────────────────────────────────────────────────────────────
 function runSearch() {
   window._allRaceData = null;  // clear cached full field on new search
+  var horse  = document.getElementById('f-horse').value.trim();
   var mode   = document.getElementById('f-search-mode').value;
   var ukOnly = document.getElementById('f-uk-only').checked;
 
