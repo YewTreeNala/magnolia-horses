@@ -1230,7 +1230,6 @@ def settle_from_results_json():
                 no_match += 1
                 continue
 
-        row     = lookup[key]
         pos     = str(row.get('pos', '') or '').strip()
         sp_str  = str(row.get('sp', '') or '').strip()
         ran     = int(row.get('ran', 0) or 0)
