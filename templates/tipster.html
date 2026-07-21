@@ -323,7 +323,8 @@ function renderTable(tips){
          +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')+'</td>';
     html+='<td style="color:var(--text2)">'+(t.course||'—')+'</td>';
     html+='<td style="color:var(--brand);font-weight:500;white-space:nowrap">'+(t.race_time||'—')+'</td>';
-    html+='<td style="font-weight:500">'+escHtml(t.horse_name)+(t.tagged?'<span class="tagged-badge">&#9733;</span>':'')+'</td>';
+    var rpUrl='https://www.racingpost.com/search-results/?keyword='+encodeURIComponent(t.horse_name);
+    html+='<td style="font-weight:500"><a href="'+rpUrl+'" target="_blank" style="color:var(--text);text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)">'+escHtml(t.horse_name)+'</a>'+(t.tagged?'<span class="tagged-badge">&#9733;</span>':'')+'</td>';
     html+='<td style="font-size:12px;color:var(--text2);white-space:nowrap">'+betLbl+'</td>';
     html+='<td style="font-weight:500">'+(t.odds||'—')+'</td>';
     html+='<td style="font-size:12px;color:var(--text2)">'+(t.jockey||'—')+'</td>';
