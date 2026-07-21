@@ -290,7 +290,7 @@ function loadUnsettled() {
         return;
       }
       var html = '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">';
-      ['Date','Course','Time','Horse','Bet','Tipped Odds','Horse ID','Position','SP',''].forEach(function(h){
+      ['Date','Course','Time','Horse','Bet','Tipped Odds','Horse ID','Position','SP','',''].forEach(function(h){
         html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase">' + h + '</th>';
       });
       html += '</tr></thead><tbody>';
@@ -308,11 +308,26 @@ function loadUnsettled() {
         html += '<td style="padding:6px 10px"><input type="text" id="pos-' + t.id + '" placeholder="e.g. 3" style="width:60px;padding:4px 6px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:4px;background:var(--surface2)"/></td>';
         html += '<td style="padding:6px 10px"><input type="text" id="sp-' + t.id + '" placeholder="e.g. 8/1" style="width:70px;padding:4px 6px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:4px;background:var(--surface2)"/></td>';
         html += '<td style="padding:6px 10px"><button onclick="saveResult(' + t.id + ')" style="padding:4px 10px;font-size:12px;font-family:inherit;background:var(--brand);color:#fff;border:none;border-radius:4px;cursor:pointer">Save</button></td>';
+        html += '<td style="padding:6px 10px"><button onclick="deleteTip(' + t.id + ')" style="padding:4px 10px;font-size:12px;font-family:inherit;background:transparent;color:var(--red);border:0.5px solid var(--red);border-radius:4px;cursor:pointer">Delete</button></td>';
         html += '</tr>';
-        html += '<tr id="res-msg-' + t.id + '"><td colspan="10"></td></tr>';
+        html += '<tr id="res-msg-' + t.id + '"><td colspan="11"></td></tr>';
       }
       html += '</tbody></table>';
       container.innerHTML = html;
+    });
+}
+
+function deleteTip(tipId) {
+  if (!confirm('Delete this tip permanently?')) return;
+  fetch('/api/admin/tip/' + tipId, {method: 'DELETE'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        loadUnsettled();
+        loadStatus();
+      } else {
+        alert('Error: ' + (d.error||'unknown'));
+      }
     });
 }
 
@@ -329,10 +344,10 @@ function saveResult(tipId) {
     .then(function(d){
       var msg = document.getElementById('res-msg-' + tipId);
       if (d.status === 'ok') {
-        msg.innerHTML = '<td colspan="10" style="padding:4px 10px;font-size:12px;color:var(--green)">Saved: ' + d.result_type + ' (' + (d.total_pts >= 0 ? '+' : '') + d.total_pts.toFixed(2) + 'pts)</td>';
+        msg.innerHTML = '<td colspan="11" style="padding:4px 10px;font-size:12px;color:var(--green)">Saved: ' + d.result_type + ' (' + (d.total_pts >= 0 ? '+' : '') + d.total_pts.toFixed(2) + 'pts)</td>';
         setTimeout(function(){ loadUnsettled(); loadStatus(); }, 1000);
       } else {
-        msg.innerHTML = '<td colspan="10" style="padding:4px 10px;font-size:12px;color:var(--red)">Error: ' + (d.error||'unknown') + '</td>';
+        msg.innerHTML = '<td colspan="11" style="padding:4px 10px;font-size:12px;color:var(--red)">Error: ' + (d.error||'unknown') + '</td>';
       }
     });
 }

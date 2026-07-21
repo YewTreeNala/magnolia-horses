@@ -1407,6 +1407,22 @@ def admin_cleanup_tips():
 
 
 
+@app.route('/api/admin/tip/<int:tip_id>', methods=['DELETE'])
+@login_required
+def admin_delete_tip(tip_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    tip = Tip.query.get(tip_id)
+    if not tip:
+        return jsonify({'error': 'not found'}), 404
+    if tip.result:
+        db.session.delete(tip.result)
+    db.session.delete(tip)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
