@@ -11,6 +11,8 @@ class User(UserMixin, db.Model):
     email      = db.Column(db.String(150), unique=True, nullable=False)
     password   = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.String(30))
+    is_banned  = db.Column(db.Boolean, default=False)
+    banned_at  = db.Column(db.String(30))
     tagged     = db.relationship('TaggedHorse', backref='user', lazy=True)
     searches   = db.relationship('SavedSearch', backref='user', lazy=True)
 
@@ -19,6 +21,10 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
+    @property
+    def is_active(self):
+        return not bool(self.is_banned)
 
 
 class TaggedHorse(db.Model):

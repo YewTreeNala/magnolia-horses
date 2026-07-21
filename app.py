@@ -296,6 +296,9 @@ def admin_users():
             'created_at':   u.created_at or '—',
             'tagged_count': len(u.tagged),
             'searches':     searches,
+            'is_banned':    bool(getattr(u, 'is_banned', False)),
+            'banned_at':    getattr(u, 'banned_at', '') or '',
+            'is_admin':     u.email == ADMIN_EMAIL,
         })
     return render_template('admin_users.html', users=users_data)
 
@@ -878,6 +881,13 @@ def tipster_page():
     return render_template('tipster.html', is_admin=is_admin())
 
 
+@app.route('/admin/tipster')
+@login_required
+def admin_tipster():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_tipster.html')
+
 @app.route('/admin/colours')
 def admin_colours():
     return render_template('admin_colours.html')
@@ -1411,6 +1421,37 @@ def admin_delete_tip(tip_id):
     if tip.result:
         db.session.delete(tip.result)
     db.session.delete(tip)
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+
+@app.route('/api/admin/user/<int:user_id>/ban', methods=['POST'])
+@login_required
+def admin_ban_user(user_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'not found'}), 404
+    if user.email == ADMIN_EMAIL:
+        return jsonify({'error': 'Cannot ban admin'}), 400
+    user.is_banned = True
+    user.banned_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/admin/user/<int:user_id>/unban', methods=['POST'])
+@login_required
+def admin_unban_user(user_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'not found'}), 404
+    user.is_banned = False
+    user.banned_at = None
     db.session.commit()
     return jsonify({'status': 'ok'})
 
