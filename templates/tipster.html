@@ -112,6 +112,15 @@
     </div>
   </div>
 
+  <div class="panel" style="margin-bottom:1.5rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
+    <div class="panel-title" style="color:var(--green)">&#9679; Best Odds Guaranteed (BOG)</div>
+    <div class="stats-strip" style="margin-bottom:0">
+      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog">—</div><div class="lbl">Profit (pts)</div></div>
+      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog">—</div><div class="lbl">ROI %</div></div>
+      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+    </div>
+  </div>
+
   <!-- Chart -->
   <div class="panel">
     <div class="panel-title">Cumulative P&L by month</div>
@@ -246,12 +255,16 @@ function renderStats(s){
   var gs=document.getElementById('s-gbp-sp');
   gs.textContent=(gbpsp>=0?'+£':'−£')+Math.abs(gbpsp).toFixed(0);
   gs.className='val '+(gbpsp>=0?'pos':'neg');
+  var pbog=retBOG-staked,roibog=staked?+(pbog/staked*100).toFixed(1):0,gbpbog=pbog*PTS_TO_GBP;
+  setEl('s-profit-bog',(pbog>=0?'+':'')+pbog.toFixed(2)+'pts',pbog>=0?'pos':'neg');
+  setEl('s-roi-bog',(roibog>=0?'+':'')+roibog+'%',roibog>=0?'pos':'neg');
+  setEl('s-gbp-bog',(gbpbog>=0?'+£':'−£')+Math.abs(gbpbog).toFixed(0),gbpbog>=0?'pos':'neg');
 }
 
 function renderChart(s){
   var monthly=s.monthly||[];
   if(!monthly.length) return;
-  var labels=[], cumTips=[], cumSP=[], runTips=0, runSP=0;
+  var labels=[], cumTips=[], cumSP=[], cumBOG=[], runTips=0, runSP=0, runBOG=0;
   for(var i=0;i<monthly.length;i++){
     var m=monthly[i];
     runTips+=m.profit;
@@ -259,6 +272,8 @@ function renderChart(s){
     labels.push(m.month);
     cumTips.push(+(runTips*PTS_TO_GBP).toFixed(0));
     cumSP.push(+(runSP*PTS_TO_GBP).toFixed(0));
+    runBOG+=(m.profit_bog||m.profit);
+    cumBOG.push(+(runBOG*PTS_TO_GBP).toFixed(0));
   }
   var ctx=document.getElementById('pnl-chart').getContext('2d');
   if(chart) chart.destroy();
@@ -270,7 +285,9 @@ function renderChart(s){
         {label:'Tipped odds (£)',data:cumTips,borderColor:'#8b3a3a',backgroundColor:'rgba(139,58,58,0.08)',
          tension:0.3,pointRadius:3,pointBackgroundColor:'#8b3a3a',fill:true,borderWidth:2},
         {label:'SP (£)',data:cumSP,borderColor:'#185fa5',backgroundColor:'transparent',
-         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2}
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2},
+        {label:'BOG (£)',data:cumBOG,borderColor:'#3b6d11',backgroundColor:'transparent',
+         tension:0.3,pointRadius:2,pointBackgroundColor:'#3b6d11',borderDash:[2,3],borderWidth:2}
       ]
     },
     options:{
@@ -334,7 +351,7 @@ function applyFilters(){
 
 function updateStatsFromFiltered(tips){
   var PTS = 20;
-  var wins=0,places=0,losses=0,unsettled=0,staked=0,retTips=0,retSP=0;
+  var wins=0,places=0,losses=0,unsettled=0,staked=0,retTips=0,retSP=0,retBOG=0;
   var monthly={};
 
   for(var i=0;i<tips.length;i++){
@@ -346,6 +363,15 @@ function updateStatsFromFiltered(tips){
     if(!r) continue;
     // total_pts in DB is settled at SP - recalculate tipped odds P&L
     retSP+=s+r.total_pts;  // SP P&L = stored result (settled at SP)
+    // BOG: max of tipped or SP
+    (function(){
+      var rt0=r.result_type;
+      if(rt0==='loss'||rt0==='nr'){retBOG+=s+r.total_pts;return;}
+      var bogD=Math.max(t.odds_dec||0,r.sp_dec||0),p0=parseInt(r.position||'99',10)||99;
+      var sk0=t.stake_pts,ew0=t.bet_type==='ew',pl0=t.each_way_places||4;
+      if(bogD>1){var wp0=p0===1?sk0*(bogD-1):-sk0;var pp0=ew0?((p0>=1&&p0<=pl0)?sk0*((bogD-1)/5):-sk0):0;retBOG+=s+(wp0+(ew0?pp0:0));}
+      else{retBOG+=s+r.total_pts;}
+    })();
     (function(){
       var rt=r.result_type;
       if(rt==='loss'||rt==='nr'){ retTips+=s+r.total_pts; return; } // losses same at any odds
@@ -363,10 +389,18 @@ function updateStatsFromFiltered(tips){
 
     // Monthly
     var m=(t.tip_date||'').slice(0,7);
-    if(!monthly[m]) monthly[m]={staked:0,retTips:0,retSP:0};
+    if(!monthly[m]) monthly[m]={staked:0,retTips:0,retSP:0,retBOG:0};
     monthly[m].staked+=s;
     monthly[m].retTips+=s+r.total_pts;
-    monthly[m].retSP+=s+r.total_pts;  // SP P&L = stored result
+    monthly[m].retSP+=s+r.total_pts;
+    (function(){
+      var rt3=r.result_type;
+      if(rt3==='loss'||rt3==='nr'){monthly[m].retBOG+=s+r.total_pts;return;}
+      var bogD3=Math.max(t.odds_dec||0,r.sp_dec||0),p3=parseInt(r.position||'99',10)||99;
+      var sk3=t.stake_pts,ew3=t.bet_type==='ew',pl3=t.each_way_places||4;
+      if(bogD3>1){var wp3=p3===1?sk3*(bogD3-1):-sk3;var pp3=ew3?((p3>=1&&p3<=pl3)?sk3*((bogD3-1)/5):-sk3):0;monthly[m].retBOG+=s+(wp3+(ew3?pp3:0));}
+      else{monthly[m].retBOG+=s+r.total_pts;}
+    })();
     (function(){
       var rt2=r.result_type;
       if(rt2==='loss'||rt2==='nr'){ monthly[m].retTips+=s+r.total_pts; return; }
@@ -406,7 +440,7 @@ function updateStatsFromFiltered(tips){
 
   // Rebuild chart
   var months=Object.keys(monthly).sort();
-  var labels=[],cumT=[],cumS=[],runT=0,runS=0;
+  var labels=[],cumT=[],cumS=[],cumB=[],runT=0,runS=0,runB=0;
   for(var j=0;j<months.length;j++){
     var md=monthly[months[j]];
     runT+=md.retTips-md.staked;
@@ -414,11 +448,14 @@ function updateStatsFromFiltered(tips){
     labels.push(months[j]);
     cumT.push(+(runT*PTS).toFixed(0));
     cumS.push(+(runS*PTS).toFixed(0));
+    runB+=md.retBOG-md.staked;
+    cumB.push(+(runB*PTS).toFixed(0));
   }
   if(chart){
     chart.data.labels=labels;
     chart.data.datasets[0].data=cumT;
     chart.data.datasets[1].data=cumS;
+    if(chart.data.datasets[2]) chart.data.datasets[2].data=cumB;
     chart.update();
   }
 }
