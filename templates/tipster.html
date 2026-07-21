@@ -481,13 +481,13 @@ function renderTable(tips){
     html+='<td>'+pnlSP+'</td>';
     html+='<td style="white-space:nowrap">';
     if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span>';
-    if(IS_ADMIN && !t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete" onclick="deleteTipRow('+t.id+','row-'+i+'')" >&#128465;</span>';
+    if(IS_ADMIN && !t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete" onclick="deleteTipRow('+t.id+','+i+')">&#128465;</span>';
     html+='</td>';
     html+='</tr>';
     if(t.reasoning){
       html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="14">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td>';
       html+='<td style="vertical-align:top;padding-top:6px">';
-      if(IS_ADMIN) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete tip" onclick="deleteTipRow('+t.id+','row-'+i+'')">&#128465; delete</span>';
+      if(IS_ADMIN) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete tip" onclick="deleteTipRow('+t.id+','+i+')">&#128465; delete</span>';
       html+='</td></tr>';
     }
   }
@@ -500,17 +500,15 @@ function toggleRow(i){
   if(r) r.style.display=r.style.display==='none'?'':'none';
 }
 
-function deleteTipRow(tipId, rowId){
+function deleteTipRow(tipId, rowIdx){
   if(!confirm('Delete this tip permanently?')) return;
   fetch('/api/admin/tip/'+tipId,{method:'DELETE'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'){
-        // Remove from allTips array
         allTips=allTips.filter(function(t){return t.id!==tipId;});
-        // Remove rows from DOM without re-rendering
-        var mainRow=document.getElementById('row-'+rowId.replace('row-',''));
-        var noteRow=document.getElementById('rrow-'+rowId.replace('row-',''));
+        var mainRow=document.getElementById('row-'+rowIdx);
+        var noteRow=document.getElementById('rrow-'+rowIdx);
         if(mainRow) mainRow.remove();
         if(noteRow) noteRow.remove();
         // Update count
