@@ -1279,72 +1279,61 @@ def settle_from_results_json():
         tip.settled    = True
         settled_count += 1
 
-    # Also populate RunnerHistory from this results file
-    rh_added = 0
-    rh_updated = 0
-    for r in results:
-        date     = r.get('date', '')
-        course   = r.get('course', '')
-        off      = r.get('off', '')
-        horse    = r.get('horse', '')
-        if not date or not horse:
-            continue
-        # Normalise time format: "15:10" -> "3:10" or keep as is
-        # Store as-is, matching is done by stripped horse name
-        existing = RunnerHistory.query.filter_by(
-            horse_name=horse, race_date=date, course=course, race_time=off
-        ).first()
-        if existing:
-            # Update position/SP if we have better data
-            if r.get('pos'):
-                existing.position = str(r.get('pos', ''))
-            if r.get('sp'):
-                existing.sp = str(r.get('sp', ''))
-            if r.get('odds'):
-                existing.odds = str(r.get('odds', ''))
-            rh_updated += 1
-        else:
-            rh = RunnerHistory(
-                race_date       = date,
-                course          = course,
-                race_time       = off,
-                race_name       = r.get('race_name', ''),
-                race_class      = r.get('class', ''),
-                distance        = r.get('dist', ''),
-                going           = r.get('going', ''),
-                horse_id        = '',
-                horse_name      = horse,
-                number          = str(r.get('num', '')),
-                draw            = str(r.get('draw', '')),
-                age             = str(r.get('age', '')),
-                sex             = str(r.get('sex', '')),
-                trainer         = r.get('trainer', ''),
-                jockey          = r.get('jockey', ''),
-                owner           = r.get('owner', ''),
-                form            = '',
-                weight          = str(r.get('wgt', '')),
-                official_rating = str(r.get('or', '')),
-                rpr             = str(r.get('rpr', '')),
-                ts              = str(r.get('ts', '')),
-                odds            = '',
-                sp              = str(r.get('sp', '')),
-                headgear        = str(r.get('hg', '')),
-                last_run        = '',
-                position        = str(r.get('pos', '')),
-                silk_url        = '',
-                wind_surgery    = '',
-                trainer_14_days = '',
-            )
-            db.session.add(rh)
-            rh_added += 1
-        if (rh_added + rh_updated) % 200 == 0:
-            db.session.flush()
-
     db.session.commit()
+
+    # Populate RunnerHistory in background to avoid request timeout
+    import threading as _threading
+    def _populate_rh(results_data):
+        with app.app_context():
+            rh_added = rh_updated = 0
+            for r in results_data:
+                date  = r.get('date', '')
+                course = r.get('course', '')
+                off   = r.get('off', '')
+                horse = r.get('horse', '')
+                if not date or not horse:
+                    continue
+                existing = RunnerHistory.query.filter_by(
+                    horse_name=horse, race_date=date, course=course, race_time=off
+                ).first()
+                if existing:
+                    if r.get('pos'): existing.position = str(r['pos'])
+                    if r.get('sp'):  existing.sp = str(r['sp'])
+                    rh_updated += 1
+                else:
+                    db.session.add(RunnerHistory(
+                        race_date=date, course=course, race_time=off,
+                        race_name=r.get('race_name',''), race_class=r.get('class',''),
+                        distance=r.get('dist',''), going=r.get('going',''),
+                        horse_id='', horse_name=horse,
+                        number=str(r.get('num','')), draw=str(r.get('draw','')),
+                        age=str(r.get('age','')), sex=str(r.get('sex','')),
+                        trainer=r.get('trainer',''), jockey=r.get('jockey',''),
+                        owner=r.get('owner',''), form='',
+                        weight=str(r.get('wgt','')), official_rating=str(r.get('or','')),
+                        rpr=str(r.get('rpr','')), ts=str(r.get('ts','')),
+                        odds='', sp=str(r.get('sp','')), headgear=str(r.get('hg','')),
+                        last_run='', position=str(r.get('pos','')),
+                        silk_url='', wind_surgery='', trainer_14_days='',
+                    ))
+                    rh_added += 1
+                if (rh_added + rh_updated) % 500 == 0:
+                    try: db.session.flush()
+                    except: db.session.rollback()
+            try:
+                db.session.commit()
+                print(f"[RunnerHistory] added={rh_added} updated={rh_updated}")
+            except Exception as e:
+                db.session.rollback()
+                print(f"[RunnerHistory] error: {e}")
+
+    t = _threading.Thread(target=_populate_rh, args=(results,))
+    t.daemon = True
+    t.start()
+
     return jsonify({'status': 'ok', 'settled': settled_count,
                     'no_match': no_match, 'total_unsettled': len(unsettled),
-                    'runner_history_added': rh_added,
-                    'runner_history_updated': rh_updated})
+                    'runner_history': 'populating in background — check sync log'})
 
 
 
