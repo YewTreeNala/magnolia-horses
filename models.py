@@ -142,6 +142,71 @@ class TipResult(db.Model):
     total_pts     = db.Column(db.Float,       default=0.0) # combined P&L
     settled_at    = db.Column(db.String(30))
 
+
+class HorseProfile(db.Model):
+    """One row per unique horse — keyed by API horse_id."""
+    __tablename__ = 'horse_profile'
+    horse_id   = db.Column(db.String(30), primary_key=True)
+    name       = db.Column(db.String(100))
+    colour     = db.Column(db.String(30))
+    sex        = db.Column(db.String(20))
+    dob        = db.Column(db.String(20))
+    region     = db.Column(db.String(10))
+    sire       = db.Column(db.String(100))
+    dam        = db.Column(db.String(100))
+    trainer    = db.Column(db.String(100))
+    owner      = db.Column(db.String(100))
+    updated_at = db.Column(db.String(30))
+    runs       = db.relationship('HorseRun', backref='horse', lazy=True)
+
+
+class HorseRun(db.Model):
+    """One row per historical run for a horse."""
+    __tablename__ = 'horse_run'
+    id            = db.Column(db.Integer, primary_key=True)
+    horse_id      = db.Column(db.String(30), db.ForeignKey('horse_profile.horse_id'), nullable=False)
+    race_id       = db.Column(db.String(30))
+    date          = db.Column(db.String(20))
+    course        = db.Column(db.String(100))
+    race_name     = db.Column(db.Text)
+    race_type     = db.Column(db.String(20))
+    race_class    = db.Column(db.String(20))
+    pattern       = db.Column(db.String(30))
+    dist          = db.Column(db.String(20))
+    going         = db.Column(db.String(50))
+    surface       = db.Column(db.String(20))
+    position      = db.Column(db.String(10))
+    sp            = db.Column(db.String(20))
+    sp_dec        = db.Column(db.String(20))
+    jockey        = db.Column(db.String(100))
+    trainer       = db.Column(db.String(100))
+    weight        = db.Column(db.String(20))
+    btn           = db.Column(db.String(20))
+    ovr_btn       = db.Column(db.String(20))
+    official_rating = db.Column(db.String(10))
+    prize         = db.Column(db.String(20))
+    comment       = db.Column(db.Text)
+    field         = db.relationship('HorseRunField', backref='run', lazy=True,
+                                    cascade='all, delete-orphan')
+    __table_args__ = (db.UniqueConstraint('horse_id', 'race_id', name='uq_horse_race'),)
+
+
+class HorseRunField(db.Model):
+    """Every runner in a race stored against a HorseRun."""
+    __tablename__ = 'horse_run_field'
+    id         = db.Column(db.Integer, primary_key=True)
+    run_id     = db.Column(db.Integer, db.ForeignKey('horse_run.id'), nullable=False)
+    horse_id   = db.Column(db.String(30))
+    horse_name = db.Column(db.String(100))
+    position   = db.Column(db.String(10))
+    sp         = db.Column(db.String(20))
+    sp_dec     = db.Column(db.String(20))
+    jockey     = db.Column(db.String(100))
+    trainer    = db.Column(db.String(100))
+    weight     = db.Column(db.String(20))
+    btn        = db.Column(db.String(20))
+    official_rating = db.Column(db.String(10))
+
 class ColourOverride(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     horse_name = db.Column(db.String(100), unique=True, nullable=False)
