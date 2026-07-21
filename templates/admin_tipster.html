@@ -69,30 +69,8 @@
     </div>
   </div>
 
-  <!-- Backfill panel -->
-  <div class="panel">
-    <div class="panel-title">Backfill from embedded history</div>
-    <div class="panel-sub">
-      Loads the embedded June-July 2026 message history. Safe to run multiple times — duplicates skipped.
-    </div>
-    <div id="backfill-result"></div>
-    <button class="btn btn-primary" id="btn-backfill" onclick="runBackfill()">Run embedded backfill</button>
-  </div>
 
-  <!-- Telegram JSON upload panel -->
-  <div class="panel">
-    <div class="panel-title">Backfill from Telegram export</div>
-    <div class="panel-sub">
-      Upload the Telegram JSON export file to parse and store all historical tips.
-      Duplicate message IDs are skipped automatically. Export from Telegram Desktop:
-      Settings → Advanced → Export Telegram Data → select group → JSON format.
-    </div>
-    <div id="upload-result"></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input type="file" id="tof-json-file" accept=".json,.txt" style="font-size:13px;font-family:inherit"/>
-      <button class="btn btn-primary" id="btn-upload" onclick="uploadJson()">Upload and process</button>
-    </div>
-  </div>
+
 
   <!-- Settle panel -->
   <div class="panel">
@@ -103,6 +81,21 @@
     </div>
     <div id="settle-result"></div>
     <button class="btn btn-primary" id="btn-settle" onclick="runSettle()">Settle pending tips</button>
+  </div>
+
+  <!-- Settle from results JSON panel -->
+  <div class="panel">
+    <div class="panel-title">Settle from results JSON file</div>
+    <div class="panel-sub">
+      Upload a race results JSON file to match and settle historical tips.
+      Each file should be a JSON array of runner rows with date, horse, pos, sp, ran fields.
+      Safe to upload multiple files — already settled tips are skipped.
+    </div>
+    <div id="results-json-result"></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="file" id="results-json-file" accept=".json" style="font-size:13px;font-family:inherit"/>
+      <button class="btn btn-primary" id="btn-results-json" onclick="uploadResultsJson()">Upload and settle</button>
+    </div>
   </div>
 
   <!-- Archive runners panel -->
@@ -172,64 +165,33 @@ function loadStatus() {
   });
 }
 
-function uploadJson() {
-  var fileInput = document.getElementById('tof-json-file');
-  var res = document.getElementById('upload-result');
-  var btn = document.getElementById('btn-upload');
+
+
+function uploadResultsJson() {
+  var fileInput = document.getElementById('results-json-file');
+  var res = document.getElementById('results-json-result');
+  var btn = document.getElementById('btn-results-json');
   if (!fileInput.files.length) {
-    res.innerHTML = '<div class="result-box error">Please select a file first.</div>';
+    res.innerHTML = '<div class="result-box error">Please select a file.</div>';
     return;
   }
   var file = fileInput.files[0];
   btn.textContent = 'Processing...'; btn.disabled = true;
-  res.innerHTML = '<div class="result-box info">Uploading and parsing ' + file.name + ' (' + Math.round(file.size/1024) + 'kb)...</div>';
-
-  var formData = new FormData();
-  formData.append('file', file);
-
-  fetch('/api/admin/backfill-tof-json', {
-    method: 'POST',
-    body: formData
-  })
+  res.innerHTML = '<div class="result-box info">Uploading ' + file.name + '...</div>';
+  var fd = new FormData();
+  fd.append('file', file);
+  fetch('/api/admin/settle-from-results-json', {method: 'POST', body: fd})
     .then(function(r){ return r.json(); })
     .then(function(d) {
       if (d.status === 'ok') {
-        res.innerHTML = '<div class="result-box success">Done! ' + d.created + ' tips created, ' + d.skipped + ' duplicates skipped from ' + d.messages_processed + ' messages.</div>';
+        res.innerHTML = '<div class="result-box success">Settled ' + d.settled + ' tips. No match: ' + d.no_match + ' of ' + d.total_unsettled + ' unsettled.</div>';
         loadStatus();
       } else {
-        res.innerHTML = '<div class="result-box error">' + (d.error || 'Unknown error') + '</div>';
+        res.innerHTML = '<div class="result-box error">' + (d.error||'Error') + '</div>';
       }
     })
-    .catch(function(e) {
-      res.innerHTML = '<div class="result-box error">Error: ' + e + '</div>';
-    })
-    .finally(function() { btn.textContent = 'Upload and process'; btn.disabled = false; });
-}
-
-function runBackfill() {
-  var btn = document.getElementById('btn-backfill');
-  var res = document.getElementById('backfill-result');
-  btn.textContent = 'Running...'; btn.disabled = true;
-  res.innerHTML = '<div class="result-box info">Backfill running — this may take a moment...</div>';
-
-  fetch('/api/admin/backfill-tips', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({messages: []})  // empty = use embedded history in server
-  })
-    .then(function(r){return r.json();})
-    .then(function(d) {
-      if (d.status === 'ok') {
-        res.innerHTML = '<div class="result-box success">Backfill complete — ' + d.created + ' tips created.</div>';
-        loadStatus();
-      } else {
-        res.innerHTML = '<div class="result-box error">' + (d.error || 'Unknown error') + '</div>';
-      }
-    })
-    .catch(function() {
-      res.innerHTML = '<div class="result-box error">Could not reach server.</div>';
-    })
-    .finally(function() { btn.textContent = 'Run backfill now'; btn.disabled = false; });
+    .catch(function(e){ res.innerHTML = '<div class="result-box error">Error: ' + e + '</div>'; })
+    .finally(function(){ btn.textContent = 'Upload and settle'; btn.disabled = false; });
 }
 
 function runSettle() {
