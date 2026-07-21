@@ -1457,6 +1457,66 @@ def admin_unban_user(user_id):
 
 
 
+@app.route('/api/admin/tip-edit/<int:tip_id>', methods=['POST'])
+@login_required
+def admin_edit_tip(tip_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    from tip_parser import settle_tip as _settle, fractional_to_decimal
+    tip = Tip.query.get(tip_id)
+    if not tip:
+        return jsonify({'error': 'not found'}), 404
+    data  = request.get_json() or {}
+    field = data.get('field', '')
+    value = str(data.get('value', '')).strip()
+
+    if field == 'race_date':
+        tip.race_date = value
+    elif field == 'odds':
+        tip.odds = value
+        try:
+            if '/' in value:
+                p = value.split('/')
+                tip.odds_dec = round(float(p[0])/float(p[1])+1, 4)
+            else:
+                tip.odds_dec = float(value)
+        except Exception:
+            pass
+    elif field in ('position', 'sp'):
+        tr = tip.result
+        if not tr:
+            tr = TipResult(tip_id=tip.id)
+            db.session.add(tr)
+            db.session.flush()
+        if field == 'position':
+            tr.position = value
+        elif field == 'sp':
+            tr.sp = value
+            try:
+                if '/' in value:
+                    p = value.split('/')
+                    tr.sp_dec = round(float(p[0])/float(p[1])+1, 4)
+                else:
+                    tr.sp_dec = float(value)
+            except Exception:
+                pass
+        # Recalculate P&L if we have both position and SP
+        if tr.position and tr.sp_dec and tr.sp_dec > 1.0:
+            result = _settle(tip, tr.position, tr.sp_dec)
+            tr.result_type = result['result_type']
+            tr.win_pts     = result['win_pts']
+            tr.place_pts   = result['place_pts']
+            tr.total_pts   = result['total_pts']
+            tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            tip.settled    = True
+    else:
+        return jsonify({'error': 'unknown field'}), 400
+
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
