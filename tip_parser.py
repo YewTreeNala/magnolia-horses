@@ -385,6 +385,7 @@ def settle_tip(tip, position_str, sp_dec):
 
     else:  # each-way
         place_odds_dec = round((odds_dec - 1) / fraction + 1, 4)
+        result_type = 'loss'  # default
 
         # Win part
         if pos == 1:
@@ -400,8 +401,6 @@ def settle_tip(tip, position_str, sp_dec):
                 result_type = 'place'
         else:
             place_pts = -stake
-            if result_type != 'win':
-                result_type = 'loss'
 
         total_pts = round(win_pts + place_pts, 4)
 
