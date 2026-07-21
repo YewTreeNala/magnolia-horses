@@ -1033,6 +1033,104 @@ def admin_archive_runners():
 
 
 
+@app.route('/api/admin/backfill-tof-json', methods=['POST'])
+@login_required
+def admin_backfill_tof_json():
+    """Accept a Telegram JSON export file and parse all tips from it."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    from tip_parser import parse_message as _parse
+    import re as _re
+    from datetime import timedelta as _td
+
+    def _get_text(m):
+        text = m.get('text', '')
+        if isinstance(text, list):
+            return ''.join(t.get('text','') if isinstance(t,dict) else str(t) for t in text)
+        return text.strip()
+
+    def _race_date(dt_str):
+        try:
+            dt = datetime.fromisoformat(dt_str)
+            if dt.hour >= 12:
+                return (dt + _td(days=1)).strftime('%Y-%m-%d')
+            return dt.strftime('%Y-%m-%d')
+        except Exception:
+            return dt_str[:10] if dt_str else ''
+
+    # Accept JSON body or file upload
+    if request.content_type and 'multipart' in request.content_type:
+        f = request.files.get('file')
+        if not f:
+            return jsonify({'error': 'no file'}), 400
+        raw = f.read().decode('utf-8', errors='replace')
+    else:
+        raw = request.get_data(as_text=True)
+
+    # Parse the Telegram export (array of message objects)
+    try:
+        if raw.strip().startswith('['):
+            messages = json.loads(raw)
+        else:
+            messages = json.loads('[' + raw + ']')
+    except Exception as e:
+        return jsonify({'error': f'JSON parse error: {e}'}), 400
+
+    tipster  = _get_or_create_tipster('Turn Of Foot')
+    created  = 0
+    skipped  = 0
+
+    for m in messages:
+        text = _get_text(m)
+        if not text:
+            continue
+        msg_dt       = m.get('date', '')
+        msg_id       = m.get('id', 0)
+        race_date    = _race_date(msg_dt)
+        msg_datetime = msg_dt.replace('T', ' ') if msg_dt else ''
+
+        if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
+            skipped += 1
+            continue
+
+        tips = _parse(text)
+        for t in tips:
+            if not t.get('horse_name'):
+                continue
+            tip = Tip(
+                tipster_id       = tipster.id,
+                horse_name       = t['horse_name'],
+                tip_date         = msg_datetime[:10],
+                tip_datetime     = msg_datetime,
+                course           = t.get('course', ''),
+                race_time        = t.get('race_time', ''),
+                race_date        = race_date,
+                bet_type         = t.get('bet_type', 'ew'),
+                stake_pts        = t.get('stake_pts', 0.5),
+                odds             = t.get('odds', ''),
+                odds_dec         = t.get('odds_dec', 0.0),
+                each_way_places  = t.get('each_way_places', 4),
+                each_way_fraction= t.get('each_way_fraction', 5),
+                reasoning        = t.get('reasoning', ''),
+                raw_message      = text,
+                telegram_msg_id  = msg_id,
+                uncertain        = t.get('uncertain', False),
+                created_at       = datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            )
+            db.session.add(tip)
+            created += 1
+
+        if created % 100 == 0 and created > 0:
+            db.session.flush()
+
+    db.session.commit()
+    _settle_pending_tips()
+    return jsonify({'status': 'ok', 'created': created, 'skipped': skipped,
+                    'messages_processed': len(messages)})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')

@@ -71,14 +71,27 @@
 
   <!-- Backfill panel -->
   <div class="panel">
-    <div class="panel-title">Backfill historical tips</div>
+    <div class="panel-title">Backfill from embedded history</div>
     <div class="panel-sub">
-      Run the backfill to load the 6-month Turn Of Foot message history into the database.
-      This is safe to run multiple times — duplicate message IDs are skipped automatically.
-      After backfill, the system will attempt to auto-settle any tips where race results are already stored.
+      Loads the embedded June-July 2026 message history. Safe to run multiple times — duplicates skipped.
     </div>
     <div id="backfill-result"></div>
-    <button class="btn btn-primary" id="btn-backfill" onclick="runBackfill()">Run backfill now</button>
+    <button class="btn btn-primary" id="btn-backfill" onclick="runBackfill()">Run embedded backfill</button>
+  </div>
+
+  <!-- Telegram JSON upload panel -->
+  <div class="panel">
+    <div class="panel-title">Backfill from Telegram export</div>
+    <div class="panel-sub">
+      Upload the Telegram JSON export file to parse and store all historical tips.
+      Duplicate message IDs are skipped automatically. Export from Telegram Desktop:
+      Settings → Advanced → Export Telegram Data → select group → JSON format.
+    </div>
+    <div id="upload-result"></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <input type="file" id="tof-json-file" accept=".json,.txt" style="font-size:13px;font-family:inherit"/>
+      <button class="btn btn-primary" id="btn-upload" onclick="uploadJson()">Upload and process</button>
+    </div>
   </div>
 
   <!-- Settle panel -->
@@ -157,6 +170,40 @@ function loadStatus() {
   }).catch(function() {
     document.getElementById('status-container').innerHTML = '<div style="color:var(--text3);font-size:13px">Could not load status.</div>';
   });
+}
+
+function uploadJson() {
+  var fileInput = document.getElementById('tof-json-file');
+  var res = document.getElementById('upload-result');
+  var btn = document.getElementById('btn-upload');
+  if (!fileInput.files.length) {
+    res.innerHTML = '<div class="result-box error">Please select a file first.</div>';
+    return;
+  }
+  var file = fileInput.files[0];
+  btn.textContent = 'Processing...'; btn.disabled = true;
+  res.innerHTML = '<div class="result-box info">Uploading and parsing ' + file.name + ' (' + Math.round(file.size/1024) + 'kb)...</div>';
+
+  var formData = new FormData();
+  formData.append('file', file);
+
+  fetch('/api/admin/backfill-tof-json', {
+    method: 'POST',
+    body: formData
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        res.innerHTML = '<div class="result-box success">Done! ' + d.created + ' tips created, ' + d.skipped + ' duplicates skipped from ' + d.messages_processed + ' messages.</div>';
+        loadStatus();
+      } else {
+        res.innerHTML = '<div class="result-box error">' + (d.error || 'Unknown error') + '</div>';
+      }
+    })
+    .catch(function(e) {
+      res.innerHTML = '<div class="result-box error">Error: ' + e + '</div>';
+    })
+    .finally(function() { btn.textContent = 'Upload and process'; btn.disabled = false; });
 }
 
 function runBackfill() {
