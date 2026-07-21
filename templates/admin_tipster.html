@@ -81,6 +81,8 @@
     </div>
     <div id="settle-result"></div>
     <button class="btn btn-primary" id="btn-settle" onclick="runSettle()">Settle pending tips</button>
+    &nbsp;
+    <button class="btn btn-secondary" id="btn-cleanup" onclick="runCleanup()" style="margin-left:8px">Remove pre-2026 &amp; duplicates</button>
   </div>
 
   <!-- Settle from results JSON panel -->
@@ -192,6 +194,20 @@ function uploadResultsJson() {
     })
     .catch(function(e){ res.innerHTML = '<div class="result-box error">Error: ' + e + '</div>'; })
     .finally(function(){ btn.textContent = 'Upload and settle'; btn.disabled = false; });
+}
+
+function runCleanup() {
+  if (!confirm('Remove all pre-2026 tips and duplicates?')) return;
+  var btn = document.getElementById('btn-cleanup');
+  btn.textContent = 'Cleaning...'; btn.disabled = true;
+  fetch('/api/admin/cleanup-tips', {method: 'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      alert('Done! Pre-2026 deleted: ' + d.pre_2026_deleted + ', Duplicates deleted: ' + d.duplicates_deleted + ', Remaining: ' + d.total_remaining + ' (' + d.settled + ' settled, ' + d.unsettled + ' unsettled)');
+      loadStatus();
+    })
+    .catch(function(){ alert('Error'); })
+    .finally(function(){ btn.textContent = 'Remove pre-2026 & duplicates'; btn.disabled = false; });
 }
 
 function runSettle() {

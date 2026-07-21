@@ -1341,6 +1341,70 @@ def settle_from_results_json():
 
 
 
+@app.route('/api/admin/cleanup-tips', methods=['POST'])
+@login_required
+def admin_cleanup_tips():
+    """Remove pre-2026 tips and duplicates."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    from sqlalchemy import text as _text
+
+    # Delete tip_results for pre-2026 tips
+    db.session.execute(_text(
+        "DELETE FROM tip_result WHERE tip_id IN "
+        "(SELECT id FROM tip WHERE tip_date < '2026-01-01')"
+    ))
+
+    # Delete pre-2026 tips
+    r1 = db.session.execute(_text(
+        "DELETE FROM tip WHERE tip_date < '2026-01-01'"
+    ))
+
+    # Delete tip_results for duplicate tips (keep settled preferring lower id)
+    db.session.execute(_text(
+        "DELETE FROM tip_result WHERE tip_id IN ("
+        "  SELECT t.id FROM tip t WHERE EXISTS ("
+        "    SELECT 1 FROM tip t2"
+        "    WHERE t2.horse_name = t.horse_name"
+        "      AND t2.race_date = t.race_date"
+        "      AND t2.course = t.course"
+        "      AND t2.race_time = t.race_time"
+        "      AND (t2.settled > t.settled"
+        "           OR (t2.settled = t.settled AND t2.id < t.id))"
+        "  )"
+        ")"
+    ))
+
+    # Delete duplicate tips
+    r2 = db.session.execute(_text(
+        "DELETE FROM tip WHERE EXISTS ("
+        "  SELECT 1 FROM tip t2"
+        "  WHERE t2.horse_name = tip.horse_name"
+        "    AND t2.race_date = tip.race_date"
+        "    AND t2.course = tip.course"
+        "    AND t2.race_time = tip.race_time"
+        "    AND (t2.settled > tip.settled"
+        "         OR (t2.settled = tip.settled AND t2.id < tip.id))"
+        ")"
+    ))
+
+    db.session.commit()
+
+    total = db.session.execute(_text("SELECT COUNT(*) FROM tip")).scalar()
+    settled = db.session.execute(_text("SELECT COUNT(*) FROM tip WHERE settled = true")).scalar()
+
+    return jsonify({
+        'status': 'ok',
+        'pre_2026_deleted': r1.rowcount,
+        'duplicates_deleted': r2.rowcount,
+        'total_remaining': total,
+        'settled': settled,
+        'unsettled': total - settled,
+    })
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
