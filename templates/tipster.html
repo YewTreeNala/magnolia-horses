@@ -22,7 +22,6 @@
     .brand-header{display:flex;align-items:center;gap:12px;padding:1rem 0 0.75rem;border-bottom:0.5px solid rgba(139,58,58,0.2);margin-bottom:1.5rem}
     .brand-name{font-family:Georgia,serif;font-size:22px;font-weight:600;color:var(--brand);cursor:pointer}
     .nav-links{margin-left:auto;display:flex;gap:16px;font-size:13px}
-    .nav-links a.active{font-weight:600;border-bottom:2px solid var(--brand);padding-bottom:1px}
     .nav-links a{color:var(--brand);text-decoration:none}
     .page-title{font-size:20px;font-weight:500;margin-bottom:1.25rem}
     .panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem}
@@ -67,12 +66,11 @@
 <div class="page">
   <div class="brand-header">
     <div class="brand-name" onclick="window.location='/'">Magnolia Horses</div>
-        <div class="nav-links">
-      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
-      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
-      <a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>
-      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
-      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
+    <div class="nav-links">
+      <a href="/">Search</a>
+      <a href="/my-horses">My horses</a>
+      <a href="/account">Account</a>
+      {% if is_admin %}<a href="/admin/users">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>
     </div>
   </div>
@@ -140,9 +138,10 @@
       </select>
       <select id="f-tagged" onchange="applyFilters()">
         <option value="">All horses</option>
-        <option value="true">My tagged horses only</option>
+        <option value="true">&#9829; My tagged horses</option>
       </select>
-      <input type="text" id="f-course" placeholder="Course..." oninput="applyFilters()" style="width:120px"/>
+      <input type="text" id="f-course" list="course-list" placeholder="Course..." oninput="applyFilters()" style="width:130px"/>
+      <datalist id="course-list"></datalist>
       <input type="text" id="f-jockey" placeholder="Jockey..." oninput="applyFilters()" style="width:120px"/>
       <select id="f-colour" onchange="applyFilters()">
         <option value="">All colours (known only)</option>
@@ -158,7 +157,6 @@
         <option value="date">Sort: Date / Course / Time / Horse</option>
         <option value="horse">Sort: Horse name</option>
         <option value="profit">Sort: P&L (best first)</option>
-        <option value="odds">Sort: Odds (highest first)</option>
       </select>
     </div>
 
@@ -205,6 +203,10 @@ function loadData(){
     renderStats(statsData);
     renderChart(statsData);
     applyFilters();
+    // Populate course datalist
+    var _courses=[...new Set(allTips.map(function(t){return t.course||'';}).filter(Boolean))].sort();
+    var _dl=document.getElementById('course-list');
+    if(_dl){_dl.innerHTML=_courses.map(function(c){return '<option value="'+c+'">';}).join('');}
   }).catch(function(){
     document.getElementById('tips-container').innerHTML='<div class="empty">Could not load tips.</div>';
   });
@@ -308,7 +310,6 @@ function applyFilters(){
       var pa=(a.result?a.result.total_pts:-999), pb=(b.result?b.result.total_pts:-999);
       return pb-pa;
     }
-    if(sortBy==='odds') return (b.odds_dec||0)-(a.odds_dec||0);
     // Default: date desc, then course, then race_time, then horse
     var da=a.tip_date||'', db=b.tip_date||'';
     if(da!==db) return db.localeCompare(da);
@@ -468,7 +469,9 @@ function renderTable(tips){
     html+='<td style="font-size:12px;color:var(--text2)">'+(t.jockey||'—')+'</td>';
     html+='<td style="font-size:12px;color:var(--text2)">'+(t.colour||'—')+'</td>';
     html+='<td>'+resultBadge(r)+'</td>';
-    html+='<td style="font-size:12px;color:var(--text2)">'+(r?posLabel(r.position):'—')+'</td>';
+    var posNum=r?parseInt(r.position,10):0;
+    var posColor=posNum===1?'color:#7a5500;background:rgba(196,154,0,0.15);font-weight:600;border-radius:4px;padding:1px 6px':r&&r.result_type==='place'?'color:var(--blue);font-weight:500':'';
+    html+='<td style="font-size:12px"><span style="'+posColor+'">'+(r?posLabel(r.position):'—')+'</span></td>';
     html+='<td style="font-size:12px;color:var(--text2)">'+(r?r.sp||'—':'—')+'</td>';
     html+='<td>'+pnlTips+'</td>';
     html+='<td>'+pnlSP+'</td>';
