@@ -294,6 +294,102 @@ function applyFilters(){
 
   document.getElementById('tips-count').textContent = filtered.length + ' tips';
   renderTable(filtered);
+  updateStatsFromFiltered(filtered);
+}
+
+function updateStatsFromFiltered(tips){
+  var PTS = 20;
+  var wins=0,places=0,losses=0,unsettled=0,staked=0,retTips=0,retSP=0;
+  var monthly={};
+
+  for(var i=0;i<tips.length;i++){
+    var t=tips[i];
+    var r=t.result;
+    var s=t.stake_pts*(t.bet_type==='ew'?2:1);
+    staked+=s;
+    if(!t.settled){unsettled++;continue;}
+    if(!r) continue;
+    retTips+=s+r.total_pts;
+    // SP P&L: use sp_dec and odds_dec to recalculate
+    if(r.sp_dec&&r.sp_dec>1&&t.odds_dec&&t.odds_dec>1){
+      var places_n=t.each_way_places||0;
+      var frac=5;
+      var pos=parseInt(r.position||'99',10)||99;
+      var sp=r.sp_dec,tipped=t.odds_dec,stake=t.stake_pts;
+      var wpSP=0,ppSP=0;
+      if(t.bet_type==='win'){
+        wpSP=pos===1?stake*(sp-1):-stake;
+      } else {
+        wpSP=pos===1?stake*(sp-1):-stake;
+        var placeOdds=(sp-1)/frac+1;
+        ppSP=(pos>=1&&pos<=places_n)?stake*(placeOdds-1):-stake;
+      }
+      retSP+=s+(wpSP+ppSP);
+    } else {
+      retSP+=s+r.total_pts;
+    }
+    if(r.result_type==='win') wins++;
+    else if(r.result_type==='place') places++;
+    else losses++;
+
+    // Monthly
+    var m=(t.tip_date||'').slice(0,7);
+    if(!monthly[m]) monthly[m]={staked:0,retTips:0,retSP:0};
+    monthly[m].staked+=s;
+    monthly[m].retTips+=s+r.total_pts;
+    if(r.sp_dec&&r.sp_dec>1&&t.odds_dec&&t.odds_dec>1){
+      var pos2=parseInt(r.position||'99',10)||99;
+      var sp2=r.sp_dec,stake2=t.stake_pts,ew2=t.bet_type==='ew',pl2=t.each_way_places||0;
+      var wp2=pos2===1?stake2*(sp2-1):-stake2;
+      var pp2=ew2?((pos2>=1&&pos2<=pl2)?stake2*((sp2-1)/5+1-1):-stake2):0;
+      var s2=stake2*(ew2?2:1);
+      monthly[m].retSP+=s2+(wp2+pp2);
+    } else {
+      monthly[m].retSP+=s+r.total_pts;
+    }
+  }
+
+  var profitTips=retTips-staked, profitSP=retSP-staked;
+  var roi=staked?+(profitTips/staked*100).toFixed(1):0;
+  var roiSP=staked?+(profitSP/staked*100).toFixed(1):0;
+
+  function setEl(id,val,cls){
+    var el=document.getElementById(id);
+    if(!el) return;
+    el.textContent=val;
+    if(cls) el.className='val '+cls;
+  }
+
+  setEl('s-wins',wins);
+  setEl('s-places',places);
+  setEl('s-losses',losses);
+  setEl('s-unsettled',unsettled);
+  var ptSign=profitTips>=0?'+':'';
+  var spSign=profitSP>=0?'+':'';
+  setEl('s-profit',ptSign+profitTips.toFixed(2)+'pts',profitTips>=0?'pos':'neg');
+  setEl('s-roi',ptSign+roi+'%',profitTips>=0?'pos':'neg');
+  setEl('s-gbp',(profitTips>=0?'+£':'-£')+Math.abs(profitTips*PTS).toFixed(0),profitTips>=0?'pos':'neg');
+  setEl('s-profit-sp',spSign+profitSP.toFixed(2)+'pts',profitSP>=0?'pos':'neg');
+  setEl('s-roi-sp',spSign+roiSP+'%',profitSP>=0?'pos':'neg');
+  setEl('s-gbp-sp',(profitSP>=0?'+£':'-£')+Math.abs(profitSP*PTS).toFixed(0),profitSP>=0?'pos':'neg');
+
+  // Rebuild chart
+  var months=Object.keys(monthly).sort();
+  var labels=[],cumT=[],cumS=[],runT=0,runS=0;
+  for(var j=0;j<months.length;j++){
+    var md=monthly[months[j]];
+    runT+=md.retTips-md.staked;
+    runS+=md.retSP-md.staked;
+    labels.push(months[j]);
+    cumT.push(+(runT*PTS).toFixed(0));
+    cumS.push(+(runS*PTS).toFixed(0));
+  }
+  if(chart){
+    chart.data.labels=labels;
+    chart.data.datasets[0].data=cumT;
+    chart.data.datasets[1].data=cumS;
+    chart.update();
+  }
 }
 
 function clearFilters(){
