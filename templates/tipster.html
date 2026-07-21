@@ -154,6 +154,12 @@
         <option value="roan">Roan</option>
       </select>
       <button class="btn-sm" onclick="clearFilters()">Clear</button>
+      <select id="f-sort" onchange="applyFilters()" style="margin-left:auto">
+        <option value="date">Sort: Date / Course / Time / Horse</option>
+        <option value="horse">Sort: Horse name</option>
+        <option value="profit">Sort: P&L (best first)</option>
+        <option value="odds">Sort: Odds (highest first)</option>
+      </select>
     </div>
 
     <div id="tips-container"><div class="empty">Loading...</div></div>
@@ -292,6 +298,25 @@ function applyFilters(){
       if(!t.colour.toLowerCase().includes(fColour)) return false;
     }
     return true;
+  });
+
+  // Sort
+  var sortBy = document.getElementById('f-sort').value;
+  filtered.sort(function(a,b){
+    if(sortBy==='horse') return (a.horse_name||'').localeCompare(b.horse_name||'');
+    if(sortBy==='profit'){
+      var pa=(a.result?a.result.total_pts:-999), pb=(b.result?b.result.total_pts:-999);
+      return pb-pa;
+    }
+    if(sortBy==='odds') return (b.odds_dec||0)-(a.odds_dec||0);
+    // Default: date desc, then course, then race_time, then horse
+    var da=a.tip_date||'', db=b.tip_date||'';
+    if(da!==db) return db.localeCompare(da);
+    var ca=a.course||'', cb=b.course||'';
+    if(ca!==cb) return ca.localeCompare(cb);
+    var ta=a.race_time||'', tb=b.race_time||'';
+    if(ta!==tb) return ta.localeCompare(tb);
+    return (a.horse_name||'').localeCompare(b.horse_name||'');
   });
 
   document.getElementById('tips-count').textContent = filtered.length + ' tips';
@@ -451,10 +476,13 @@ function renderTable(tips){
     html+='<td style="font-size:12px;color:var(--text2)">'+(r?r.sp||'—':'—')+'</td>';
     html+='<td>'+pnlTips+'</td>';
     html+='<td>'+pnlSP+'</td>';
-    html+='<td>'+(t.reasoning?'<span style="cursor:pointer;font-size:11px;color:var(--brand);white-space:nowrap" onclick="toggleRow('+i+')">&#9654; notes</span>':'')+'</td>';
+    html+='<td style="white-space:nowrap">';
+    if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span> ';
+    {% if is_admin %}html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" onclick="deleteTipRow('+t.id+',this)">&#128465;</span>';{% endif %}
+    html+='</td>';
     html+='</tr>';
     if(t.reasoning){
-      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="14">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td></tr>';
+      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="15">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td></tr>';
     }
   }
   html+='</tbody></table></div>';
@@ -464,6 +492,19 @@ function renderTable(tips){
 function toggleRow(i){
   var r=document.getElementById('rrow-'+i);
   if(r) r.style.display=r.style.display==='none'?'':'none';
+}
+
+function deleteTipRow(tipId, el){
+  if(!confirm('Delete this tip permanently?')) return;
+  fetch('/api/admin/tip/'+tipId,{method:'DELETE'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok'){
+        // Remove from allTips and re-render
+        allTips=allTips.filter(function(t){return t.id!==tipId;});
+        applyFilters();
+      } else { alert('Error: '+(d.error||'unknown')); }
+    });
 }
 
 function settleTips(){
