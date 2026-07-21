@@ -486,19 +486,21 @@ function renderTable(tips){
     var betLbl=t.bet_type==='ew'?t.stake_pts+'pt E/W'+(t.each_way_places?' '+t.each_way_places+'pl':''):t.stake_pts+'pt Win';
     var pnlTips='—', pnlSP='—';
     if(r){
-      pnlTips=ptsLabel(r.total_pts, true);
-      // SP P&L: losses and NR are always same as tipped
+      // total_pts is settled at SP — recalculate tipped P&L from odds_dec
+      var _p=parseInt(r.position||'99',10)||99,_sk=t.stake_pts,_ew=t.bet_type==='ew',_pl=t.each_way_places||4;
       if(r.result_type==='loss'||r.result_type==='nr'){
+        pnlTips=ptsLabel(r.total_pts, true);
         pnlSP=pnlTips;
-      } else if(r.sp_dec && r.sp_dec>1.0 && t.odds_dec && t.odds_dec>1.0){
-        var spDec=r.sp_dec, tDec=t.odds_dec, sk=t.stake_pts;
-        var isEw=t.bet_type==='ew', pl=t.each_way_places||4, pos=parseInt(r.position||'99',10)||99;
-        var wp=pos===1?sk*(spDec-1):-sk;
-        var pp=isEw?((pos>=1&&pos<=pl)?sk*((spDec-1)/5):-sk):0;
-        var spPts=wp+(isEw?pp:0);
-        pnlSP=ptsLabel(+spPts.toFixed(2), true);
       } else {
-        pnlSP=pnlTips;
+        // Tipped odds P&L
+        var _tD=t.odds_dec||0;
+        if(_tD>1){
+          var _twp=_p===1?_sk*(_tD-1):-_sk;
+          var _tpp=_ew?((_p>=1&&_p<=_pl)?_sk*((_tD-1)/5):-_sk):0;
+          pnlTips=ptsLabel(+(_twp+(_ew?_tpp:0)).toFixed(2), true);
+        } else { pnlTips=ptsLabel(r.total_pts, true); }
+        // SP P&L (stored)
+        pnlSP=ptsLabel(r.total_pts, true);
       }
     }
     html+='<tr id="row-'+i+'" style="border-bottom:0.5px solid var(--border)">';
