@@ -273,7 +273,7 @@ function loadUnsettled() {
         var t = tips[i];
         var betLabel = t.bet_type === 'ew' ? t.stake_pts + 'pt E/W' : t.stake_pts + 'pt Win';
         html += '<tr style="border-bottom:0.5px solid var(--border)">';
-        html += '<td style="padding:6px 10px;font-size:12px;color:var(--text2)">' + (t.tip_date||'') + '</td>';
+        html += '<td style="padding:6px 10px;font-size:12px;color:var(--text2);white-space:nowrap">' + (t.tip_date||'') + (t.tip_date ? ' <a href="https://www.racingpost.com/results/' + t.tip_date + '" target="_blank" title="Racing Post results" style="color:var(--brand);text-decoration:none;font-size:11px">&#128279;</a>' : '') + '</td>';
         html += '<td style="padding:6px 10px">' + (t.course||'—') + '</td>';
         html += '<td style="padding:6px 10px;color:var(--brand);font-weight:500">' + (t.race_time||'—') + '</td>';
         html += '<td style="padding:6px 10px;font-weight:500">' + escHtml(t.horse_name) + '</td>';
