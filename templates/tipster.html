@@ -131,10 +131,12 @@
         <option value="ew">E/W only</option>
         <option value="win">Win only</option>
       </select>
-      <select id="f-settled" onchange="applyFilters()">
+      <select id="f-result" onchange="applyFilters()">
         <option value="">All results</option>
-        <option value="true">Settled</option>
-        <option value="false">Unsettled</option>
+        <option value="win">Won</option>
+        <option value="place">Placed</option>
+        <option value="loss">Lost</option>
+        <option value="unsettled">Unsettled</option>
       </select>
       <select id="f-tagged" onchange="applyFilters()">
         <option value="">All horses</option>
@@ -272,7 +274,7 @@ function renderChart(s){
 
 function applyFilters(){
   var fBet     = document.getElementById('f-bet').value;
-  var fSettled = document.getElementById('f-settled').value;
+  var fResult  = document.getElementById('f-result').value;
   var fTagged  = document.getElementById('f-tagged').value;
   var fCourse  = document.getElementById('f-course').value.trim().toLowerCase();
   var fJockey  = document.getElementById('f-jockey').value.trim().toLowerCase();
@@ -280,8 +282,8 @@ function applyFilters(){
 
   var filtered = allTips.filter(function(t){
     if(fBet && t.bet_type !== fBet) return false;
-    if(fSettled === 'true'  && !t.settled) return false;
-    if(fSettled === 'false' &&  t.settled) return false;
+    if(fResult==='unsettled' && t.settled) return false;
+    if(fResult && fResult!=='unsettled' && (!t.result||t.result.result_type!==fResult)) return false;
     if(fTagged === 'true'  && !t.tagged)  return false;
     if(fCourse && !(t.course||'').toLowerCase().includes(fCourse)) return false;
     if(fJockey && !(t.jockey||'').toLowerCase().includes(fJockey)) return false;
@@ -310,24 +312,21 @@ function updateStatsFromFiltered(tips){
     if(!t.settled){unsettled++;continue;}
     if(!r) continue;
     retTips+=s+r.total_pts;
-    // SP P&L: use sp_dec and odds_dec to recalculate
-    if(r.sp_dec&&r.sp_dec>1&&t.odds_dec&&t.odds_dec>1){
-      var places_n=t.each_way_places||0;
-      var frac=5;
-      var pos=parseInt(r.position||'99',10)||99;
-      var sp=r.sp_dec,tipped=t.odds_dec,stake=t.stake_pts;
-      var wpSP=0,ppSP=0;
-      if(t.bet_type==='win'){
-        wpSP=pos===1?stake*(sp-1):-stake;
-      } else {
-        wpSP=pos===1?stake*(sp-1):-stake;
-        var placeOdds=(sp-1)/frac+1;
-        ppSP=(pos>=1&&pos<=places_n)?stake*(placeOdds-1):-stake;
+    // SP P&L: only wins/places differ from tipped odds; losses are always -stake
+    (function(){
+      var rt=r.result_type;
+      if(rt==='loss'||rt==='nr'){
+        retSP+=s+r.total_pts; // same as tipped - loss is always -stake regardless of odds
+        return;
       }
-      retSP+=s+(wpSP+ppSP);
-    } else {
-      retSP+=s+r.total_pts;
-    }
+      var spD=r.sp_dec||0, p=parseInt(r.position||'99',10)||99;
+      var sk=t.stake_pts, ew=t.bet_type==='ew', pl=t.each_way_places||4, fr=5;
+      if(spD>1){
+        var wp=p===1?sk*(spD-1):-sk;
+        var pp=ew?((p>=1&&p<=pl)?sk*((spD-1)/fr):-sk):0;
+        retSP+=s+(wp+(ew?pp:0));
+      } else { retSP+=s+r.total_pts; }
+    })();
     if(r.result_type==='win') wins++;
     else if(r.result_type==='place') places++;
     else losses++;
@@ -337,16 +336,19 @@ function updateStatsFromFiltered(tips){
     if(!monthly[m]) monthly[m]={staked:0,retTips:0,retSP:0};
     monthly[m].staked+=s;
     monthly[m].retTips+=s+r.total_pts;
-    if(r.sp_dec&&r.sp_dec>1&&t.odds_dec&&t.odds_dec>1){
-      var pos2=parseInt(r.position||'99',10)||99;
-      var sp2=r.sp_dec,stake2=t.stake_pts,ew2=t.bet_type==='ew',pl2=t.each_way_places||0;
-      var wp2=pos2===1?stake2*(sp2-1):-stake2;
-      var pp2=ew2?((pos2>=1&&pos2<=pl2)?stake2*((sp2-1)/5+1-1):-stake2):0;
-      var s2=stake2*(ew2?2:1);
-      monthly[m].retSP+=s2+(wp2+pp2);
-    } else {
-      monthly[m].retSP+=s+r.total_pts;
-    }
+    (function(){
+      var rt2=r.result_type;
+      if(rt2==='loss'||rt2==='nr'){
+        monthly[m].retSP+=s+r.total_pts; return;
+      }
+      var spD2=r.sp_dec||0, p2=parseInt(r.position||'99',10)||99;
+      var sk2=t.stake_pts, ew2=t.bet_type==='ew', pl2=t.each_way_places||4;
+      if(spD2>1){
+        var wp2=p2===1?sk2*(spD2-1):-sk2;
+        var pp2=ew2?((p2>=1&&p2<=pl2)?sk2*((spD2-1)/5):-sk2):0;
+        monthly[m].retSP+=s+(wp2+(ew2?pp2:0));
+      } else { monthly[m].retSP+=s+r.total_pts; }
+    })();
   }
 
   var profitTips=retTips-staked, profitSP=retSP-staked;
@@ -394,7 +396,7 @@ function updateStatsFromFiltered(tips){
 
 function clearFilters(){
   document.getElementById('f-bet').value='';
-  document.getElementById('f-settled').value='';
+  document.getElementById('f-result').value='';
   document.getElementById('f-tagged').value='';
   document.getElementById('f-course').value='';
   document.getElementById('f-jockey').value='';
