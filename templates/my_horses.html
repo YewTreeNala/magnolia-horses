@@ -21,7 +21,9 @@
     .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
     .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
     .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
-    .nav-links a { color: var(--brand); text-decoration: none; }
+    .nav-links a { color: var(--brand); text-decoration: none; font-size:13px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
     .nav-links a:hover { text-decoration: underline; }
     .page-title { font-size: 20px; font-weight: 500; margin: 1.5rem 0 0.25rem; }
     .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
@@ -72,10 +74,12 @@
 <div class="page">
   <div class="brand-header">
     <div class="brand-name">Magnolia Horses</div>
-    <div class="nav-links">
-      <a href="/">Search</a>
-      <a href="/tipster">Tipster</a>
-      <a href="/account">Account</a>
+        <div class="nav-links">
+      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
+      <a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>
+      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
+      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>
     </div>
   </div>

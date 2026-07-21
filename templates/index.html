@@ -30,6 +30,7 @@
     .nav-links { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
     .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
     .nav-links a:hover { text-decoration: underline; }
+    .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
     .nav-user { font-size: 13px; color: var(--text2); white-space: nowrap; }
 
     .search-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin: 0.75rem 0 1rem; backdrop-filter: blur(4px); }
@@ -210,17 +211,13 @@
       <div class="brand-name">Magnolia Horses</div>
       <div class="brand-tagline">Race card search &amp; runner database</div>
     </div>
-    <div class="nav-links">
-      {% if current_user.is_authenticated %}
-        <span class="nav-user">{{ current_user.name }}</span>
-        <a href="/my-horses">My horses</a>
-        <a href="/account">Account</a>
-        {% if is_admin %}<a href="/admin/users">Users</a>{% endif %}
-        <a href="/logout">Sign out</a>
-      {% else %}
-        <a href="/login">Sign in</a>
-        <a href="/register">Register</a>
-      {% endif %}
+        <div class="nav-links">
+      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
+      <a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>
+      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
+      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
+      <a href="/logout">Sign out</a>
     </div>
   </div>
 

@@ -87,7 +87,7 @@ def is_admin():
 
 @app.route('/')
 def index():
-    return render_template('index.html', is_admin=is_admin())
+    return render_template('index.html', page_id='search', is_admin=is_admin())
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -246,7 +246,7 @@ def my_horses():
             'alert':   s.alert,
             'filters': s.filters,
         })
-    return render_template('my_horses.html', tagged=tagged,
+    return render_template('my_horses.html', page_id='my_horses', tagged=tagged,
                            running_today=running_today, searches=searches_display)
 
 
@@ -259,7 +259,7 @@ def account():
     except Exception:
         db.create_all()
         logs = []
-    return render_template('account.html', logs=logs, is_admin=is_admin())
+    return render_template('account.html', page_id='account', logs=logs, is_admin=is_admin())
 
 
 @app.route('/admin/users')
@@ -300,7 +300,7 @@ def admin_users():
             'banned_at':    getattr(u, 'banned_at', '') or '',
             'is_admin':     u.email == ADMIN_EMAIL,
         })
-    return render_template('admin_users.html', users=users_data)
+    return render_template('admin_users.html', users=users_data, is_admin=True, page_id='admin')
 
 
 # ── Tag API ────────────────────────────────────────────────────────────────────
@@ -878,7 +878,7 @@ def send_test_email():
 @app.route('/tipster')
 @login_required
 def tipster_page():
-    return render_template('tipster.html', is_admin=is_admin())
+    return render_template('tipster.html', is_admin=is_admin(), page_id='tipster')
 
 
 @app.route('/admin/tipster')
@@ -886,11 +886,11 @@ def tipster_page():
 def admin_tipster():
     if not is_admin():
         return redirect(url_for('index'))
-    return render_template('admin_tipster.html')
+    return render_template('admin_tipster.html', is_admin=True, page_id='admin')
 
 @app.route('/admin/colours')
 def admin_colours():
-    return render_template('admin_colours.html')
+    return render_template('admin_colours.html', is_admin=True, page_id='admin')
 
 
 @app.route('/api/colours/runners')
