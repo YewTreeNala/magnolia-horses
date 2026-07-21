@@ -58,6 +58,9 @@
     .tips-table-wrap { overflow-x:auto; max-height:70vh; overflow-y:auto; }
     .tips-table-wrap table { border-collapse:collapse; width:100%; }
     .tips-table-wrap thead th { position:sticky; top:0; background:var(--surface); z-index:10; box-shadow:0 1px 0 var(--border); }
+    .editable{cursor:pointer;border-bottom:1px dashed var(--border2)}
+    .editable:hover{background:var(--brand-light)}
+    .edit-input{font-size:13px;font-family:inherit;padding:2px 4px;border:1px solid var(--brand);border-radius:3px;width:90px;outline:none}
     .reasoning-row td{padding:6px 10px 10px 20px;font-size:12px;color:var(--text2);font-style:italic;background:var(--surface2);border-bottom:0.5px solid var(--border)}
     .empty{text-align:center;padding:2rem;color:var(--text3);font-size:14px}
 
@@ -447,36 +450,38 @@ function renderTable(tips){
     var pnlTips='—', pnlSP='—';
     if(r){
       pnlTips=ptsLabel(r.total_pts, true);
-      // SP P&L estimate
-      if(r.sp_dec && r.sp_dec>1.0 && t.odds_dec && t.odds_dec>1.0){
-        var stake=t.stake_pts;
-        var isEw=t.bet_type==='ew';
-        // Simple estimate: scale total_pts by SP/tipped ratio
-        var tipsDec=t.odds_dec||1;
-        var spDec=r.sp_dec||tipsDec;
-        var ratio=(spDec-1)/(tipsDec-1);
-        var spPnl=r.total_pts*ratio;
-        pnlSP=ptsLabel(+spPnl.toFixed(2), true);
+      // SP P&L: losses and NR are always same as tipped
+      if(r.result_type==='loss'||r.result_type==='nr'){
+        pnlSP=pnlTips;
+      } else if(r.sp_dec && r.sp_dec>1.0 && t.odds_dec && t.odds_dec>1.0){
+        var spDec=r.sp_dec, tDec=t.odds_dec, sk=t.stake_pts;
+        var isEw=t.bet_type==='ew', pl=t.each_way_places||4, pos=parseInt(r.position||'99',10)||99;
+        var wp=pos===1?sk*(spDec-1):-sk;
+        var pp=isEw?((pos>=1&&pos<=pl)?sk*((spDec-1)/5):-sk):0;
+        var spPts=wp+(isEw?pp:0);
+        pnlSP=ptsLabel(+spPts.toFixed(2), true);
       } else {
         pnlSP=pnlTips;
       }
     }
     html+='<tr id="row-'+i+'" style="border-bottom:0.5px solid var(--border)">';
-    html+='<td style="white-space:nowrap;color:var(--text2);font-size:12px">'+(t.tip_date||'')
-         +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')
-         +(IS_ADMIN?' <span style="cursor:pointer;color:var(--red);font-size:11px" title="Delete" onclick="deleteTipRow('+t.id+','+i+')">&#128465;</span>':'')+'</td>';
+    html+='<td style="white-space:nowrap;color:var(--text2);font-size:12px">';
+    if(IS_ADMIN) html+='<span class="editable" title="Click to edit date" onclick="editField(this,'+t.id+',&quot;race_date&quot;,&quot;'+(t.tip_date||'')+'&quot;)">'+escHtml(t.tip_date||'—')+'</span>';
+    else html+=escHtml(t.tip_date||'');
+    html+=(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'');
+    html+=(IS_ADMIN?' <span style="cursor:pointer;color:var(--red);font-size:11px" title="Delete" onclick="deleteTipRow('+t.id+','+i+')">&#128465;</span>':'')+'</td>';
     html+='<td style="color:var(--text2)">'+(t.course||'—')+'</td>';
     html+='<td style="color:var(--brand);font-weight:500;white-space:nowrap">'+(t.race_time||'—')+'</td>';
     var rpUrl='https://www.racingpost.com/search-results/?keyword='+encodeURIComponent(t.horse_name);
     html+='<td style="font-weight:500"><a href="'+rpUrl+'" target="_blank" style="color:var(--text);text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)">'+escHtml(t.horse_name)+'</a>'+(t.tagged?'<span class="tagged-badge">&#9733;</span>':'')+'</td>';
     html+='<td style="font-size:12px;color:var(--text2);white-space:nowrap">'+betLbl+'</td>';
-    html+='<td style="font-weight:500">'+(t.odds||'—')+'</td>';
+    html+='<td>'+(IS_ADMIN?'<span class="editable" style="font-weight:500" title="Click to edit tipped odds" onclick="editField(this,'+t.id+',&quot;odds&quot;,&quot;'+(t.odds||'')+'&quot;)">'+escHtml(t.odds||'—')+'</span>':escHtml(t.odds||'—'))+'</td>';
 
     html+='<td>'+resultBadge(r)+'</td>';
     var posNum=r?parseInt(r.position,10):0;
     var posColor=posNum===1?'color:#7a5500;background:rgba(196,154,0,0.15);font-weight:600;border-radius:4px;padding:1px 6px':r&&r.result_type==='place'?'color:var(--blue);font-weight:500':'';
-    html+='<td style="font-size:12px"><span style="'+posColor+'">'+(r?posLabel(r.position):'—')+'</span></td>';
-    html+='<td style="font-size:12px;color:var(--text2)">'+(r?r.sp||'—':'—')+'</td>';
+    html+='<td style="font-size:12px">'+(IS_ADMIN?'<span class="editable" style="'+posColor+'" title="Click to edit position" onclick="editField(this,'+t.id+',&quot;position&quot;,&quot;'+(r?r.position||'':'')+'&quot;)">'+posLabel(r?r.position:'')+'</span>':'<span style="'+posColor+'">'+(r?posLabel(r.position):'—')+'</span>')+'</td>';
+    html+='<td style="font-size:12px">'+(IS_ADMIN&&r?'<span class="editable" style="color:var(--text2)" title="Click to edit SP" onclick="editField(this,'+t.id+',&quot;sp&quot;,&quot;'+(r?r.sp||'':'')+'&quot;)">'+escHtml(r?r.sp||'—':'—')+'</span>':(r?r.sp||'—':'—'))+'</td>';
     html+='<td>'+pnlTips+'</td>';
     html+='<td>'+pnlSP+'</td>';
     html+='<td style="white-space:nowrap">';
@@ -517,6 +522,42 @@ function deleteTipRow(tipId, rowIdx){
         }
       } else { alert('Error: '+(d.error||'unknown')); }
     });
+}
+
+function editField(el, tipId, field, currentVal){
+  var input=document.createElement('input');
+  input.type='text';
+  input.className='edit-input';
+  input.value=currentVal;
+  input.style.width=field==='race_date'?'100px':field==='position'?'50px':'80px';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+  function save(){
+    var newVal=input.value.trim();
+    if(newVal===currentVal){ input.replaceWith(el); return; }
+    fetch('/api/admin/tip-edit/'+tipId, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({field:field, value:newVal})
+    }).then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==='ok'){
+        el.textContent=newVal||'—';
+        input.replaceWith(el);
+        // Refresh data to get updated P&L
+        loadData();
+      } else {
+        alert('Error: '+(d.error||'unknown'));
+        input.replaceWith(el);
+      }
+    }).catch(function(){ input.replaceWith(el); });
+  }
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', function(e){
+    if(e.key==='Enter') input.blur();
+    if(e.key==='Escape'){ input.removeEventListener('blur',save); input.replaceWith(el); }
+  });
 }
 
 function settleTips(){
