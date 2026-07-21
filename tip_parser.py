@@ -358,10 +358,10 @@ def settle_tip(tip, position_str, sp_dec):
         # Non-numeric position (F, PU, UR etc.) = loss
         pos = 99
 
-    stake = tip.stake_pts
-    bet_type = tip.bet_type
-    places = tip.each_way_places
-    fraction = tip.each_way_fraction or 5
+    stake    = float(tip.stake_pts or 0.5)
+    bet_type = tip.bet_type or 'ew'
+    places   = int(tip.each_way_places or 4)
+    fraction = int(tip.each_way_fraction or 5)
 
     # Use SP decimal if tip odds not reliable
     if sp_dec and sp_dec > 1.0:
