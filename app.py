@@ -1214,7 +1214,16 @@ def tipster_webhook():
     raw_text     = data.get('text', '').strip()
     msg_id       = data.get('message_id', 0)
     msg_datetime = data.get('datetime', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
-    race_date    = data.get('race_date', date.today().strftime('%Y-%m-%d'))
+    # Apply midday rule: tips posted at midday or after are for the next day's racing
+    if data.get('race_date'):
+        race_date = data.get('race_date')
+    else:
+        try:
+            from datetime import timedelta
+            msg_dt = datetime.strptime(msg_datetime[:19], '%Y-%m-%d %H:%M:%S')
+            race_date = (msg_dt + timedelta(days=1)).strftime('%Y-%m-%d') if msg_dt.hour >= 12 else msg_dt.strftime('%Y-%m-%d')
+        except Exception:
+            race_date = date.today().strftime('%Y-%m-%d')
 
     if not raw_text:
         return jsonify({'status': 'ignored', 'reason': 'empty text'})
@@ -1781,8 +1790,50 @@ Mohmentous stands out quite a bit on RP speed figures here and looks a big price
 Power Blue jumps out at every touch point. A Group 1 winner over 6f at the track, he's competed at the same level over a mile in recent outings, producing superior figures to this field."""},
 ]
     messages = data.get('messages') or MESSAGES
-    tipster  = _get_or_create_tipster('Turn Of Foot')
-    created  = 0
+    tipster = _get_or_create_tipster('Turn Of Foot')
+    created = 0
+    data_json = request.get_json() or {}
+
+    # Mode 1: pre-parsed tips passed directly
+    pre_parsed = data_json.get('tips', [])
+    if pre_parsed:
+        for t in pre_parsed:
+            msg_id = t.get('message_id', 0)
+            if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
+                continue
+            if not t.get('horse_name'):
+                continue
+            msg_datetime = t.get('datetime', '')
+            tip = Tip(
+                tipster_id       = tipster.id,
+                horse_name       = t['horse_name'],
+                tip_date         = msg_datetime[:10],
+                tip_datetime     = msg_datetime,
+                course           = t.get('course', ''),
+                race_time        = t.get('race_time', ''),
+                race_date        = t.get('race_date', msg_datetime[:10]),
+                bet_type         = t.get('bet_type', 'ew'),
+                stake_pts        = t.get('stake_pts', 0.5),
+                odds             = t.get('odds', ''),
+                odds_dec         = t.get('odds_dec', 0.0),
+                each_way_places  = t.get('each_way_places', 4),
+                each_way_fraction= t.get('each_way_fraction', 5),
+                reasoning        = t.get('reasoning', ''),
+                raw_message      = t.get('text', ''),
+                telegram_msg_id  = msg_id,
+                uncertain        = t.get('uncertain', False),
+                created_at       = datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            )
+            db.session.add(tip)
+            created += 1
+            if created % 50 == 0:
+                db.session.flush()
+        db.session.commit()
+        _settle_pending_tips()
+        return jsonify({'status': 'ok', 'created': created})
+
+    # Mode 2: raw messages to parse
+    messages = data_json.get('messages') or MESSAGES
     for msg in messages:
         raw_text     = msg.get('text', '')
         msg_datetime = msg.get('datetime', '')
@@ -1793,26 +1844,26 @@ Power Blue jumps out at every touch point. A Group 1 winner over 6f at the track
         tips = parse_message(raw_text)
         for t in tips:
             if t.get('uncertain') and not t.get('horse_name'):
-                continue  # skip fully unparseable
+                continue
             tip = Tip(
-                tipster_id=tipster.id,
-                horse_name=t['horse_name'],
-                tip_date=msg_datetime[:10],
-                tip_datetime=msg_datetime,
-                course=t.get('course',''),
-                race_time=t.get('race_time',''),
-                race_date=race_date,
-                bet_type=t.get('bet_type','ew'),
-                stake_pts=t.get('stake_pts',0.5),
-                odds=t.get('odds',''),
-                odds_dec=t.get('odds_dec',0.0),
-                each_way_places=t.get('each_way_places',4),
-                each_way_fraction=t.get('each_way_fraction',5),
-                reasoning=t.get('reasoning',''),
-                raw_message=raw_text,
-                telegram_msg_id=msg_id,
-                uncertain=t.get('uncertain',False),
-                created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                tipster_id       = tipster.id,
+                horse_name       = t['horse_name'],
+                tip_date         = msg_datetime[:10],
+                tip_datetime     = msg_datetime,
+                course           = t.get('course', ''),
+                race_time        = t.get('race_time', ''),
+                race_date        = race_date,
+                bet_type         = t.get('bet_type', 'ew'),
+                stake_pts        = t.get('stake_pts', 0.5),
+                odds             = t.get('odds', ''),
+                odds_dec         = t.get('odds_dec', 0.0),
+                each_way_places  = t.get('each_way_places', 4),
+                each_way_fraction= t.get('each_way_fraction', 5),
+                reasoning        = t.get('reasoning', ''),
+                raw_message      = raw_text,
+                telegram_msg_id  = msg_id,
+                uncertain        = t.get('uncertain', False),
+                created_at       = datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             )
             db.session.add(tip)
             created += 1
