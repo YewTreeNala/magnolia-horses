@@ -129,7 +129,7 @@ class Tip(db.Model):
 
 
 class TipResult(db.Model):
-    """Settlement result for a tip â€” auto-populated from race sync."""
+    """Settlement result for a tip -- auto-populated from race sync."""
     __tablename__ = 'tip_result'
     id            = db.Column(db.Integer, primary_key=True)
     tip_id        = db.Column(db.Integer, db.ForeignKey('tip.id'), nullable=False)
@@ -144,7 +144,7 @@ class TipResult(db.Model):
 
 
 class HorseProfile(db.Model):
-    """One row per unique horse — keyed by API horse_id."""
+    """One row per unique horse ï¿½ keyed by API horse_id."""
     __tablename__ = 'horse_profile'
     horse_id   = db.Column(db.String(30), primary_key=True)
     name       = db.Column(db.String(100))
