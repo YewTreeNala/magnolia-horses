@@ -1281,48 +1281,52 @@ def settle_from_results_json():
 
     db.session.commit()
 
-    # Populate RunnerHistory in background to avoid request timeout
+    # Populate RunnerHistory via bulk INSERT in background thread
     import threading as _threading
     def _populate_rh(results_data):
         with app.app_context():
-            rh_added = rh_updated = 0
-            for r in results_data:
-                date  = r.get('date', '')
-                course = r.get('course', '')
-                off   = r.get('off', '')
-                horse = r.get('horse', '')
-                if not date or not horse:
-                    continue
-                existing = RunnerHistory.query.filter_by(
-                    horse_name=horse, race_date=date, course=course, race_time=off
-                ).first()
-                if existing:
-                    if r.get('pos'): existing.position = str(r['pos'])
-                    if r.get('sp'):  existing.sp = str(r['sp'])
-                    rh_updated += 1
-                else:
-                    db.session.add(RunnerHistory(
-                        race_date=date, course=course, race_time=off,
-                        race_name=r.get('race_name',''), race_class=r.get('class',''),
-                        distance=r.get('dist',''), going=r.get('going',''),
-                        horse_id='', horse_name=horse,
-                        number=str(r.get('num','')), draw=str(r.get('draw','')),
-                        age=str(r.get('age','')), sex=str(r.get('sex','')),
-                        trainer=r.get('trainer',''), jockey=r.get('jockey',''),
-                        owner=r.get('owner',''), form='',
-                        weight=str(r.get('wgt','')), official_rating=str(r.get('or','')),
-                        rpr=str(r.get('rpr','')), ts=str(r.get('ts','')),
-                        odds='', sp=str(r.get('sp','')), headgear=str(r.get('hg','')),
-                        last_run='', position=str(r.get('pos','')),
-                        silk_url='', wind_surgery='', trainer_14_days='',
-                    ))
-                    rh_added += 1
-                if (rh_added + rh_updated) % 500 == 0:
-                    try: db.session.flush()
-                    except: db.session.rollback()
             try:
-                db.session.commit()
-                print(f"[RunnerHistory] added={rh_added} updated={rh_updated}")
+                from sqlalchemy import text as _text
+                _sql = (
+                    'INSERT INTO runner_history '
+                    '(race_date,course,race_time,race_name,race_class,distance,going,'
+                    'horse_id,horse_name,number,draw,age,sex,trainer,jockey,owner,'
+                    'form,weight,official_rating,rpr,ts,odds,sp,headgear,'
+                    'last_run,position,silk_url,wind_surgery,trainer_14_days) '
+                    'VALUES '
+                    '(:race_date,:course,:race_time,:race_name,:race_class,:distance,:going,'
+                    ':horse_id,:horse_name,:number,:draw,:age,:sex,:trainer,:jockey,:owner,'
+                    ':form,:weight,:official_rating,:rpr,:ts,:odds,:sp,:headgear,'
+                    ':last_run,:position,:silk_url,:wind_surgery,:trainer_14_days) '
+                    'ON CONFLICT (horse_name,race_date,course,race_time) DO UPDATE SET '
+                    'position=EXCLUDED.position, sp=EXCLUDED.sp'
+                )
+                rows = []
+                for r in results_data:
+                    if not r.get('date') or not r.get('horse'):
+                        continue
+                    rows.append({
+                        'race_date': r.get('date',''), 'course': r.get('course',''),
+                        'race_time': r.get('off',''), 'race_name': r.get('race_name',''),
+                        'race_class': r.get('class',''), 'distance': r.get('dist',''),
+                        'going': r.get('going',''), 'horse_id': '',
+                        'horse_name': r.get('horse',''),
+                        'number': str(r.get('num','')), 'draw': str(r.get('draw','')),
+                        'age': str(r.get('age','')), 'sex': str(r.get('sex','')),
+                        'trainer': r.get('trainer',''), 'jockey': r.get('jockey',''),
+                        'owner': r.get('owner',''), 'form': '',
+                        'weight': str(r.get('wgt','')),
+                        'official_rating': str(r.get('or','')),
+                        'rpr': str(r.get('rpr','')), 'ts': str(r.get('ts','')),
+                        'odds': '', 'sp': str(r.get('sp','')),
+                        'headgear': str(r.get('hg','')), 'last_run': '',
+                        'position': str(r.get('pos','')),
+                        'silk_url': '', 'wind_surgery': '', 'trainer_14_days': '',
+                    })
+                for i in range(0, len(rows), 1000):
+                    db.session.execute(_text(_sql), rows[i:i+1000])
+                    db.session.commit()
+                print(f"[RunnerHistory] bulk upserted {len(rows)} rows")
             except Exception as e:
                 db.session.rollback()
                 print(f"[RunnerHistory] error: {e}")
@@ -1333,7 +1337,7 @@ def settle_from_results_json():
 
     return jsonify({'status': 'ok', 'settled': settled_count,
                     'no_match': no_match, 'total_unsettled': len(unsettled),
-                    'runner_history': 'populating in background — check sync log'})
+                    'runner_history': 'populating in background'})
 
 
 
