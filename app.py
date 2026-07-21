@@ -1131,6 +1131,224 @@ def admin_backfill_tof_json():
 
 
 
+@app.route('/api/admin/settle-from-results-json', methods=['POST'])
+@login_required
+def settle_from_results_json():
+    """Accept a results JSON file (list of runner rows) and settle matching tips."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    import re as _re
+    from tip_parser import settle_tip as _settle
+
+    def _strip(name):
+        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+
+    def _frac_to_dec(sp):
+        try:
+            if '/' in str(sp):
+                p = str(sp).split('/')
+                return round(float(p[0]) / float(p[1]) + 1, 4)
+            return float(sp)
+        except Exception:
+            return 0.0
+
+    # Accept file upload or raw JSON body
+    if request.content_type and 'multipart' in request.content_type:
+        f = request.files.get('file')
+        if not f:
+            return jsonify({'error': 'no file'}), 400
+        raw = f.read().decode('utf-8', errors='replace')
+    else:
+        raw = request.get_data(as_text=True)
+
+    try:
+        results = json.loads(raw)
+    except Exception as e:
+        return jsonify({'error': f'JSON parse error: {e}'}), 400
+
+    # Build lookup: (date, stripped_horse_name) -> result row
+    lookup = {}
+    for r in results:
+        key = (r.get('date', ''), _strip(r.get('horse', '')))
+        lookup[key] = r
+
+    # Also build horse-name -> all rows lookup for fuzzy date matching
+    horse_rows = {}
+    for r in results:
+        h = _strip(r.get('horse', ''))
+        if h not in horse_rows:
+            horse_rows[h] = []
+        horse_rows[h].append(r)
+
+    # Find unsettled tips and match
+    unsettled = Tip.query.filter_by(settled=False).all()
+    settled_count = 0
+    no_match = 0
+
+    for tip in unsettled:
+        h = _strip(tip.horse_name)
+        race_date = tip.race_date or ''
+
+        # Try exact date first, then ±1 day to handle tipster timing variations
+        row = None
+        from datetime import timedelta as _td2, datetime as _dt2
+        for offset in [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5]:
+            try:
+                check_date = (_dt2.strptime(race_date, '%Y-%m-%d') + _td2(days=offset)).strftime('%Y-%m-%d')
+            except Exception:
+                continue
+            key = (check_date, h)
+            if key in lookup:
+                row = lookup[key]
+                # If date was wrong, correct it in the DB
+                if offset != 0:
+                    tip.race_date = check_date
+                break
+
+        if not row:
+            candidates = horse_rows.get(h, [])
+            if len(candidates) == 1:
+                # Only one result for this horse - use it
+                row = candidates[0]
+                tip.race_date = row['date']
+            elif len(candidates) > 1 and tip.race_time:
+                # Multiple results - try to match by time (convert tip 1:20 to 13:20)
+                tip_time = tip.race_time.replace('.', ':')
+                try:
+                    th, tm = tip_time.split(':')
+                    th = int(th)
+                    tip_time_24 = f"{th+12}:{tm}" if th < 12 else tip_time
+                except Exception:
+                    tip_time_24 = tip_time
+                for c in candidates:
+                    if c.get('off', '') in (tip_time, tip_time_24):
+                        row = c
+                        tip.race_date = c['date']
+                        break
+            if not row:
+                no_match += 1
+                continue
+
+        row     = lookup[key]
+        pos     = str(row.get('pos', '') or '').strip()
+        sp_str  = str(row.get('sp', '') or '').strip()
+        ran     = int(row.get('ran', 0) or 0)
+        sp_dec  = _frac_to_dec(sp_str)
+
+        # Apply place rule if places not specified
+        if tip.each_way_places == 0 and tip.bet_type == 'ew':
+            if ran <= 4:   places = 0
+            elif ran <= 7: places = 2
+            elif ran <= 11: places = 3
+            elif ran <= 15: places = 4
+            elif ran <= 19: places = 4
+            else:           places = 5
+            tip.each_way_places = places
+
+        # Handle NR
+        if pos.upper() in ('NR', 'W/O', 'SCR'):
+            tr = tip.result
+            if not tr:
+                tr = TipResult(tip_id=tip.id)
+                db.session.add(tr)
+            tr.position    = pos
+            tr.sp          = sp_str
+            tr.sp_dec      = 0.0
+            tr.result_type = 'nr'
+            tr.win_pts     = 0.0
+            tr.place_pts   = 0.0
+            tr.total_pts   = 0.0
+            tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            tip.settled    = True
+            settled_count += 1
+            continue
+
+        result = _settle(tip, pos, sp_dec)
+        tr = tip.result
+        if not tr:
+            tr = TipResult(tip_id=tip.id)
+            db.session.add(tr)
+        tr.position    = pos
+        tr.sp          = sp_str
+        tr.sp_dec      = sp_dec
+        tr.result_type = result['result_type']
+        tr.win_pts     = result['win_pts']
+        tr.place_pts   = result['place_pts']
+        tr.total_pts   = result['total_pts']
+        tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        tip.settled    = True
+        settled_count += 1
+
+    # Also populate RunnerHistory from this results file
+    rh_added = 0
+    rh_updated = 0
+    for r in results:
+        date     = r.get('date', '')
+        course   = r.get('course', '')
+        off      = r.get('off', '')
+        horse    = r.get('horse', '')
+        if not date or not horse:
+            continue
+        # Normalise time format: "15:10" -> "3:10" or keep as is
+        # Store as-is, matching is done by stripped horse name
+        existing = RunnerHistory.query.filter_by(
+            horse_name=horse, race_date=date, course=course, race_time=off
+        ).first()
+        if existing:
+            # Update position/SP if we have better data
+            if r.get('pos'):
+                existing.position = str(r.get('pos', ''))
+            if r.get('sp'):
+                existing.sp = str(r.get('sp', ''))
+            if r.get('odds'):
+                existing.odds = str(r.get('odds', ''))
+            rh_updated += 1
+        else:
+            rh = RunnerHistory(
+                race_date       = date,
+                course          = course,
+                race_time       = off,
+                race_name       = r.get('race_name', ''),
+                race_class      = r.get('class', ''),
+                distance        = r.get('dist', ''),
+                going           = r.get('going', ''),
+                horse_id        = '',
+                horse_name      = horse,
+                number          = str(r.get('num', '')),
+                draw            = str(r.get('draw', '')),
+                age             = str(r.get('age', '')),
+                sex             = str(r.get('sex', '')),
+                trainer         = r.get('trainer', ''),
+                jockey          = r.get('jockey', ''),
+                owner           = r.get('owner', ''),
+                form            = '',
+                weight          = str(r.get('wgt', '')),
+                official_rating = str(r.get('or', '')),
+                rpr             = str(r.get('rpr', '')),
+                ts              = str(r.get('ts', '')),
+                odds            = '',
+                sp              = str(r.get('sp', '')),
+                headgear        = str(r.get('hg', '')),
+                last_run        = '',
+                position        = str(r.get('pos', '')),
+                silk_url        = '',
+                wind_surgery    = '',
+                trainer_14_days = '',
+            )
+            db.session.add(rh)
+            rh_added += 1
+        if (rh_added + rh_updated) % 200 == 0:
+            db.session.flush()
+
+    db.session.commit()
+    return jsonify({'status': 'ok', 'settled': settled_count,
+                    'no_match': no_match, 'total_unsettled': len(unsettled),
+                    'runner_history_added': rh_added,
+                    'runner_history_updated': rh_updated})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
