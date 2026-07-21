@@ -3,7 +3,7 @@ import time
 import requests
 import os
 from datetime import datetime
-from models import db, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField
+from models import db, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField
 
 BASE_URL = "https://api.theracingapi.com/v1"
 
@@ -67,6 +67,71 @@ def _parse_results(res_json):
             }
         results_by_key[key] = runners
     return results_by_key
+
+
+
+def archive_to_runner_history(app):
+    """Copy today's results into RunnerHistory for permanent storage."""
+    with app.app_context():
+        from datetime import date as _date
+        today = _date.today().strftime('%Y-%m-%d')
+        meetings = Meeting.query.filter_by(date=today).all()
+        added = 0
+        for meeting in meetings:
+            for race in meeting.races:
+                for runner in race.runners:
+                    existing = RunnerHistory.query.filter_by(
+                        horse_name=runner.horse_name,
+                        race_date=today,
+                        course=meeting.name,
+                        race_time=race.time
+                    ).first()
+                    if existing:
+                        # Update position/SP if now available
+                        if runner.position:
+                            existing.position = runner.position
+                        if runner.sp:
+                            existing.sp = runner.sp
+                        if runner.odds:
+                            existing.odds = runner.odds
+                    else:
+                        rh = RunnerHistory(
+                            race_date       = today,
+                            course          = meeting.name or '',
+                            race_time       = race.time or '',
+                            race_name       = race.name or '',
+                            race_class      = race.race_class or '',
+                            distance        = race.distance or '',
+                            going           = race.going_detailed or '',
+                            horse_id        = runner.horse_id or '',
+                            horse_name      = runner.horse_name or '',
+                            number          = runner.number or '',
+                            draw            = runner.draw or '',
+                            colour          = runner.colour or '',
+                            age             = runner.age or '',
+                            sex             = runner.sex or '',
+                            trainer         = runner.trainer or '',
+                            jockey          = runner.jockey or '',
+                            owner           = runner.owner or '',
+                            form            = runner.form or '',
+                            weight          = runner.weight or '',
+                            official_rating = runner.official_rating or '',
+                            rpr             = runner.rpr or '',
+                            ts              = runner.ts or '',
+                            odds            = runner.odds or '',
+                            sp              = runner.sp or '',
+                            headgear        = runner.headgear or '',
+                            last_run        = runner.last_run or '',
+                            position        = runner.position or '',
+                            silk_url        = runner.silk_url or '',
+                            wind_surgery    = runner.wind_surgery or '',
+                            trainer_14_days = runner.trainer_14_days or '',
+                        )
+                        db.session.add(rh)
+                        added += 1
+        db.session.commit()
+        _log('INFO', f'RunnerHistory: archived {added} runners for {today}')
+        return added
 
 
 def sync_todays_races(app):

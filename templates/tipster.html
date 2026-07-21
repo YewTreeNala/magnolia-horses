@@ -259,7 +259,7 @@ function renderTips(tips) {
   }
 
   var html = '<div style="overflow-x:auto"><table><thead><tr>';
-  ['Date','Course','Time','Horse','Bet','Odds','Result','Pos','SP','P&amp;L',''].forEach(function(h) {
+  ['Date','Course','Time','Horse','Bet','Odds','Horse ID','Result','Pos','SP','P&amp;L',''].forEach(function(h) {
     html += '<th>' + h + '</th>';
   });
   html += '</tr></thead><tbody>';
@@ -282,6 +282,7 @@ function renderTips(tips) {
     html += '</td>';
     html += '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + betLabel + '</td>';
     html += '<td style="font-weight:500">' + (t.odds||'—') + '</td>';
+    html += '<td style="font-size:11px;color:var(--text3)">' + escHtml(t.horse_id||'—') + '</td>';
     html += '<td>' + resultBadge(r, false) + '</td>';
     html += '<td style="font-size:12px;color:var(--text2)">' + (r ? posLabel(r.position) : '—') + '</td>';
     html += '<td style="font-size:12px;color:var(--text2)">' + (r ? (r.sp||'—') : '—') + '</td>';
@@ -291,7 +292,7 @@ function renderTips(tips) {
     html += '</td>';
     html += '</tr>';
     if (t.reasoning) {
-      html += '<tr class="reasoning-row" id="rrow-' + i + '" style="display:none"><td colspan="11">' + escHtml(t.reasoning).replace(/\n/g,'<br>') + '</td></tr>';
+      html += '<tr class="reasoning-row" id="rrow-' + i + '" style="display:none"><td colspan="12">' + escHtml(t.reasoning).replace(/\n/g,'<br>') + '</td></tr>';
     }
   }
   html += '</tbody></table></div>';

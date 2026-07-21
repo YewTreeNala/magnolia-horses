@@ -92,6 +92,28 @@
     <button class="btn btn-primary" id="btn-settle" onclick="runSettle()">Settle pending tips</button>
   </div>
 
+  <!-- Archive runners panel -->
+  <div class="panel">
+    <div class="panel-title">Archive today's runners</div>
+    <div class="panel-sub">
+      Copies today's runners and results into the permanent RunnerHistory table.
+      Runs automatically at 10:30pm each night but can be triggered manually here.
+    </div>
+    <div id="archive-result"></div>
+    <button class="btn btn-primary" id="btn-archive" onclick="runArchive()">Archive today's runners</button>
+  </div>
+
+  <!-- Unsettled tips panel -->
+  <div class="panel">
+    <div class="panel-title">Enter results for unsettled tips</div>
+    <div class="panel-sub">
+      Enter finishing position and SP for tips that could not be auto-settled.
+      Position: use number (1, 2, 3...) or non-finisher code (PU, F, UR, NR).
+      SP: enter as fractional e.g. 8/1 or decimal e.g. 9.0.
+    </div>
+    <div id="unsettled-container"><div style="color:var(--text3);font-size:13px">Loading...</div></div>
+  </div>
+
   <!-- Manual tip panel -->
   <div class="panel">
     <div class="panel-title">Parse a message manually</div>
@@ -213,6 +235,80 @@ function parseManual() {
     })
     .finally(function() { btn.textContent = 'Parse and store'; btn.disabled = false; });
 }
+
+function runArchive() {
+  var btn = document.getElementById('btn-archive');
+  var res = document.getElementById('archive-result');
+  btn.textContent = 'Archiving...'; btn.disabled = true;
+  fetch('/api/admin/archive-runners', {method: 'POST'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      res.innerHTML = '<div class="result-box success">Archived ' + d.archived + ' runners.</div>';
+      loadStatus();
+    })
+    .catch(function(){ res.innerHTML = '<div class="result-box error">Error</div>'; })
+    .finally(function(){ btn.textContent = 'Archive today\'s runners'; btn.disabled = false; });
+}
+
+function loadUnsettled() {
+  fetch('/api/tipster/tips?per_page=500')
+    .then(function(r){return r.json();})
+    .then(function(data){
+      var tips = (data.tips || []).filter(function(t){ return !t.settled; });
+      var container = document.getElementById('unsettled-container');
+      if (!tips.length) {
+        container.innerHTML = '<div style="color:var(--text3);font-size:13px">No unsettled tips.</div>';
+        return;
+      }
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">';
+      ['Date','Course','Time','Horse','Bet','Tipped Odds','Horse ID','Position','SP',''].forEach(function(h){
+        html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase">' + h + '</th>';
+      });
+      html += '</tr></thead><tbody>';
+      for (var i = 0; i < tips.length; i++) {
+        var t = tips[i];
+        var betLabel = t.bet_type === 'ew' ? t.stake_pts + 'pt E/W' : t.stake_pts + 'pt Win';
+        html += '<tr style="border-bottom:0.5px solid var(--border)">';
+        html += '<td style="padding:6px 10px;font-size:12px;color:var(--text2)">' + (t.tip_date||'') + '</td>';
+        html += '<td style="padding:6px 10px">' + (t.course||'—') + '</td>';
+        html += '<td style="padding:6px 10px;color:var(--brand);font-weight:500">' + (t.race_time||'—') + '</td>';
+        html += '<td style="padding:6px 10px;font-weight:500">' + escHtml(t.horse_name) + '</td>';
+        html += '<td style="padding:6px 10px;font-size:12px;color:var(--text2)">' + betLabel + '</td>';
+        html += '<td style="padding:6px 10px;font-weight:500">' + (t.odds||'—') + '</td>';
+        html += '<td style="padding:6px 10px;font-size:11px;color:var(--text3)">' + (t.horse_id||'—') + '</td>';
+        html += '<td style="padding:6px 10px"><input type="text" id="pos-' + t.id + '" placeholder="e.g. 3" style="width:60px;padding:4px 6px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:4px;background:var(--surface2)"/></td>';
+        html += '<td style="padding:6px 10px"><input type="text" id="sp-' + t.id + '" placeholder="e.g. 8/1" style="width:70px;padding:4px 6px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:4px;background:var(--surface2)"/></td>';
+        html += '<td style="padding:6px 10px"><button onclick="saveResult(' + t.id + ')" style="padding:4px 10px;font-size:12px;font-family:inherit;background:var(--brand);color:#fff;border:none;border-radius:4px;cursor:pointer">Save</button></td>';
+        html += '</tr>';
+        html += '<tr id="res-msg-' + t.id + '"><td colspan="10"></td></tr>';
+      }
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    });
+}
+
+function saveResult(tipId) {
+  var pos = document.getElementById('pos-' + tipId).value.trim();
+  var sp  = document.getElementById('sp-' + tipId).value.trim();
+  if (!pos) { alert('Enter a position'); return; }
+  fetch('/api/admin/tip-result/' + tipId, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({position: pos, sp: sp})
+  })
+    .then(function(r){return r.json();})
+    .then(function(d){
+      var msg = document.getElementById('res-msg-' + tipId);
+      if (d.status === 'ok') {
+        msg.innerHTML = '<td colspan="10" style="padding:4px 10px;font-size:12px;color:var(--green)">Saved: ' + d.result_type + ' (' + (d.total_pts >= 0 ? '+' : '') + d.total_pts.toFixed(2) + 'pts)</td>';
+        setTimeout(function(){ loadUnsettled(); loadStatus(); }, 1000);
+      } else {
+        msg.innerHTML = '<td colspan="10" style="padding:4px 10px;font-size:12px;color:var(--red)">Error: ' + (d.error||'unknown') + '</td>';
+      }
+    });
+}
+
+loadUnsettled();
 
 loadStatus();
 </script>

@@ -210,6 +210,47 @@ class TipResult(db.Model):
     settled_at    = db.Column(db.String(30))
 
 
+
+class RunnerHistory(db.Model):
+    """Permanent historical record of all runners — copied from Runner after each day's results."""
+    __tablename__ = 'runner_history'
+    id              = db.Column(db.Integer, primary_key=True)
+    race_date       = db.Column(db.String(20),  nullable=False)
+    course          = db.Column(db.String(100), default='')
+    race_time       = db.Column(db.String(10),  default='')
+    race_name       = db.Column(db.Text,        default='')
+    race_class      = db.Column(db.String(50),  default='')
+    distance        = db.Column(db.String(20),  default='')
+    going           = db.Column(db.Text,        default='')
+    horse_id        = db.Column(db.String(30),  default='')
+    horse_name      = db.Column(db.String(100), nullable=False)
+    number          = db.Column(db.String(20),  default='')
+    draw            = db.Column(db.String(20),  default='')
+    colour          = db.Column(db.String(30),  default='')
+    age             = db.Column(db.String(10),  default='')
+    sex             = db.Column(db.String(20),  default='')
+    trainer         = db.Column(db.String(100), default='')
+    jockey          = db.Column(db.String(100), default='')
+    owner           = db.Column(db.String(100), default='')
+    form            = db.Column(db.String(30),  default='')
+    weight          = db.Column(db.String(20),  default='')
+    official_rating = db.Column(db.String(20),  default='')
+    rpr             = db.Column(db.String(20),  default='')
+    ts              = db.Column(db.String(20),  default='')
+    odds            = db.Column(db.String(20),  default='')
+    sp              = db.Column(db.String(20),  default='')
+    headgear        = db.Column(db.String(20),  default='')
+    last_run        = db.Column(db.String(20),  default='')
+    position        = db.Column(db.String(20),  default='')
+    silk_url        = db.Column(db.Text,        default='')
+    wind_surgery    = db.Column(db.String(10),  default='')
+    trainer_14_days = db.Column(db.String(20),  default='')
+    __table_args__ = (
+        db.UniqueConstraint('horse_name', 'race_date', 'course', 'race_time',
+                            name='uq_runner_history'),
+    )
+
+
 class ColourOverride(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     horse_name = db.Column(db.String(100), unique=True, nullable=False)

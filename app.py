@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
-from sync import sync_todays_races, sync_horse_history, backfill_horse_history
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
+from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history
 from email_service import send_morning_alerts
 import json
 import os
@@ -73,6 +73,7 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=23, minute=0)
+scheduler.add_job(func=lambda: archive_to_runner_history(app), trigger='cron', hour=22, minute=30)
 scheduler.add_job(func=lambda: sync_and_settle(app), trigger='cron', hour=22, minute=0)
 scheduler.start()
 
@@ -979,6 +980,59 @@ def debug_results():
 
 
 
+# ── Manual tip result entry ────────────────────────────────────────────────────
+
+@app.route('/api/admin/tip-result/<int:tip_id>', methods=['POST'])
+@login_required
+def admin_set_tip_result(tip_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    from tip_parser import settle_tip as _settle
+    tip = Tip.query.get(tip_id)
+    if not tip:
+        return jsonify({'error': 'not found'}), 404
+    data     = request.get_json() or {}
+    position = str(data.get('position', '')).strip()
+    sp_str   = str(data.get('sp', '')).strip()
+    sp_dec   = 0.0
+    try:
+        # Parse fractional SP e.g. "8/1" -> 9.0
+        if '/' in sp_str:
+            parts = sp_str.split('/')
+            sp_dec = round(float(parts[0]) / float(parts[1]) + 1, 4)
+        else:
+            sp_dec = float(sp_str)
+    except Exception:
+        pass
+    result = _settle(tip, position, sp_dec)
+    tr = tip.result
+    if not tr:
+        tr = TipResult(tip_id=tip.id)
+        db.session.add(tr)
+    tr.position    = position
+    tr.sp          = sp_str
+    tr.sp_dec      = sp_dec
+    tr.result_type = result['result_type']
+    tr.win_pts     = result['win_pts']
+    tr.place_pts   = result['place_pts']
+    tr.total_pts   = result['total_pts']
+    tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    tip.settled    = True
+    db.session.commit()
+    return jsonify({'status': 'ok', 'result_type': result['result_type'],
+                    'total_pts': result['total_pts']})
+
+
+@app.route('/api/admin/archive-runners', methods=['POST'])
+@login_required
+def admin_archive_runners():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    count = archive_to_runner_history(app)
+    return jsonify({'status': 'ok', 'archived': count})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
@@ -1067,33 +1121,68 @@ def _get_or_create_tipster(name):
 
 
 def _settle_pending_tips():
-    """Try to settle any unsettled tips from today's race results."""
+    """Try to settle unsettled tips from Runner (today) and RunnerHistory (historical)."""
     from tip_parser import settle_tip as _settle
+    import re as _re
+
+    def _strip(name):
+        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+
     unsettled = Tip.query.filter_by(settled=False).all()
     settled_count = 0
+
     for tip in unsettled:
-        # Find a matching runner in the DB by horse name + course + race date
-        runner = db.session.query(Runner).join(Race).join(Meeting).filter(
-            Runner.horse_name.ilike(f'%{tip.horse_name}%'),
-            Meeting.date == (tip.race_date or date.today().strftime('%Y-%m-%d')),
-        ).first()
-        if not runner:
+        tip_name    = _strip(tip.horse_name)
+        race_date   = tip.race_date or ''
+        course      = _strip(tip.course) if tip.course else ''
+        race_time   = tip.race_time or ''
+
+        position = None
+        sp_str   = ''
+        sp_dec   = 0.0
+        horse_id = ''
+
+        # 1. Check RunnerHistory (permanent historical store)
+        rh_query = RunnerHistory.query.filter(
+            RunnerHistory.race_date == race_date
+        ).all()
+        for rh in rh_query:
+            if _strip(rh.horse_name) == tip_name:
+                if rh.course and _strip(rh.course) != course:
+                    continue
+                if rh.race_time and race_time and rh.race_time != race_time:
+                    continue
+                if rh.position:
+                    position = rh.position
+                    sp_str   = rh.sp or rh.odds or ''
+                    horse_id = rh.horse_id or ''
+                    try: sp_dec = float(rh.odds or 0)
+                    except: pass
+                    break
+
+        # 2. Fall back to today's Runner table
+        if not position:
+            runner = db.session.query(Runner).join(Race).join(Meeting).filter(
+                Runner.horse_name.ilike(f'%{tip.horse_name}%'),
+                Meeting.date == race_date,
+            ).first()
+            if runner and runner.position:
+                position = runner.position
+                sp_str   = runner.sp or runner.odds or ''
+                horse_id = runner.horse_id or ''
+                try: sp_dec = float(runner.odds or 0)
+                except: pass
+
+        if not position:
             continue
-        if not runner.position:
-            continue  # race not yet run
-        # Settle
-        sp_dec = 0.0
-        try:
-            sp_dec = float(runner.odds or 0)
-        except Exception:
-            pass
-        result = _settle(tip, runner.position, sp_dec)
+
+        result = _settle(tip, position, sp_dec)
         tr = tip.result
         if not tr:
             tr = TipResult(tip_id=tip.id)
             db.session.add(tr)
-        tr.position    = runner.position
-        tr.sp          = runner.sp or runner.odds or ''
+        tr.position    = position
+        tr.sp          = sp_str
         tr.sp_dec      = sp_dec
         tr.result_type = result['result_type']
         tr.win_pts     = result['win_pts']
@@ -1101,7 +1190,10 @@ def _settle_pending_tips():
         tr.total_pts   = result['total_pts']
         tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tip.settled    = True
+        if horse_id and not tip.horse_id:
+            tip.horse_id = horse_id
         settled_count += 1
+
     if settled_count:
         db.session.commit()
     return settled_count
@@ -1223,6 +1315,7 @@ def get_tips():
             'each_way_places': t.each_way_places,
             'reasoning':    t.reasoning,
             'uncertain':    t.uncertain,
+            'horse_id':     t.horse_id or '',
             'settled':      t.settled,
             'result': {
                 'position':    t.result.position,
