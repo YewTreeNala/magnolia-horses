@@ -461,7 +461,7 @@ function renderTable(tips){
         pnlSP=pnlTips;
       }
     }
-    html+='<tr style="border-bottom:0.5px solid var(--border)">';
+    html+='<tr id="row-'+i+'" style="border-bottom:0.5px solid var(--border)">';
     html+='<td style="white-space:nowrap;color:var(--text2);font-size:12px">'+(t.tip_date||'')
          +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')+'</td>';
     html+='<td style="color:var(--text2)">'+(t.course||'—')+'</td>';
@@ -480,12 +480,15 @@ function renderTable(tips){
     html+='<td>'+pnlTips+'</td>';
     html+='<td>'+pnlSP+'</td>';
     html+='<td style="white-space:nowrap">';
-    if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span> ';
-    if(IS_ADMIN) html+='<span style="cursor:pointer;font-size:11px;color:var(--red);margin-left:4px" onclick="deleteTipRow('+t.id+',this)">&#128465;</span>';
+    if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span>';
+    if(IS_ADMIN && !t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete" onclick="deleteTipRow('+t.id+','row-'+i+'')" >&#128465;</span>';
     html+='</td>';
     html+='</tr>';
     if(t.reasoning){
-      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="15">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td></tr>';
+      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="14">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td>';
+      html+='<td style="vertical-align:top;padding-top:6px">';
+      if(IS_ADMIN) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete tip" onclick="deleteTipRow('+t.id+','row-'+i+'')">&#128465; delete</span>';
+      html+='</td></tr>';
     }
   }
   html+='</tbody></table></div>';
@@ -497,15 +500,25 @@ function toggleRow(i){
   if(r) r.style.display=r.style.display==='none'?'':'none';
 }
 
-function deleteTipRow(tipId, el){
+function deleteTipRow(tipId, rowId){
   if(!confirm('Delete this tip permanently?')) return;
   fetch('/api/admin/tip/'+tipId,{method:'DELETE'})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==='ok'){
-        // Remove from allTips and re-render
+        // Remove from allTips array
         allTips=allTips.filter(function(t){return t.id!==tipId;});
-        applyFilters();
+        // Remove rows from DOM without re-rendering
+        var mainRow=document.getElementById('row-'+rowId.replace('row-',''));
+        var noteRow=document.getElementById('rrow-'+rowId.replace('row-',''));
+        if(mainRow) mainRow.remove();
+        if(noteRow) noteRow.remove();
+        // Update count
+        var cnt=document.getElementById('tips-count');
+        if(cnt){
+          var n=parseInt(cnt.textContent)||0;
+          cnt.textContent=(n-1)+' tips';
+        }
       } else { alert('Error: '+(d.error||'unknown')); }
     });
 }
