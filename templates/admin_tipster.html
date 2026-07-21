@@ -72,45 +72,6 @@
 
 
 
-  <!-- Settle panel -->
-  <div class="panel">
-    <div class="panel-title">Settle pending tips</div>
-    <div class="panel-sub">
-      Attempts to match unsettled tips against race results already in the database.
-      Runs automatically after each sync, but you can trigger it manually here.
-    </div>
-    <div id="settle-result"></div>
-    <button class="btn btn-primary" id="btn-settle" onclick="runSettle()">Settle pending tips</button>
-    &nbsp;
-    <button class="btn btn-secondary" id="btn-cleanup" onclick="runCleanup()" style="margin-left:8px">Remove pre-2026 &amp; duplicates</button>
-  </div>
-
-  <!-- Settle from results JSON panel -->
-  <div class="panel">
-    <div class="panel-title">Settle from results JSON file</div>
-    <div class="panel-sub">
-      Upload a race results JSON file to match and settle historical tips.
-      Each file should be a JSON array of runner rows with date, horse, pos, sp, ran fields.
-      Safe to upload multiple files — already settled tips are skipped.
-    </div>
-    <div id="results-json-result"></div>
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-      <input type="file" id="results-json-file" accept=".json" style="font-size:13px;font-family:inherit"/>
-      <button class="btn btn-primary" id="btn-results-json" onclick="uploadResultsJson()">Upload and settle</button>
-    </div>
-  </div>
-
-  <!-- Archive runners panel -->
-  <div class="panel">
-    <div class="panel-title">Archive today's runners</div>
-    <div class="panel-sub">
-      Copies today's runners and results into the permanent RunnerHistory table.
-      Runs automatically at 10:30pm each night but can be triggered manually here.
-    </div>
-    <div id="archive-result"></div>
-    <button class="btn btn-primary" id="btn-archive" onclick="runArchive()">Archive today's runners</button>
-  </div>
-
   <!-- Unsettled tips panel -->
   <div class="panel">
     <div class="panel-title">Enter results for unsettled tips</div>
@@ -169,32 +130,6 @@ function loadStatus() {
 
 
 
-function uploadResultsJson() {
-  var fileInput = document.getElementById('results-json-file');
-  var res = document.getElementById('results-json-result');
-  var btn = document.getElementById('btn-results-json');
-  if (!fileInput.files.length) {
-    res.innerHTML = '<div class="result-box error">Please select a file.</div>';
-    return;
-  }
-  var file = fileInput.files[0];
-  btn.textContent = 'Processing...'; btn.disabled = true;
-  res.innerHTML = '<div class="result-box info">Uploading ' + file.name + '...</div>';
-  var fd = new FormData();
-  fd.append('file', file);
-  fetch('/api/admin/settle-from-results-json', {method: 'POST', body: fd})
-    .then(function(r){ return r.json(); })
-    .then(function(d) {
-      if (d.status === 'ok') {
-        res.innerHTML = '<div class="result-box success">Settled ' + d.settled + ' tips. No match: ' + d.no_match + ' of ' + d.total_unsettled + ' unsettled.</div>';
-        loadStatus();
-      } else {
-        res.innerHTML = '<div class="result-box error">' + (d.error||'Error') + '</div>';
-      }
-    })
-    .catch(function(e){ res.innerHTML = '<div class="result-box error">Error: ' + e + '</div>'; })
-    .finally(function(){ btn.textContent = 'Upload and settle'; btn.disabled = false; });
-}
 
 function runCleanup() {
   if (!confirm('Remove all pre-2026 tips and duplicates?')) return;
@@ -210,23 +145,6 @@ function runCleanup() {
     .finally(function(){ btn.textContent = 'Remove pre-2026 & duplicates'; btn.disabled = false; });
 }
 
-function runSettle() {
-  var btn = document.getElementById('btn-settle');
-  var res = document.getElementById('settle-result');
-  btn.textContent = 'Settling...'; btn.disabled = true;
-  res.innerHTML = '';
-
-  fetch('/api/admin/settle-tips', {method: 'POST'})
-    .then(function(r){return r.json();})
-    .then(function(d) {
-      res.innerHTML = '<div class="result-box success">Settled ' + d.settled + ' tip(s).</div>';
-      loadStatus();
-    })
-    .catch(function() {
-      res.innerHTML = '<div class="result-box error">Could not reach server.</div>';
-    })
-    .finally(function() { btn.textContent = 'Settle pending tips'; btn.disabled = false; });
-}
 
 function parseManual() {
   var btn    = document.getElementById('btn-manual');
@@ -265,19 +183,6 @@ function parseManual() {
     .finally(function() { btn.textContent = 'Parse and store'; btn.disabled = false; });
 }
 
-function runArchive() {
-  var btn = document.getElementById('btn-archive');
-  var res = document.getElementById('archive-result');
-  btn.textContent = 'Archiving...'; btn.disabled = true;
-  fetch('/api/admin/archive-runners', {method: 'POST'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      res.innerHTML = '<div class="result-box success">Archived ' + d.archived + ' runners.</div>';
-      loadStatus();
-    })
-    .catch(function(){ res.innerHTML = '<div class="result-box error">Error</div>'; })
-    .finally(function(){ btn.textContent = 'Archive today\'s runners'; btn.disabled = false; });
-}
 
 function loadUnsettled() {
   fetch('/api/tipster/tips?per_page=500')

@@ -878,13 +878,6 @@ def tipster_page():
     return render_template('tipster.html', is_admin=is_admin())
 
 
-@app.route('/admin/tipster')
-@login_required
-def admin_tipster():
-    if not is_admin():
-        return redirect(url_for('index'))
-    return render_template('admin_tipster.html')
-
 @app.route('/admin/colours')
 def admin_colours():
     return render_template('admin_colours.html')

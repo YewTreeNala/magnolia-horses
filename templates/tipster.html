@@ -84,21 +84,33 @@
     <div class="stat-box"><div class="val" id="s-places">—</div><div class="lbl">Places</div></div>
     <div class="stat-box"><div class="val" id="s-losses">—</div><div class="lbl">Losses</div></div>
     <div class="stat-box"><div class="val" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
-    <div class="stat-box"><div class="val" id="s-profit">—</div><div class="lbl">Profit @ tips odds</div></div>
-    <div class="stat-box"><div class="val" id="s-profit-sp">—</div><div class="lbl">Profit @ SP</div></div>
-    <div class="stat-box"><div class="val" id="s-roi">—</div><div class="lbl">ROI @ tips odds</div></div>
-    <div class="stat-box"><div class="val" id="s-roi-sp">—</div><div class="lbl">ROI @ SP</div></div>
-    <div class="stat-box"><div class="val" id="s-gbp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+  </div>
+
+  <!-- Side by side comparison -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-title" style="color:#8b3a3a">&#9679; Tipped odds</div>
+      <div class="stats-strip" style="margin-bottom:0">
+        <div class="stat-box"><div class="val" id="s-profit">—</div><div class="lbl">Profit (pts)</div></div>
+        <div class="stat-box"><div class="val" id="s-roi">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box"><div class="val" id="s-gbp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <div class="panel-title" style="color:#185fa5">&#9679; Starting price (SP)</div>
+      <div class="stats-strip" style="margin-bottom:0">
+        <div class="stat-box"><div class="val" id="s-profit-sp">—</div><div class="lbl">Profit (pts)</div></div>
+        <div class="stat-box"><div class="val" id="s-roi-sp">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box"><div class="val" id="s-gbp-sp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+      </div>
+    </div>
   </div>
 
   <!-- Chart -->
   <div class="panel">
     <div class="panel-title">Cumulative P&L by month</div>
     <div class="chart-wrap"><canvas id="pnl-chart"></canvas></div>
-    <div style="display:flex;gap:16px;font-size:12px;color:var(--text2);margin-top:6px">
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#8b3a3a;display:inline-block;border-radius:2px"></span>Tipped odds</span>
-      <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#185fa5;display:inline-block;border-radius:2px;border-top:2px dashed #185fa5;background:transparent"></span>SP</span>
-    </div>
+
   </div>
 
   <!-- Tips -->
@@ -213,6 +225,10 @@ function renderStats(s){
   var ge=document.getElementById('s-gbp');
   ge.textContent=(gbp>=0?'+£':'−£')+Math.abs(gbp).toFixed(0);
   ge.className='val '+(gbp>=0?'pos':'neg');
+  var gbpsp=psp*PTS_TO_GBP;
+  var gs=document.getElementById('s-gbp-sp');
+  gs.textContent=(gbpsp>=0?'+£':'−£')+Math.abs(gbpsp).toFixed(0);
+  gs.className='val '+(gbpsp>=0?'pos':'neg');
 }
 
 function renderChart(s){
@@ -242,7 +258,10 @@ function renderChart(s){
     },
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.raw>=0?'+£':'−£')+Math.abs(c.raw).toFixed(0);}}}},
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:12},usePointStyle:true,pointStyle:'line'}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.raw>=0?'+£':'−£')+Math.abs(c.raw).toFixed(0);}}}
+      },
       scales:{
         y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:function(v){return(v>=0?'+£':'−£')+Math.abs(v);},font:{size:11}}},
         x:{grid:{display:false},ticks:{font:{size:11}}}
