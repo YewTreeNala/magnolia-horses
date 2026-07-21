@@ -135,6 +135,10 @@
 </div>
 
 <script>
+function escHtml(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function loadStatus() {
   Promise.all([
     fetch('/api/tipster/stats').then(function(r){return r.json();}),
