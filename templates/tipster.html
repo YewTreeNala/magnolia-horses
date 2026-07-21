@@ -463,7 +463,8 @@ function renderTable(tips){
     }
     html+='<tr id="row-'+i+'" style="border-bottom:0.5px solid var(--border)">';
     html+='<td style="white-space:nowrap;color:var(--text2);font-size:12px">'+(t.tip_date||'')
-         +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')+'</td>';
+         +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')
+         +(IS_ADMIN?' <span style="cursor:pointer;color:var(--red);font-size:11px" title="Delete" onclick="deleteTipRow('+t.id+','+i+')">&#128465;</span>':'')+'</td>';
     html+='<td style="color:var(--text2)">'+(t.course||'—')+'</td>';
     html+='<td style="color:var(--brand);font-weight:500;white-space:nowrap">'+(t.race_time||'—')+'</td>';
     var rpUrl='https://www.racingpost.com/search-results/?keyword='+encodeURIComponent(t.horse_name);
@@ -481,14 +482,12 @@ function renderTable(tips){
     html+='<td>'+pnlSP+'</td>';
     html+='<td style="white-space:nowrap">';
     if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span>';
-    if(IS_ADMIN && !t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete" onclick="deleteTipRow('+t.id+','+i+')">&#128465;</span>';
+
     html+='</td>';
     html+='</tr>';
     if(t.reasoning){
-      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="14">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td>';
-      html+='<td style="vertical-align:top;padding-top:6px">';
-      if(IS_ADMIN) html+='<span style="cursor:pointer;font-size:11px;color:var(--red)" title="Delete tip" onclick="deleteTipRow('+t.id+','+i+')">&#128465; delete</span>';
-      html+='</td></tr>';
+      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="15">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td>';
+      html+='</tr>';
     }
   }
   html+='</tbody></table></div>';
