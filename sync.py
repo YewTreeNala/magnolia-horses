@@ -134,6 +134,42 @@ def archive_to_runner_history(app):
         return added
 
 
+
+def update_horse_ids_from_runners(app):
+    """Update tip.horse_id and runner_history.horse_id from today's racecard."""
+    with app.app_context():
+        import re as _re
+        def _strip(name):
+            return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+
+        from models import Runner, Tip, RunnerHistory
+        id_map = {}
+        for r in db.session.query(Runner).all():
+            if r.horse_id and r.horse_name:
+                id_map[_strip(r.horse_name)] = r.horse_id
+
+        if not id_map:
+            return 0
+
+        updated = 0
+        for tip in Tip.query.filter(Tip.horse_id == '').all():
+            hid = id_map.get(_strip(tip.horse_name))
+            if hid:
+                tip.horse_id = hid
+                updated += 1
+
+        for rh in RunnerHistory.query.filter(RunnerHistory.horse_id == '').all():
+            hid = id_map.get(_strip(rh.horse_name))
+            if hid:
+                rh.horse_id = hid
+                updated += 1
+
+        if updated:
+            db.session.commit()
+            _log('INFO', f'horse_id updated for {updated} tip/history records')
+        return updated
+
+
 def sync_todays_races(app):
     with app.app_context():
 

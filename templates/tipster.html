@@ -4,68 +4,62 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tipster — Magnolia Horses</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --brand: #8b3a3a; --brand-light: #f5ece8;
-      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
-      --surface: #fff; --surface2: #f5f1eb;
-      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
-      --green: #3b6d11; --green-bg: #eaf3de;
-      --red: #a32d2d; --red-bg: #fcebeb;
-      --blue: #185fa5; --blue-bg: #e6f1fb;
-      --radius: 8px; --radius-lg: 12px;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --brand:#8b3a3a;--brand-light:#f5ece8;
+      --text:#2a1f14;--text2:#6b5a48;--text3:#9c8a78;
+      --surface:#fff;--surface2:#f5f1eb;
+      --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+      --green:#3b6d11;--green-bg:#eaf3de;
+      --red:#a32d2d;--red-bg:#fcebeb;
+      --blue:#185fa5;--blue-bg:#e6f1fb;
+      --radius:8px;--radius-lg:12px;
     }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 15px; padding: 0 1rem 3rem; }
-    .page { max-width: 1060px; margin: 0 auto; }
-    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
-    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); cursor: pointer; }
-    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
-    .nav-links a { color: var(--brand); text-decoration: none; }
-    .nav-links a:hover { text-decoration: underline; }
-    .page-title { font-size: 20px; font-weight: 500; margin: 1.5rem 0 0.25rem; }
-    .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
-    .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; margin-bottom: 1.5rem; }
-    .panel-title { font-size: 15px; font-weight: 500; color: var(--brand); margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 0.5px solid; }
-    .badge-blue { background: var(--blue-bg); color: var(--blue); border-color: rgba(24,95,165,0.2); }
-    .badge-green { background: var(--green-bg); color: var(--green); border-color: rgba(59,109,17,0.2); }
-    .badge-red { background: var(--red-bg); color: var(--red); border-color: rgba(163,45,45,0.2); }
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--surface2);color:var(--text);font-size:15px;padding:0 1rem 3rem}
+    .page{max-width:1100px;margin:0 auto}
+    .brand-header{display:flex;align-items:center;gap:12px;padding:1rem 0 0.75rem;border-bottom:0.5px solid rgba(139,58,58,0.2);margin-bottom:1.5rem}
+    .brand-name{font-family:Georgia,serif;font-size:22px;font-weight:600;color:var(--brand);cursor:pointer}
+    .nav-links{margin-left:auto;display:flex;gap:16px;font-size:13px}
+    .nav-links a{color:var(--brand);text-decoration:none}
+    .page-title{font-size:20px;font-weight:500;margin-bottom:1.25rem}
+    .panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem}
+    .panel-title{font-size:15px;font-weight:500;color:var(--brand);margin-bottom:1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
     /* Stats strip */
-    .stats-strip { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1.25rem; }
-    .stat-box { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 16px; min-width: 100px; }
-    .stat-box .val { font-size: 20px; font-weight: 600; color: var(--brand); }
-    .stat-box .lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
-    .stat-box .val.pos { color: var(--green); }
-    .stat-box .val.neg { color: var(--red); }
+    .stats-strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem}
+    .stat-box{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;min-width:110px}
+    .stat-box .val{font-size:19px;font-weight:600;color:var(--brand)}
+    .stat-box .val.pos{color:var(--green)}
+    .stat-box .val.neg{color:var(--red)}
+    .stat-box .lbl{font-size:11px;color:var(--text3);margin-top:2px}
 
-    /* Monthly table */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { padding: 6px 10px; text-align: left; font-size: 10px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 0.5px solid var(--border); white-space: nowrap; }
-    th.r, td.r { text-align: right; }
-    th.c, td.c { text-align: center; }
-    td { padding: 8px 10px; border-bottom: 0.5px solid var(--border); vertical-align: middle; }
-    tr:last-child td { border-bottom: none; }
-    tr:hover td { background: var(--brand-light); }
-    .profit-pos { color: var(--green); font-weight: 600; }
-    .profit-neg { color: var(--red); font-weight: 600; }
-    .tip-result-win   { color: var(--green); font-weight: 600; }
-    .tip-result-place { color: var(--blue);  font-weight: 600; }
-    .tip-result-loss  { color: var(--red); }
-    .tip-unsettled    { color: var(--text3); font-style: italic; font-size: 12px; }
+    /* Filters */
+    .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+    .filter-bar select,.filter-bar input{padding:6px 10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);outline:none}
+    .filter-bar select:focus,.filter-bar input:focus{border-color:var(--brand)}
+    .btn-sm{border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;border:0.5px solid var(--border2);background:transparent;color:var(--text2)}
+    .btn-sm:hover{background:var(--surface2)}
 
-    /* Filter bar */
-    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; align-items: center; }
-    .filter-bar input, .filter-bar select { padding: 6px 10px; font-size: 13px; font-family: inherit; background: var(--surface2); color: var(--text); border: 0.5px solid var(--border2); border-radius: var(--radius); outline: none; }
-    .filter-bar input:focus, .filter-bar select:focus { border-color: var(--brand); }
-    .btn-sm { border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; font-family: inherit; border: 0.5px solid; background: transparent; }
-    .btn-clear { color: var(--text2); border-color: var(--border2); }
-    .btn-clear:hover { background: var(--surface2); }
+    /* Table */
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th{padding:6px 10px;text-align:left;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap}
+    td{padding:8px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    tr:hover td{background:var(--brand-light)}
+    .profit-pos{color:var(--green);font-weight:600}
+    .profit-neg{color:var(--red);font-weight:600}
+    .tip-result-win{color:var(--green);font-weight:600}
+    .tip-result-place{color:var(--blue);font-weight:600}
+    .tip-result-loss{color:var(--red)}
+    .tip-unsettled{color:var(--text3);font-style:italic;font-size:12px}
+    .tagged-badge{font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px}
+    .reasoning-row td{padding:6px 10px 10px 20px;font-size:12px;color:var(--text2);font-style:italic;background:var(--surface2);border-bottom:0.5px solid var(--border)}
+    .empty{text-align:center;padding:2rem;color:var(--text3);font-size:14px}
 
-    .reasoning-row td { padding: 6px 10px 10px 20px; font-size: 12px; color: var(--text2); font-style: italic; background: var(--surface2); border-bottom: 0.5px solid var(--border); }
-    .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
-    .uncertain-badge { font-size: 10px; color: #856404; background: #fff3cd; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    /* Chart */
+    .chart-wrap{position:relative;height:260px;margin-bottom:0.5rem}
   </style>
 </head>
 <body>
@@ -82,7 +76,6 @@
   </div>
 
   <div class="page-title">Turn Of Foot — Tips tracker</div>
-  <div class="page-sub">All tips, results and profitability for the Turn Of Foot tipster service.</div>
 
   <!-- Stats strip -->
   <div class="stats-strip" id="stats-strip">
@@ -91,48 +84,62 @@
     <div class="stat-box"><div class="val" id="s-places">—</div><div class="lbl">Places</div></div>
     <div class="stat-box"><div class="val" id="s-losses">—</div><div class="lbl">Losses</div></div>
     <div class="stat-box"><div class="val" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
-    <div class="stat-box"><div class="val" id="s-staked">—</div><div class="lbl">Staked (pts)</div></div>
-    <div class="stat-box"><div class="val" id="s-profit">—</div><div class="lbl">Profit (pts)</div></div>
-    <div class="stat-box"><div class="val" id="s-roi">—</div><div class="lbl">ROI</div></div>
+    <div class="stat-box"><div class="val" id="s-profit">—</div><div class="lbl">Profit @ tips odds</div></div>
+    <div class="stat-box"><div class="val" id="s-profit-sp">—</div><div class="lbl">Profit @ SP</div></div>
+    <div class="stat-box"><div class="val" id="s-roi">—</div><div class="lbl">ROI @ tips odds</div></div>
+    <div class="stat-box"><div class="val" id="s-roi-sp">—</div><div class="lbl">ROI @ SP</div></div>
+    <div class="stat-box"><div class="val" id="s-gbp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
   </div>
 
-  <!-- Monthly P&L -->
+  <!-- Chart -->
   <div class="panel">
-    <div class="panel-title">Monthly P&amp;L</div>
-    <div id="monthly-container"><div class="empty">Loading...</div></div>
+    <div class="panel-title">Cumulative P&L by month</div>
+    <div class="chart-wrap"><canvas id="pnl-chart"></canvas></div>
+    <div style="display:flex;gap:16px;font-size:12px;color:var(--text2);margin-top:6px">
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#8b3a3a;display:inline-block;border-radius:2px"></span>Tipped odds</span>
+      <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:3px;background:#185fa5;display:inline-block;border-radius:2px;border-top:2px dashed #185fa5;background:transparent"></span>SP</span>
+    </div>
   </div>
 
   <!-- Tips -->
   <div class="panel">
     <div class="panel-title">
       All tips
-      <span class="badge badge-blue" id="tips-count">—</span>
+      <span id="tips-count" style="font-size:12px;font-weight:400;color:var(--text2)"></span>
+      {% if is_admin %}
       <span style="margin-left:auto">
-        {% if is_admin %}
         <button class="btn-sm" style="color:var(--brand);border-color:rgba(139,58,58,0.3)" onclick="settleTips()">Settle pending</button>
-        {% endif %}
       </span>
+      {% endif %}
     </div>
 
     <div class="filter-bar">
-      <input type="text" id="f-horse" placeholder="Horse name..." oninput="filterTips()"/>
-      <select id="f-result" onchange="filterTips()">
-        <option value="">All results</option>
-        <option value="win">Win</option>
-        <option value="place">Place</option>
-        <option value="loss">Loss</option>
-        <option value="unsettled">Unsettled</option>
-        <option value="uncertain">Needs review</option>
-      </select>
-      <select id="f-bet" onchange="filterTips()">
+      <select id="f-bet" onchange="applyFilters()">
         <option value="">All bet types</option>
-        <option value="ew">E/W</option>
+        <option value="ew">E/W only</option>
         <option value="win">Win only</option>
       </select>
-      <select id="f-month" onchange="filterTips()">
-        <option value="">All months</option>
+      <select id="f-settled" onchange="applyFilters()">
+        <option value="">All results</option>
+        <option value="true">Settled</option>
+        <option value="false">Unsettled</option>
       </select>
-      <button class="btn-sm btn-clear" onclick="clearFilters()">Clear</button>
+      <select id="f-tagged" onchange="applyFilters()">
+        <option value="">All horses</option>
+        <option value="true">My tagged horses only</option>
+      </select>
+      <input type="text" id="f-course" placeholder="Course..." oninput="applyFilters()" style="width:120px"/>
+      <input type="text" id="f-jockey" placeholder="Jockey..." oninput="applyFilters()" style="width:120px"/>
+      <select id="f-colour" onchange="applyFilters()">
+        <option value="">All colours (known only)</option>
+        <option value="bay">Bay</option>
+        <option value="grey">Grey</option>
+        <option value="chestnut">Chestnut</option>
+        <option value="brown">Brown</option>
+        <option value="black">Black</option>
+        <option value="roan">Roan</option>
+      </select>
+      <button class="btn-sm" onclick="clearFilters()">Clear</button>
     </div>
 
     <div id="tips-container"><div class="empty">Loading...</div></div>
@@ -140,179 +147,211 @@
 </div>
 
 <script>
-var allTips = [];
+var allTips   = [];
+var statsData = {};
+var chart     = null;
+var PTS_TO_GBP = 20;
 
-function posLabel(p) {
-  var n = parseInt(p, 10);
-  if (isNaN(n) || n <= 0) return p || '—';
-  return n + (n===1?'st':n===2?'nd':n===3?'rd':'th');
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function posLabel(p){
+  var n=parseInt(p,10);
+  if(isNaN(n)||n<=0) return p||'—';
+  return n+(n===1?'st':n===2?'nd':n===3?'rd':'th');
 }
 
-function resultBadge(r, uncertain) {
-  if (uncertain) return '<span class="uncertain-badge">&#9888; Review</span>';
-  if (!r) return '<span class="tip-unsettled">Pending</span>';
-  var cls = r.result_type === 'win' ? 'tip-result-win' : r.result_type === 'place' ? 'tip-result-place' : 'tip-result-loss';
-  var label = r.result_type === 'win' ? '&#9733; Won' : r.result_type === 'place' ? 'Placed' : 'Lost';
-  return '<span class="' + cls + '">' + label + '</span>';
+function resultBadge(r){
+  if(!r) return '<span class="tip-unsettled">Pending</span>';
+  var cls=r.result_type==='win'?'tip-result-win':r.result_type==='place'?'tip-result-place':'tip-result-loss';
+  var lbl=r.result_type==='win'?'&#9733; Won':r.result_type==='place'?'Placed':r.result_type==='nr'?'NR':'Lost';
+  return '<span class="'+cls+'">'+lbl+'</span>';
 }
 
-function ptsLabel(pts) {
-  if (pts === null || pts === undefined) return '—';
-  var cls = pts >= 0 ? 'profit-pos' : 'profit-neg';
-  return '<span class="' + cls + '">' + (pts >= 0 ? '+' : '') + pts.toFixed(2) + 'pts</span>';
+function ptsLabel(pts,gbp){
+  if(pts===null||pts===undefined) return '—';
+  var cls=pts>=0?'profit-pos':'profit-neg';
+  var s='<span class="'+cls+'">'+(pts>=0?'+':'')+pts.toFixed(2)+'pts</span>';
+  if(gbp) s+=' <span style="font-size:11px;color:var(--text3)">/ '+(pts>=0?'+£':'−£')+Math.abs(pts*PTS_TO_GBP).toFixed(0)+'</span>';
+  return s;
 }
 
-function loadData() {
+function loadData(){
   Promise.all([
-    fetch('/api/tipster/tips?per_page=500').then(function(r){return r.json();}),
+    fetch('/api/tipster/tips?per_page=1000').then(function(r){return r.json();}),
     fetch('/api/tipster/stats').then(function(r){return r.json();})
-  ]).then(function(results) {
-    allTips = results[0].tips || [];
-    var stats = results[1];
-
-    // Stats strip
-    document.getElementById('s-bets').textContent      = stats.total_bets || 0;
-    document.getElementById('s-wins').textContent      = stats.wins || 0;
-    document.getElementById('s-places').textContent    = stats.places || 0;
-    document.getElementById('s-losses').textContent    = stats.losses || 0;
-    document.getElementById('s-unsettled').textContent = stats.unsettled || 0;
-    document.getElementById('s-staked').textContent    = (stats.staked_pts || 0).toFixed(2);
-    var profitEl = document.getElementById('s-profit');
-    profitEl.textContent = (stats.profit_pts >= 0 ? '+' : '') + (stats.profit_pts || 0).toFixed(2);
-    profitEl.className   = 'val ' + (stats.profit_pts >= 0 ? 'pos' : 'neg');
-    var roiEl = document.getElementById('s-roi');
-    roiEl.textContent = (stats.roi_pct >= 0 ? '+' : '') + (stats.roi_pct || 0) + '%';
-    roiEl.className   = 'val ' + (stats.roi_pct >= 0 ? 'pos' : 'neg');
-
-    // Monthly table
-    var monthly = stats.monthly || [];
-    if (monthly.length) {
-      var html = '<table><thead><tr><th>Month</th><th class="c">Bets</th><th class="r">Staked</th><th class="r">Profit</th><th class="r">ROI</th></tr></thead><tbody>';
-      for (var i = 0; i < monthly.length; i++) {
-        var m = monthly[i];
-        var pc = m.profit >= 0 ? 'profit-pos' : 'profit-neg';
-        html += '<tr><td>' + m.month + '</td><td class="c">' + m.bets + '</td>';
-        html += '<td class="r" style="color:var(--text2)">' + m.staked.toFixed(2) + 'pts</td>';
-        html += '<td class="r"><span class="' + pc + '">' + (m.profit>=0?'+':'') + m.profit.toFixed(2) + 'pts</span></td>';
-        html += '<td class="r"><span class="' + pc + '">' + (m.roi_pct>=0?'+':'') + m.roi_pct + '%</span></td>';
-        html += '</tr>';
-      }
-      html += '</tbody></table>';
-      document.getElementById('monthly-container').innerHTML = html;
-    } else {
-      document.getElementById('monthly-container').innerHTML = '<div class="empty">No settled bets yet.</div>';
-    }
-
-    // Populate month filter
-    var months = [...new Set(allTips.map(function(t){ return (t.tip_date||'').slice(0,7); }).filter(Boolean))].sort().reverse();
-    var sel = document.getElementById('f-month');
-    months.forEach(function(m) {
-      var opt = document.createElement('option');
-      opt.value = m; opt.textContent = m;
-      sel.appendChild(opt);
-    });
-
-    filterTips();
-  }).catch(function() {
-    document.getElementById('tips-container').innerHTML = '<div class="empty">Could not load tips.</div>';
+  ]).then(function(res){
+    allTips   = res[0].tips || [];
+    statsData = res[1];
+    renderStats(statsData);
+    renderChart(statsData);
+    applyFilters();
+  }).catch(function(){
+    document.getElementById('tips-container').innerHTML='<div class="empty">Could not load tips.</div>';
   });
 }
 
-function filterTips() {
-  var horse  = document.getElementById('f-horse').value.trim().toLowerCase();
-  var result = document.getElementById('f-result').value;
-  var bet    = document.getElementById('f-bet').value;
-  var month  = document.getElementById('f-month').value;
+function renderStats(s){
+  document.getElementById('s-bets').textContent      = s.total_bets||0;
+  document.getElementById('s-wins').textContent      = s.wins||0;
+  document.getElementById('s-places').textContent    = s.places||0;
+  document.getElementById('s-losses').textContent    = s.losses||0;
+  document.getElementById('s-unsettled').textContent = s.unsettled||0;
+  var p=s.profit_pts||0, psp=s.profit_pts_sp||0;
+  var pe=document.getElementById('s-profit');
+  pe.textContent=(p>=0?'+':'')+p.toFixed(2)+'pts';
+  pe.className='val '+(p>=0?'pos':'neg');
+  var ps=document.getElementById('s-profit-sp');
+  ps.textContent=(psp>=0?'+':'')+psp.toFixed(2)+'pts';
+  ps.className='val '+(psp>=0?'pos':'neg');
+  var re=document.getElementById('s-roi');
+  re.textContent=(s.roi_pct>=0?'+':'')+s.roi_pct+'%';
+  re.className='val '+(s.roi_pct>=0?'pos':'neg');
+  var rs=document.getElementById('s-roi-sp');
+  rs.textContent=((s.roi_pct_sp||0)>=0?'+':'')+(s.roi_pct_sp||0)+'%';
+  rs.className='val '+((s.roi_pct_sp||0)>=0?'pos':'neg');
+  var gbp=p*PTS_TO_GBP;
+  var ge=document.getElementById('s-gbp');
+  ge.textContent=(gbp>=0?'+£':'−£')+Math.abs(gbp).toFixed(0);
+  ge.className='val '+(gbp>=0?'pos':'neg');
+}
 
-  var filtered = allTips.filter(function(t) {
-    if (horse && !(t.horse_name||'').toLowerCase().includes(horse)) return false;
-    if (month && !(t.tip_date||'').startsWith(month)) return false;
-    if (bet && t.bet_type !== bet) return false;
-    if (result) {
-      if (result === 'unsettled' && t.settled) return false;
-      if (result === 'unsettled' && !t.settled) return true;
-      if (result === 'uncertain' && !t.uncertain) return false;
-      if (result === 'uncertain') return true;
-      if (!t.result) return false;
-      if (result !== t.result.result_type) return false;
+function renderChart(s){
+  var monthly=s.monthly||[];
+  if(!monthly.length) return;
+  var labels=[], cumTips=[], cumSP=[], runTips=0, runSP=0;
+  for(var i=0;i<monthly.length;i++){
+    var m=monthly[i];
+    runTips+=m.profit;
+    runSP+=(m.profit_sp||m.profit);
+    labels.push(m.month);
+    cumTips.push(+(runTips*PTS_TO_GBP).toFixed(0));
+    cumSP.push(+(runSP*PTS_TO_GBP).toFixed(0));
+  }
+  var ctx=document.getElementById('pnl-chart').getContext('2d');
+  if(chart) chart.destroy();
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Tipped odds (£)',data:cumTips,borderColor:'#8b3a3a',backgroundColor:'rgba(139,58,58,0.08)',
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#8b3a3a',fill:true,borderWidth:2},
+        {label:'SP (£)',data:cumSP,borderColor:'#185fa5',backgroundColor:'transparent',
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.raw>=0?'+£':'−£')+Math.abs(c.raw).toFixed(0);}}}},
+      scales:{
+        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:function(v){return(v>=0?'+£':'−£')+Math.abs(v);},font:{size:11}}},
+        x:{grid:{display:false},ticks:{font:{size:11}}}
+      }
+    }
+  });
+}
+
+function applyFilters(){
+  var fBet     = document.getElementById('f-bet').value;
+  var fSettled = document.getElementById('f-settled').value;
+  var fTagged  = document.getElementById('f-tagged').value;
+  var fCourse  = document.getElementById('f-course').value.trim().toLowerCase();
+  var fJockey  = document.getElementById('f-jockey').value.trim().toLowerCase();
+  var fColour  = document.getElementById('f-colour').value.toLowerCase();
+
+  var filtered = allTips.filter(function(t){
+    if(fBet && t.bet_type !== fBet) return false;
+    if(fSettled === 'true'  && !t.settled) return false;
+    if(fSettled === 'false' &&  t.settled) return false;
+    if(fTagged === 'true'  && !t.tagged)  return false;
+    if(fCourse && !(t.course||'').toLowerCase().includes(fCourse)) return false;
+    if(fJockey && !(t.jockey||'').toLowerCase().includes(fJockey)) return false;
+    if(fColour){
+      if(!t.colour) return false;
+      if(!t.colour.toLowerCase().includes(fColour)) return false;
     }
     return true;
   });
 
-  document.getElementById('tips-count').textContent = filtered.length;
-  renderTips(filtered);
+  document.getElementById('tips-count').textContent = filtered.length + ' tips';
+  renderTable(filtered);
 }
 
-function clearFilters() {
-  document.getElementById('f-horse').value  = '';
-  document.getElementById('f-result').value = '';
-  document.getElementById('f-bet').value    = '';
-  document.getElementById('f-month').value  = '';
-  filterTips();
+function clearFilters(){
+  document.getElementById('f-bet').value='';
+  document.getElementById('f-settled').value='';
+  document.getElementById('f-tagged').value='';
+  document.getElementById('f-course').value='';
+  document.getElementById('f-jockey').value='';
+  document.getElementById('f-colour').value='';
+  applyFilters();
 }
 
-function renderTips(tips) {
-  var container = document.getElementById('tips-container');
-  if (!tips.length) {
-    container.innerHTML = '<div class="empty">No tips match the current filters.</div>';
-    return;
-  }
+function renderTable(tips){
+  var container=document.getElementById('tips-container');
+  if(!tips.length){container.innerHTML='<div class="empty">No tips match filters.</div>';return;}
 
-  var html = '<div style="overflow-x:auto"><table><thead><tr>';
-  ['Date','Course','Time','Horse','Bet','Odds','Horse ID','Result','Pos','SP','P&amp;L',''].forEach(function(h) {
-    html += '<th>' + h + '</th>';
+  var html='<div style="overflow-x:auto"><table><thead><tr>';
+  ['Date','Course','Time','Horse','Bet','Odds','Jockey','Colour','Result','Pos','SP','P&L (tips)','P&L (SP)',''].forEach(function(h){
+    html+='<th>'+h+'</th>';
   });
-  html += '</tr></thead><tbody>';
+  html+='</tr></thead><tbody>';
 
-  for (var i = 0; i < tips.length; i++) {
-    var t  = tips[i];
-    var r  = t.result;
-    var betLabel = t.bet_type === 'ew'
-      ? t.stake_pts + 'pt E/W' + (t.each_way_places ? ' ' + t.each_way_places + 'pl' : '')
-      : t.stake_pts + 'pt Win';
-    var rowBg = t.uncertain ? 'background:#fff8e1' : '';
-    var pnlStr = r ? ptsLabel(r.total_pts) : '—';
-
-    html += '<tr style="border-bottom:0.5px solid var(--border);' + rowBg + '">';
-    html += '<td style="white-space:nowrap;color:var(--text2);font-size:12px">' + (t.tip_date||'') + '</td>';
-    html += '<td style="color:var(--text2)">' + (t.course||'—') + '</td>';
-    html += '<td style="color:var(--brand);font-weight:500;white-space:nowrap">' + (t.race_time||'—') + '</td>';
-    html += '<td style="font-weight:500">' + escHtml(t.horse_name);
-    if (t.uncertain) html += ' <span class="uncertain-badge">&#9888; review</span>';
-    html += '</td>';
-    html += '<td style="font-size:12px;color:var(--text2);white-space:nowrap">' + betLabel + '</td>';
-    html += '<td style="font-weight:500">' + (t.odds||'—') + '</td>';
-    html += '<td style="font-size:11px;color:var(--text3)">' + escHtml(t.horse_id||'—') + '</td>';
-    html += '<td>' + resultBadge(r, false) + '</td>';
-    html += '<td style="font-size:12px;color:var(--text2)">' + (r ? posLabel(r.position) : '—') + '</td>';
-    html += '<td style="font-size:12px;color:var(--text2)">' + (r ? (r.sp||'—') : '—') + '</td>';
-    html += '<td>' + pnlStr + '</td>';
-    html += '<td>';
-    if (t.reasoning) html += '<span style="cursor:pointer;font-size:11px;color:var(--brand);white-space:nowrap" onclick="toggleRow(' + i + ')">&#9654; notes</span>';
-    html += '</td>';
-    html += '</tr>';
-    if (t.reasoning) {
-      html += '<tr class="reasoning-row" id="rrow-' + i + '" style="display:none"><td colspan="12">' + escHtml(t.reasoning).replace(/\n/g,'<br>') + '</td></tr>';
+  for(var i=0;i<tips.length;i++){
+    var t=tips[i];
+    var r=t.result;
+    var betLbl=t.bet_type==='ew'?t.stake_pts+'pt E/W'+(t.each_way_places?' '+t.each_way_places+'pl':''):t.stake_pts+'pt Win';
+    var pnlTips='—', pnlSP='—';
+    if(r){
+      pnlTips=ptsLabel(r.total_pts, true);
+      // SP P&L estimate
+      if(r.sp_dec && r.sp_dec>1.0 && t.odds_dec && t.odds_dec>1.0){
+        var stake=t.stake_pts;
+        var isEw=t.bet_type==='ew';
+        // Simple estimate: scale total_pts by SP/tipped ratio
+        var tipsDec=t.odds_dec||1;
+        var spDec=r.sp_dec||tipsDec;
+        var ratio=(spDec-1)/(tipsDec-1);
+        var spPnl=r.total_pts*ratio;
+        pnlSP=ptsLabel(+spPnl.toFixed(2), true);
+      } else {
+        pnlSP=pnlTips;
+      }
+    }
+    html+='<tr style="border-bottom:0.5px solid var(--border)">';
+    html+='<td style="white-space:nowrap;color:var(--text2);font-size:12px">'+(t.tip_date||'')
+         +(t.tip_date?' <a href="https://www.racingpost.com/results/'+t.tip_date+'" target="_blank" style="color:var(--brand);font-size:11px;text-decoration:none">&#128279;</a>':'')+'</td>';
+    html+='<td style="color:var(--text2)">'+(t.course||'—')+'</td>';
+    html+='<td style="color:var(--brand);font-weight:500;white-space:nowrap">'+(t.race_time||'—')+'</td>';
+    html+='<td style="font-weight:500">'+escHtml(t.horse_name)+(t.tagged?'<span class="tagged-badge">&#9733;</span>':'')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text2);white-space:nowrap">'+betLbl+'</td>';
+    html+='<td style="font-weight:500">'+(t.odds||'—')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text2)">'+(t.jockey||'—')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text2)">'+(t.colour||'—')+'</td>';
+    html+='<td>'+resultBadge(r)+'</td>';
+    html+='<td style="font-size:12px;color:var(--text2)">'+(r?posLabel(r.position):'—')+'</td>';
+    html+='<td style="font-size:12px;color:var(--text2)">'+(r?r.sp||'—':'—')+'</td>';
+    html+='<td>'+pnlTips+'</td>';
+    html+='<td>'+pnlSP+'</td>';
+    html+='<td>'+(t.reasoning?'<span style="cursor:pointer;font-size:11px;color:var(--brand);white-space:nowrap" onclick="toggleRow('+i+')">&#9654; notes</span>':'')+'</td>';
+    html+='</tr>';
+    if(t.reasoning){
+      html+='<tr class="reasoning-row" id="rrow-'+i+'" style="display:none"><td colspan="14">'+escHtml(t.reasoning).replace(/\n/g,'<br>')+'</td></tr>';
     }
   }
-  html += '</tbody></table></div>';
-  container.innerHTML = html;
+  html+='</tbody></table></div>';
+  container.innerHTML=html;
 }
 
-function toggleRow(idx) {
-  var row = document.getElementById('rrow-' + idx);
-  if (row) row.style.display = row.style.display === 'none' ? '' : 'none';
+function toggleRow(i){
+  var r=document.getElementById('rrow-'+i);
+  if(r) r.style.display=r.style.display==='none'?'':'none';
 }
 
-function escHtml(str) {
-  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-function settleTips() {
-  fetch('/api/admin/settle-tips', {method:'POST'})
-    .then(function(r){return r.json();})
-    .then(function(d){ alert('Settled: ' + d.settled + ' tips'); loadData(); })
-    .catch(function(){ alert('Error settling tips'); });
+function settleTips(){
+  fetch('/api/admin/settle-tips',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    alert('Settled: '+d.settled);loadData();
+  });
 }
 
 loadData();

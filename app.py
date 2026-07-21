@@ -4,7 +4,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
-from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history
+from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history, update_horse_ids_from_runners
 from email_service import send_morning_alerts
 import json
 import os
@@ -74,6 +74,7 @@ scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minut
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=23, minute=0)
 scheduler.add_job(func=lambda: archive_to_runner_history(app), trigger='cron', hour=22, minute=30)
+scheduler.add_job(func=lambda: update_horse_ids_from_runners(app), trigger='cron', hour=18, minute=0)
 scheduler.add_job(func=lambda: sync_and_settle(app), trigger='cron', hour=22, minute=0)
 scheduler.start()
 
@@ -825,6 +826,7 @@ def manual_sync():
         return jsonify({'error': 'Forbidden'}), 403
     sync_todays_races(app)
     _settle_pending_tips()
+    update_horse_ids_from_runners(app)
     return jsonify({'status': 'ok'})
 
 
@@ -1674,40 +1676,74 @@ def tipster_webhook():
 @login_required
 def get_tips():
     tipster_name = request.args.get('tipster', 'Turn Of Foot')
-    page         = int(request.args.get('page', 1))
-    per_page     = int(request.args.get('per_page', 50))
+    per_page     = int(request.args.get('per_page', 500))
+    f_bet        = request.args.get('bet_type', '')
+    f_settled    = request.args.get('settled', '')
+    f_tagged     = request.args.get('tagged', '')
+    f_course     = request.args.get('course', '')
+    f_jockey     = request.args.get('jockey', '')
+    f_colour     = request.args.get('colour', '')
+
     tipster = Tipster.query.filter_by(name=tipster_name).first()
     if not tipster:
         return jsonify({'tips': [], 'total': 0})
-    q = Tip.query.filter_by(tipster_id=tipster.id).order_by(Tip.tip_datetime.desc())
-    total = q.count()
-    tips  = q.offset((page-1)*per_page).limit(per_page).all()
-    return jsonify({
-        'total': total,
-        'tips': [{
-            'id':           t.id,
-            'horse_name':   t.horse_name,
-            'tip_date':     t.tip_date,
-            'course':       t.course,
-            'race_time':    t.race_time,
-            'bet_type':     t.bet_type,
-            'stake_pts':    t.stake_pts,
-            'odds':         t.odds,
+
+    q = Tip.query.filter_by(tipster_id=tipster.id)
+    if f_bet:               q = q.filter(Tip.bet_type == f_bet)
+    if f_settled == 'true': q = q.filter(Tip.settled == True)
+    if f_settled == 'false':q = q.filter(Tip.settled == False)
+    if f_course:            q = q.filter(Tip.course.ilike(f'%{f_course}%'))
+    tips = q.order_by(Tip.tip_datetime.desc()).all()
+
+    tagged_set = {th.horse_name.lower() for th in TaggedHorse.query.filter_by(user_id=current_user.id).all()}
+
+    from models import RunnerHistory
+    colour_map = {rh.horse_name.lower(): rh.colour
+                  for rh in RunnerHistory.query.filter(RunnerHistory.colour != '').with_entities(
+                      RunnerHistory.horse_name, RunnerHistory.colour).distinct().all()}
+    jockey_map = {rh.horse_name.lower(): rh.jockey
+                  for rh in RunnerHistory.query.filter(RunnerHistory.jockey != '').with_entities(
+                      RunnerHistory.horse_name, RunnerHistory.jockey).distinct().all()}
+
+    result = []
+    for t in tips:
+        h       = t.horse_name.lower()
+        colour  = colour_map.get(h, '')
+        jockey  = jockey_map.get(h, '')
+        tagged  = h in tagged_set
+        if f_tagged == 'true' and not tagged: continue
+        if f_colour and colour.lower() != f_colour.lower(): continue
+        if f_jockey and f_jockey.lower() not in jockey.lower(): continue
+        result.append({
+            'id':              t.id,
+            'horse_name':      t.horse_name,
+            'tip_date':        t.tip_date,
+            'course':          t.course,
+            'race_time':       t.race_time,
+            'bet_type':        t.bet_type,
+            'stake_pts':       t.stake_pts,
+            'odds':            t.odds,
+            'odds_dec':        t.odds_dec or 0.0,
             'each_way_places': t.each_way_places,
-            'reasoning':    t.reasoning,
-            'uncertain':    t.uncertain,
-            'horse_id':     t.horse_id or '',
-            'settled':      t.settled,
+            'reasoning':       t.reasoning,
+            'uncertain':       t.uncertain,
+            'horse_id':        t.horse_id or '',
+            'colour':          colour,
+            'jockey':          jockey,
+            'tagged':          tagged,
+            'settled':         t.settled,
             'result': {
                 'position':    t.result.position,
                 'sp':          t.result.sp,
+                'sp_dec':      t.result.sp_dec or 0.0,
                 'result_type': t.result.result_type,
                 'win_pts':     t.result.win_pts,
                 'place_pts':   t.result.place_pts,
                 'total_pts':   t.result.total_pts,
             } if t.result else None,
-        } for t in tips]
-    })
+        })
+
+    return jsonify({'total': len(result), 'tips': result[:per_page]})
 
 
 @app.route('/api/tipster/stats')
@@ -1724,39 +1760,49 @@ def get_tipster_stats():
 
     total_pts_staked = 0.0
     total_pts_return = 0.0
+    total_pts_return_sp = 0.0
     wins = places = losses = 0
+    from tip_parser import settle_tip as _sc
 
     for r in settled:
         tip = r.tip
         staked = tip.stake_pts * (2 if tip.bet_type == 'ew' else 1)
         total_pts_staked += staked
         total_pts_return += staked + r.total_pts
+        if r.sp_dec and r.sp_dec > 1.0:
+            total_pts_return_sp += staked + _sc(tip, r.position, r.sp_dec)['total_pts']
+        else:
+            total_pts_return_sp += staked + r.total_pts
         if r.result_type == 'win':    wins   += 1
         elif r.result_type == 'place': places += 1
         else:                          losses += 1
 
-    total_bets   = len(settled)
-    profit_pts   = round(total_pts_return - total_pts_staked, 2)
-    roi_pct      = round(profit_pts / total_pts_staked * 100, 1) if total_pts_staked else 0.0
+    total_bets    = len(settled)
+    profit_pts    = round(total_pts_return - total_pts_staked, 2)
+    profit_pts_sp = round(total_pts_return_sp - total_pts_staked, 2)
+    roi_pct       = round(profit_pts / total_pts_staked * 100, 1) if total_pts_staked else 0.0
+    roi_pct_sp    = round(profit_pts_sp / total_pts_staked * 100, 1) if total_pts_staked else 0.0
 
     # Monthly breakdown
     monthly = {}
     for r in settled:
         month = (r.tip.tip_date or '')[:7]  # YYYY-MM
         if month not in monthly:
-            monthly[month] = {'staked': 0.0, 'return': 0.0, 'bets': 0}
+            monthly[month] = {'staked': 0.0, 'return': 0.0, 'return_sp': 0.0, 'bets': 0}
         staked = r.tip.stake_pts * (2 if r.tip.bet_type == 'ew' else 1)
         monthly[month]['staked'] += staked
         monthly[month]['return'] += staked + r.total_pts
-        monthly[month]['bets']   += 1
+        monthly[month]['return_sp'] += staked + (_sc(r.tip, r.position, r.sp_dec)['total_pts'] if r.sp_dec and r.sp_dec > 1.0 else r.total_pts)
+        monthly[month]['bets'] += 1
 
     monthly_list = sorted([
         {
             'month':   k,
             'bets':    v['bets'],
             'staked':  round(v['staked'], 2),
-            'profit':  round(v['return'] - v['staked'], 2),
-            'roi':     round((v['return'] - v['staked']) / v['staked'] * 100, 1) if v['staked'] else 0.0,
+            'profit':    round(v['return'] - v['staked'], 2),
+            'profit_sp': round(v['return_sp'] - v['staked'], 2),
+            'roi':       round((v['return'] - v['staked']) / v['staked'] * 100, 1) if v['staked'] else 0.0,
         }
         for k, v in monthly.items()
     ], key=lambda x: x['month'])
@@ -1769,8 +1815,10 @@ def get_tipster_stats():
         'losses':       losses,
         'unsettled':    Tip.query.filter_by(tipster_id=tipster.id, settled=False).count(),
         'staked_pts':   round(total_pts_staked, 2),
-        'profit_pts':   profit_pts,
-        'roi_pct':      roi_pct,
+        'profit_pts':    profit_pts,
+        'profit_pts_sp': profit_pts_sp,
+        'roi_pct':       roi_pct,
+        'roi_pct_sp':    roi_pct_sp,
         'monthly':      monthly_list,
     })
 
