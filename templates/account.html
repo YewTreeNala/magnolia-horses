@@ -61,14 +61,27 @@
     .alert-box.error   { background: var(--red-bg);   color: var(--red);   border: 0.5px solid rgba(163,45,45,0.2); }
     .alert-box.info    { background: #e6f1fb; color: var(--blue); border: 0.5px solid rgba(24,95,165,0.2); }
     .empty { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
+      .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .brand-tagline { font-size: 11px; color: var(--text2); }
   </style>
 </head>
 <body>
 <div class="page">
   <div class="brand-header">
-    <div class="brand-name">Magnolia Horses</div>
-      <div class="brand-sub">Horse Racing Runners Search Service</div>
-    <div class="nav-links">
+    <div class="brand-logo">
+      <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 3C10 3 7 5 6 8C5 11 6 13 8 15C9 16 9 17 9 18H17C17 17 17 16 18 15C20 13 21 11 20 8C19 5 16 3 13 3Z" fill="white" opacity="0.9"/>
+        <path d="M9 18H17V20C17 21.1 16.1 22 15 22H11C9.9 22 9 21.1 9 20V18Z" fill="white" opacity="0.7"/>
+        <line x1="11" y1="18" x2="11" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="13" y1="18" x2="13" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="15" y1="18" x2="15" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Magnolia Horses</div>
+      <div class="brand-tagline">Horse Racing Runners Search Service</div>
+    </div>
+        <div class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
       {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
