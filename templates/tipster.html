@@ -454,13 +454,33 @@ function updateStatsFromFiltered(tips){
     runB+=md.retBOG-md.staked;
     cumB.push(+(runB*PTS).toFixed(0));
   }
-  if(chart){
-    chart.data.labels=labels;
-    chart.data.datasets[0].data=cumT;
-    chart.data.datasets[1].data=cumS;
-    if(chart.data.datasets[2]) chart.data.datasets[2].data=cumB;
-    chart.update();
-  }
+  var ctx=document.getElementById('pnl-chart').getContext('2d');
+  if(chart){ chart.destroy(); }
+  chart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:labels,
+      datasets:[
+        {label:'Tipped odds (£)',data:cumT,borderColor:'#8b3a3a',backgroundColor:'rgba(139,58,58,0.08)',
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#8b3a3a',fill:true,borderWidth:2},
+        {label:'SP (£)',data:cumS,borderColor:'#185fa5',backgroundColor:'transparent',
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2},
+        {label:'BOG (£)',data:cumB,borderColor:'#3b6d11',backgroundColor:'transparent',
+         tension:0.3,pointRadius:2,pointBackgroundColor:'#3b6d11',borderDash:[2,3],borderWidth:2}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:true,position:'top',labels:{font:{size:12},usePointStyle:true,pointStyle:'line'}},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.raw>=0?'+£':'-£')+Math.abs(c.raw).toFixed(0);}}}
+      },
+      scales:{
+        y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{callback:function(v){return(v>=0?'+£':'-£')+Math.abs(v);},font:{size:11}}},
+        x:{grid:{display:false},ticks:{font:{size:11}}}
+      }
+    }
+  });
 }
 
 function clearFilters(){
