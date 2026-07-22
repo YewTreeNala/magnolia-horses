@@ -92,32 +92,31 @@
     <div class="stat-box"><div class="val" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
   </div>
 
-  <!-- Side by side comparison -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
-    <div class="panel" style="margin-bottom:0">
-      <div class="panel-title" style="color:#8b3a3a">&#9679; Tipped odds</div>
-      <div class="stats-strip" style="margin-bottom:0">
-        <div class="stat-box"><div class="val" id="s-profit">—</div><div class="lbl">Profit (pts)</div></div>
-        <div class="stat-box"><div class="val" id="s-roi">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box"><div class="val" id="s-gbp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+  <!-- Three-column comparison -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem">
+    <div class="panel" style="margin-bottom:0;padding:0.75rem">
+      <div style="font-size:12px;font-weight:500;color:#8b3a3a;margin-bottom:8px">&#9679; Tipped odds</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
-    <div class="panel" style="margin-bottom:0">
-      <div class="panel-title" style="color:#185fa5">&#9679; Starting price (SP)</div>
-      <div class="stats-strip" style="margin-bottom:0">
-        <div class="stat-box"><div class="val" id="s-profit-sp">—</div><div class="lbl">Profit (pts)</div></div>
-        <div class="stat-box"><div class="val" id="s-roi-sp">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box"><div class="val" id="s-gbp-sp">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+    <div class="panel" style="margin-bottom:0;padding:0.75rem">
+      <div style="font-size:12px;font-weight:500;color:#185fa5;margin-bottom:8px">&#9679; SP</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit-sp" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi-sp" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp-sp" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
-  </div>
-
-  <div class="panel" style="margin-bottom:1.5rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
-    <div class="panel-title" style="color:var(--green)">&#9679; Best Odds Guaranteed (BOG)</div>
-    <div class="stats-strip" style="margin-bottom:0">
-      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog">—</div><div class="lbl">Profit (pts)</div></div>
-      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog">—</div><div class="lbl">ROI %</div></div>
-      <div class="stat-box" style="background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog">—</div><div class="lbl">P&L £ (£20/pt)</div></div>
+    <div class="panel" style="margin-bottom:0;padding:0.75rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
+      <div style="font-size:12px;font-weight:500;color:var(--green);margin-bottom:8px">&#9679; BOG</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
+      </div>
     </div>
   </div>
 
@@ -544,8 +543,15 @@ function renderTable(tips){
     var posColor=posNum===1?'color:#7a5500;background:rgba(196,154,0,0.15);font-weight:600;border-radius:4px;padding:1px 6px':r&&r.result_type==='place'?'color:var(--blue);font-weight:500':'';
     html+='<td style="font-size:12px">'+(IS_ADMIN?'<span class="editable" style="'+posColor+'" title="Click to edit position" onclick="editField(this,'+t.id+',&quot;position&quot;,&quot;'+(r?r.position||'':'')+'&quot;)">'+posLabel(r?r.position:'')+'</span>':'<span style="'+posColor+'">'+(r?posLabel(r.position):'—')+'</span>')+'</td>';
     html+='<td style="font-size:12px">'+(IS_ADMIN&&r?'<span class="editable" style="color:var(--text2)" title="Click to edit SP" onclick="editField(this,'+t.id+',&quot;sp&quot;,&quot;'+(r?r.sp||'':'')+'&quot;)">'+escHtml(r?r.sp||'—':'—')+'</span>':(r?r.sp||'—':'—'))+'</td>';
-    html+='<td>'+pnlTips+'</td>';
-    html+='<td>'+pnlSP+'</td>';
+    // Highlight the better odds cell for wins/places
+    var tipsBetter='', spBetter='';
+    if(r && (r.result_type==='win'||r.result_type==='place')){
+      var _tOdds=t.odds_dec||0, _sOdds=r.sp_dec||0;
+      if(_tOdds>_sOdds) tipsBetter='background:rgba(59,109,17,0.12);border-radius:4px;padding:1px 4px';
+      else if(_sOdds>_tOdds) spBetter='background:rgba(59,109,17,0.12);border-radius:4px;padding:1px 4px';
+    }
+    html+='<td><span style="'+tipsBetter+'">'+pnlTips+'</span></td>';
+    html+='<td><span style="'+spBetter+'">'+pnlSP+'</span></td>';
     html+='<td style="white-space:nowrap">';
     if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span>';
 
