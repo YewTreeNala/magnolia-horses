@@ -216,8 +216,7 @@ function loadData(){
   ]).then(function(res){
     allTips   = res[0].tips || [];
     statsData = res[1];
-    renderStats(statsData);
-    renderChart(statsData);
+    // applyFilters calls updateStatsFromFiltered which handles all stats + chart + BOG
     applyFilters();
     // Populate course datalist
     var _courses=[...new Set(allTips.map(function(t){return t.course||'';}).filter(Boolean))].sort();
@@ -437,6 +436,10 @@ function updateStatsFromFiltered(tips){
   setEl('s-profit-sp',spSign+profitSP.toFixed(2)+'pts',profitSP>=0?'pos':'neg');
   setEl('s-roi-sp',spSign+roiSP+'%',profitSP>=0?'pos':'neg');
   setEl('s-gbp-sp',(profitSP>=0?'+£':'-£')+Math.abs(profitSP*PTS).toFixed(0),profitSP>=0?'pos':'neg');
+  var pbog2=retBOG-staked,roibog2=staked?+(pbog2/staked*100).toFixed(1):0,gbpbog2=pbog2*PTS;
+  setEl('s-profit-bog',(pbog2>=0?'+':'')+pbog2.toFixed(2)+'pts',pbog2>=0?'pos':'neg');
+  setEl('s-roi-bog',(roibog2>=0?'+':'')+roibog2+'%',roibog2>=0?'pos':'neg');
+  setEl('s-gbp-bog',(gbpbog2>=0?'+£':'-£')+Math.abs(gbpbog2).toFixed(0),gbpbog2>=0?'pos':'neg');
 
   // Rebuild chart
   var months=Object.keys(monthly).sort();
