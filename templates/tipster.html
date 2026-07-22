@@ -71,12 +71,16 @@
 <body>
 <div class="page">
   <div class="brand-header">
-    <div class="brand-name" onclick="window.location='/'">Magnolia Horses</div>
+    <div>
+      <div class="brand-name" onclick="window.location='/'">Magnolia Horses</div>
+      <div class="brand-sub">Horse Racing Runners Search Service</div>
+    </div>
     <div class="nav-links">
-      <a href="/">Search</a>
-      <a href="/my-horses">My horses</a>
-      <a href="/account">Account</a>
-      {% if is_admin %}<a href="/admin/users">Admin</a>{% endif %}
+      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
+      {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
+      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
+      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>
     </div>
   </div>
@@ -89,33 +93,33 @@
     <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-wins">—</div><div class="lbl">Wins</div></div>
     <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-places">—</div><div class="lbl">Places</div></div>
     <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-losses">—</div><div class="lbl">Losses</div></div>
-    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
+    <div class="stat-box" style="padding:6px 12px;cursor:pointer" onclick="filterUnsettled()" title="Click to filter unsettled"><div class="val" style="font-size:15px" id="s-unsettled">—</div><div class="lbl">Unsettled &#8599;</div></div>
   </div>
 
   <!-- Three-column comparison -->
-  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1.5rem">
-    <div class="panel" style="margin-bottom:0;padding:0.75rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:1rem">
+    <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem">
       <div style="font-size:12px;font-weight:500;color:#8b3a3a;margin-bottom:8px">&#9679; Tipped odds</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
-    <div class="panel" style="margin-bottom:0;padding:0.75rem">
+    <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem">
       <div style="font-size:12px;font-weight:500;color:#185fa5;margin-bottom:8px">&#9679; SP</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit-sp" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi-sp" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp-sp" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit-sp" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi-sp" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp-sp" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
-    <div class="panel" style="margin-bottom:0;padding:0.75rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
+    <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
       <div style="font-size:12px;font-weight:500;color:var(--green);margin-bottom:8px">&#9679; BOG</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:14px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:14px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:14px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
   </div>
@@ -132,11 +136,7 @@
     <div class="panel-title">
       All tips
       <span id="tips-count" style="font-size:12px;font-weight:400;color:var(--text2)"></span>
-      {% if is_admin %}
-      <span style="margin-left:auto">
-        <button class="btn-sm" style="color:var(--brand);border-color:rgba(139,58,58,0.3)" onclick="settleTips()">Settle pending</button>
-      </span>
-      {% endif %}
+
     </div>
 
     <div class="filter-bar">
@@ -167,11 +167,7 @@
         <option value="roan">Roan</option>
       </select>
       <button class="btn-sm" onclick="clearFilters()">Clear</button>
-      <select id="f-sort" onchange="applyFilters()" style="margin-left:auto">
-        <option value="date">Sort: Date / Course / Time / Horse</option>
-        <option value="horse">Sort: Horse name</option>
-        <option value="profit">Sort: P&L (best first)</option>
-      </select>
+
     </div>
 
     <div id="tips-container"><div class="empty">Loading...</div></div>
@@ -324,20 +320,24 @@ function applyFilters(){
     return true;
   });
 
-  // Sort
-  var sortBy = document.getElementById('f-sort').value;
+  // Sort by sortCol/sortDir
   filtered.sort(function(a,b){
-    if(sortBy==='horse') return (a.horse_name||'').localeCompare(b.horse_name||'');
-    if(sortBy==='profit'){
-      var pa=(a.result?a.result.total_pts:-999), pb=(b.result?b.result.total_pts:-999);
-      return pb-pa;
+    var mul=sortDir==='asc'?1:-1;
+    if(sortCol==='horse') return mul*(a.horse_name||'').localeCompare(b.horse_name||'');
+    if(sortCol==='course') return mul*(a.course||'').localeCompare(b.course||'');
+    if(sortCol==='time') return mul*(a.race_time||'').localeCompare(b.race_time||'');
+    if(sortCol==='odds') return mul*((a.odds_dec||0)-(b.odds_dec||0));
+    if(sortCol==='pnl_sp') return mul*((a.result?a.result.total_pts:-999)-(b.result?b.result.total_pts:-999));
+    if(sortCol==='pnl_tips'){
+      function _tipPnl(t){if(!t.result)return -999;var r=t.result,p=parseInt(r.position||'99',10)||99,sk=t.stake_pts,ew=t.bet_type==='ew',pl=t.each_way_places||4,tD=t.odds_dec||0;if(r.result_type==='loss'||r.result_type==='nr')return r.total_pts;if(tD<=1)return r.total_pts;var wp=p===1?sk*(tD-1):-sk;var pp=ew?((p>=1&&p<=pl)?sk*((tD-1)/5):-sk):0;return wp+(ew?pp:0);}
+      return mul*(_tipPnl(a)-_tipPnl(b));
     }
-    // Default: date desc, then course, then race_time, then horse
-    var da=a.tip_date||'', db=b.tip_date||'';
-    if(da!==db) return db.localeCompare(da);
-    var ca=a.course||'', cb=b.course||'';
+    // Default date desc, course, time, horse
+    var da=a.tip_date||'',db=b.tip_date||'';
+    if(da!==db) return mul*da.localeCompare(db);
+    var ca=a.course||'',cb=b.course||'';
     if(ca!==cb) return ca.localeCompare(cb);
-    var ta=a.race_time||'', tb=b.race_time||'';
+    var ta=a.race_time||'',tb=b.race_time||'';
     if(ta!==tb) return ta.localeCompare(tb);
     return (a.horse_name||'').localeCompare(b.horse_name||'');
   });
@@ -497,8 +497,17 @@ function renderTable(tips){
   if(!tips.length){container.innerHTML='<div class="empty">No tips match filters.</div>';return;}
 
   var html='<div class="tips-table-wrap"><table><thead><tr>';
-  ['Date','Course','Time','Horse','Bet','Odds','Result','Pos','SP','P&L (tips)','P&L (SP)'].forEach(function(h){
-    html+='<th>'+h+'</th>';
+  var _cols=[
+    {k:'date',l:'Date'},{k:'course',l:'Course'},{k:'time',l:'Time'},{k:'horse',l:'Horse'},
+    {k:'',l:'Bet'},{k:'odds',l:'Odds'},{k:'',l:'Result'},{k:'',l:'Pos'},{k:'',l:'SP'},
+    {k:'pnl_tips',l:'P&L (tips)'},{k:'pnl_sp',l:'P&L (SP)'}
+  ];
+  _cols.forEach(function(col){
+    var arrow=sortCol===col.k&&col.k?(sortDir==='asc'?' &#9650;':' &#9660;'):'';
+    var s='padding:6px 10px;text-align:left;font-size:10px;font-weight:500;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap;';
+    s+=col.k?'cursor:pointer;user-select:none;':'';
+    s+=sortCol===col.k&&col.k?'color:var(--brand);':'color:var(--text2);';
+    html+='<th style="'+s+'"'+(col.k?' onclick="setSort(''+col.k+'')"':'')+'>'+col.l+arrow+'</th>';
   });
   html+='</tr></thead><tbody>';
 
@@ -550,8 +559,12 @@ function renderTable(tips){
       if(_tOdds>_sOdds) tipsBetter='background:rgba(59,109,17,0.12);border-radius:4px;padding:1px 4px';
       else if(_sOdds>_tOdds) spBetter='background:rgba(59,109,17,0.12);border-radius:4px;padding:1px 4px';
     }
-    html+='<td><span style="'+tipsBetter+'">'+pnlTips+'</span></td>';
-    html+='<td><span style="'+spBetter+'">'+pnlSP+'</span></td>';
+    // For losses, show only £ amount in small font
+    var isLoss=r&&(r.result_type==='loss'||r.result_type==='nr');
+    var showTips=isLoss?'<span style="font-size:11px;color:var(--text3)">-£'+Math.abs((t.stake_pts*(t.bet_type==="ew"?2:1))*20).toFixed(0)+'</span>':pnlTips;
+    var showSP=isLoss?'<span style="font-size:11px;color:var(--text3)">-£'+Math.abs((t.stake_pts*(t.bet_type==="ew"?2:1))*20).toFixed(0)+'</span>':pnlSP;
+    html+='<td><span style="'+tipsBetter+'">'+showTips+'</span></td>';
+    html+='<td><span style="'+spBetter+'">'+showSP+'</span></td>';
     html+='<td style="white-space:nowrap">';
     if(t.reasoning) html+='<span style="cursor:pointer;font-size:11px;color:var(--brand)" onclick="toggleRow('+i+')">&#9654; notes</span>';
 
@@ -626,6 +639,22 @@ function editField(el, tipId, field, currentVal){
     if(e.key==='Enter') input.blur();
     if(e.key==='Escape'){ input.removeEventListener('blur',save); input.replaceWith(el); }
   });
+}
+
+var sortCol='date', sortDir='desc';
+function filterUnsettled(){
+  var n=parseInt(document.getElementById('s-unsettled').textContent)||0;
+  if(n>0){
+    document.getElementById('f-result').value='';
+    document.getElementById('f-settled')&&(document.getElementById('f-settled').value='false');
+    // Filter to show only unsettled - use result filter
+    applyFilters();
+  }
+}
+function setSort(col){
+  if(sortCol===col){sortDir=sortDir==='asc'?'desc':'asc';}
+  else{sortCol=col;sortDir=col==='date'||col==='pnl_tips'||col==='pnl_sp'?'desc':'asc';}
+  applyFilters();
 }
 
 function settleTips(){
