@@ -63,10 +63,10 @@
       <span class="brand-name">Magnolia Horses</span>
       <span class="admin-tag">Admin</span>
     </div>
-        <div class="nav-links">
+            <div class="nav-links" class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
-      <a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>
+      {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
       <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
       {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>
@@ -97,11 +97,16 @@
       <span class="badge badge-blue">{{ u.searches|length }} searches</span>
       <div class="user-meta">Joined {{ u.created_at }}</div>
       {% if not u.is_admin %}
-        {% if u.is_banned %}
-          <button class="btn-unban" onclick="unbanUser({{ u.id }}, this)">&#10003; Unban</button>
-        {% else %}
-          <button class="btn-ban" onclick="banUser({{ u.id }}, this)">&#128683; Ban</button>
-        {% endif %}
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          {% if u.is_banned %}
+            <button class="btn-unban" onclick="unbanUser({{ u.id }}, this)">&#10003; Unban</button>
+          {% else %}
+            <button class="btn-ban" onclick="banUser({{ u.id }}, this)">&#128683; Ban</button>
+          {% endif %}
+          <button onclick="toggleTipster({{ u.id }}, this)" style="font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;border:0.5px solid rgba(24,95,165,0.4);background:transparent;color:{% if u.can_see_tipster %}#185fa5{% else %}var(--text3){% endif %}">
+            &#127922; Tipster {% if u.can_see_tipster %}ON{% else %}OFF{% endif %}
+          </button>
+        </div>
       {% endif %}
     </div>
 
@@ -129,6 +134,17 @@
   {% endfor %}
 </div>
 <script>
+function toggleTipster(userId, btn) {
+  fetch('/api/admin/user/' + userId + '/tipster', {method: 'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        btn.textContent = '🎲 Tipster ' + (d.can_see_tipster ? 'ON' : 'OFF');
+        btn.style.color = d.can_see_tipster ? '#185fa5' : 'var(--text3)';
+      } else { alert('Error: ' + (d.error||'unknown')); }
+    });
+}
+
 function banUser(userId, btn) {
   if (!confirm('Ban this user? They will no longer be able to log in.')) return;
   fetch('/api/admin/user/' + userId + '/ban', {method: 'POST'})

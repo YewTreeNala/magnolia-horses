@@ -209,12 +209,12 @@
     </div>
     <div>
       <div class="brand-name">Magnolia Horses</div>
-      <div class="brand-tagline">Race card search &amp; runner database</div>
+      <div class="brand-tagline">Horse Racing Runners Search Service</div>
     </div>
-        <div class="nav-links">
+            <div class="nav-links" class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
-      <a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>
+      {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
       <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
       {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
       <a href="/logout">Sign out</a>

@@ -11,8 +11,9 @@ class User(UserMixin, db.Model):
     email      = db.Column(db.String(150), unique=True, nullable=False)
     password   = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.String(30))
-    is_banned  = db.Column(db.Boolean, default=False)
-    banned_at  = db.Column(db.String(30))
+    is_banned       = db.Column(db.Boolean, default=False)
+    banned_at       = db.Column(db.String(30))
+    can_see_tipster = db.Column(db.Boolean, default=False)
     tagged     = db.relationship('TaggedHorse', backref='user', lazy=True)
     searches   = db.relationship('SavedSearch', backref='user', lazy=True)
 

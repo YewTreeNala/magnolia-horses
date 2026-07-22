@@ -87,7 +87,7 @@ def is_admin():
 
 @app.route('/')
 def index():
-    return render_template('index.html', page_id='search', is_admin=is_admin())
+    return render_template('index.html', page_id='search', is_admin=is_admin(), can_tipster=is_admin() or getattr(current_user, 'can_see_tipster', False))
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -247,7 +247,8 @@ def my_horses():
             'filters': s.filters,
         })
     return render_template('my_horses.html', page_id='my_horses', tagged=tagged,
-                           running_today=running_today, searches=searches_display)
+                           running_today=running_today, searches=searches_display,
+                           is_admin=is_admin(), can_tipster=is_admin() or getattr(current_user, 'can_see_tipster', False))
 
 
 @app.route('/account')
@@ -259,7 +260,7 @@ def account():
     except Exception:
         db.create_all()
         logs = []
-    return render_template('account.html', page_id='account', logs=logs, is_admin=is_admin())
+    return render_template('account.html', page_id='account', logs=logs, is_admin=is_admin(), can_tipster=is_admin() or getattr(current_user, 'can_see_tipster', False))
 
 
 @app.route('/admin/users')
@@ -296,11 +297,12 @@ def admin_users():
             'created_at':   u.created_at or '—',
             'tagged_count': len(u.tagged),
             'searches':     searches,
-            'is_banned':    bool(getattr(u, 'is_banned', False)),
-            'banned_at':    getattr(u, 'banned_at', '') or '',
-            'is_admin':     u.email == ADMIN_EMAIL,
+            'is_banned':         bool(getattr(u, 'is_banned', False)),
+            'banned_at':         getattr(u, 'banned_at', '') or '',
+            'is_admin':          u.email == ADMIN_EMAIL,
+            'can_see_tipster':   bool(getattr(u, 'can_see_tipster', False)),
         })
-    return render_template('admin_users.html', users=users_data, is_admin=True, page_id='admin')
+    return render_template('admin_users.html', users=users_data, is_admin=True, page_id='admin', can_tipster=True)
 
 
 # ── Tag API ────────────────────────────────────────────────────────────────────
@@ -878,7 +880,10 @@ def send_test_email():
 @app.route('/tipster')
 @login_required
 def tipster_page():
-    return render_template('tipster.html', is_admin=is_admin(), page_id='tipster')
+    if not is_admin() and not getattr(current_user, 'can_see_tipster', False):
+        flash('You do not have access to the tipster section.', 'error')
+        return redirect(url_for('index'))
+    return render_template('tipster.html', is_admin=is_admin(), page_id='tipster', can_tipster=True)
 
 
 @app.route('/admin/tipster')
@@ -1514,6 +1519,20 @@ def admin_edit_tip(tip_id):
 
     db.session.commit()
     return jsonify({'status': 'ok'})
+
+
+
+@app.route('/api/admin/user/<int:user_id>/tipster', methods=['POST'])
+@login_required
+def admin_toggle_tipster(user_id):
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'not found'}), 404
+    user.can_see_tipster = not bool(getattr(user, 'can_see_tipster', False))
+    db.session.commit()
+    return jsonify({'status': 'ok', 'can_see_tipster': user.can_see_tipster})
 
 
 
