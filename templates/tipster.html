@@ -84,12 +84,12 @@
   <div class="page-title">Turn Of Foot — Tips tracker</div>
 
   <!-- Stats strip -->
-  <div class="stats-strip" id="stats-strip">
-    <div class="stat-box"><div class="val" id="s-bets">—</div><div class="lbl">Total bets</div></div>
-    <div class="stat-box"><div class="val" id="s-wins">—</div><div class="lbl">Wins</div></div>
-    <div class="stat-box"><div class="val" id="s-places">—</div><div class="lbl">Places</div></div>
-    <div class="stat-box"><div class="val" id="s-losses">—</div><div class="lbl">Losses</div></div>
-    <div class="stat-box"><div class="val" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem">
+    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-bets">—</div><div class="lbl">Bets</div></div>
+    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-wins">—</div><div class="lbl">Wins</div></div>
+    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-places">—</div><div class="lbl">Places</div></div>
+    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-losses">—</div><div class="lbl">Losses</div></div>
+    <div class="stat-box" style="padding:6px 12px"><div class="val" style="font-size:15px" id="s-unsettled">—</div><div class="lbl">Unsettled</div></div>
   </div>
 
   <!-- Three-column comparison -->
@@ -389,7 +389,6 @@ function updateStatsFromFiltered(tips){
     var m=(t.tip_date||'').slice(0,7);
     if(!monthly[m]) monthly[m]={staked:0,retTips:0,retSP:0,retBOG:0};
     monthly[m].staked+=s;
-    monthly[m].retTips+=s+r.total_pts;
     monthly[m].retSP+=s+r.total_pts;
     (function(){
       var rt3=r.result_type;
@@ -423,6 +422,7 @@ function updateStatsFromFiltered(tips){
     if(cls) el.className='val '+cls;
   }
 
+  setEl('s-bets', wins+places+losses);
   setEl('s-wins',wins);
   setEl('s-places',places);
   setEl('s-losses',losses);
