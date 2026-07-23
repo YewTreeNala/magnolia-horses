@@ -904,7 +904,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
       + (r.trainer_14_days ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>' : '<br>' + escHtml(r.trainer || '—'))
       + '</div></td>'
-      + '<td><div class="actions-cell">\' + tb + tipBadge(r.horse_name) + matchBadges + \'</div></td>\'    + posCell + '</tr>';
+      + '<td><div class="actions-cell">' + tb + tipBadge(r.horse_name) + matchBadges + '</div></td>'
+      + posCell + '</tr>';
 
     var cardWinner = (isResult && pos === '1') ? ' winner' : '';
     mobileCards += '<div class="runner-card' + cardWinner + '">'
