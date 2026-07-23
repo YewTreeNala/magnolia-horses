@@ -698,6 +698,21 @@ function makeTagBtn(horseName, isTagged, notes) {
     + (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '') + '</button>';
 }
 
+// ── Today's tips (tipster badges)
+var todayTips = {};
+{% if can_tipster %}
+(function(){ fetch('/api/today-tips').then(function(r){return r.json();}).then(function(d){ todayTips = d.tips||{}; }); })();
+{% endif %}
+
+function tipBadge(horseName){
+  if(!horseName) return '';
+  var key=horseName.toLowerCase().trim();
+  var tips=todayTips[key];
+  if(!tips||!tips.length) return '';
+  var detail=tips.map(function(t){return (t.race_time||'')+(t.course?' '+t.course:'')+(t.odds?' @ '+t.odds:'');}).join(', ');
+  return '<span class="tip-badge tip-badge-today" title="Tipped today: '+detail+'">&#127922; '+(tips[0].tipster||'TOF')+'</span>';
+}
+
 // ── Saved searches ────────────────────────────────────────────────────────────
 function loadSavedSearches() {
   if (!IS_LOGGED_IN) return Promise.resolve();
