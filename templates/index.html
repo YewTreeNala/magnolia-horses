@@ -699,17 +699,55 @@ function makeTagBtn(horseName, isTagged, notes) {
     + (isTagged ? '&#9829;' : '&#9825;') + (hasNotes ? '<span class="tag-notes-dot">&#9679;</span>' : '') + '</button>';
 }
 
-// ── Today's tips (tipster badges)
-var todayTips = {};
-(function(){ fetch('/api/today-tips').then(function(r){return r.json();}).then(function(d){ todayTips = d.tips||{}; }); })();
+// ── Tipster badges
+var tippedHorses = {};
+function injectBadges(){
+  document.querySelectorAll('.horse-name-link[data-horse]').forEach(function(nameEl){
+    var name = nameEl.getAttribute('data-horse');
+    if(!name) return;
+    var badge = tipsterBadge(name);
+    if(!badge) return;
+    var row = nameEl.closest('tr');
+    if(!row) return;
+    var cell = row.querySelector('.actions-cell');
+    if(cell && !cell.querySelector('.tip-badge')) cell.insertAdjacentHTML('afterbegin', badge);
+  });
+}
+(function(){
+  fetch('/api/tipped-horses').then(function(r){return r.json();}).then(function(d){
+    tippedHorses = d.horses||{};
+    injectBadges();
+  });
+})();
 
-function tipBadge(horseName){
-  if(!horseName) return '';
+function tipsterBadge(horseName){
+  if(!horseName||!Object.keys(tippedHorses).length) return '';
   var key=horseName.toLowerCase().trim();
-  var tips=todayTips[key];
-  if(!tips||!tips.length) return '';
-  var detail=tips.map(function(t){return (t.race_time||'')+(t.course?' '+t.course:'')+(t.odds?' @ '+t.odds:'');}).join(', ');
-  return '<span class="tip-badge tip-badge-today" title="Tipped today: '+detail+'">&#127922; '+(tips[0].tipster||'TOF')+'</span>';
+  var data=tippedHorses[key];
+  if(!data||!data.tips||!data.tips.length) return '';
+  var cls=data.tipped_today?'tip-badge-today':'tip-badge-prev';
+  var count=data.tips.length;
+  var tipster=data.tips[0].tipster||'TOF';
+  return '<span class="tip-badge '+cls+'" style="cursor:pointer" onclick="showTipDetails(event,\''+escHtml(horseName)+'\')">&#127922; '+escHtml(tipster)+(count>1?' ('+count+')':'')+'</span>';
+}
+function showTipDetails(e,horseName){
+  e.stopPropagation();
+  var key=horseName.toLowerCase().trim();
+  var data=tippedHorses[key];
+  if(!data) return;
+  var tips=data.tips;
+  var rows='';
+  for(var i=0;i<tips.length;i++){
+    var t=tips[i];
+    var rc=t.result==='win'?'color:#3b6d11;font-weight:600':t.result==='place'?'color:#185fa5':t.result==='loss'?'color:#a32d2d':'color:#888';
+    var rl=t.result==='win'?'Won':t.result==='place'?'Placed':t.result==='loss'?'Lost':t.result==='nr'?'NR':'Pending';
+    var pnl=t.total_pts!=null?(t.total_pts>=0?'+':'')+t.total_pts.toFixed(2)+'pts':'—';
+    rows+='<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+escHtml(t.race_date||'')+'</td><td style="padding:5px 8px">'+escHtml(t.course||'—')+'</td><td style="padding:5px 8px;color:#8b3a3a">'+escHtml(t.race_time||'—')+'</td><td style="padding:5px 8px">'+escHtml(t.stake_pts+'pt '+(t.bet_type==='ew'?'E/W':'Win'))+'</td><td style="padding:5px 8px;font-weight:500">'+escHtml(t.odds||'—')+'</td><td style="padding:5px 8px;'+rc+'">'+rl+(t.position?' ('+t.position+')':'')+'</td><td style="padding:5px 8px">'+pnl+'</td></tr>';
+  }
+  var html='<div style="font-family:-apple-system,sans-serif;padding:1rem;min-width:500px"><div style="font-size:15px;font-weight:600;color:#8b3a3a;margin-bottom:1rem">&#127922; '+escHtml(horseName)+' — Tip history</div><table style="width:100%;border-collapse:collapse;font-size:12px"><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Bet</th><th style="padding:5px 8px;text-align:left">Odds</th><th style="padding:5px 8px;text-align:left">Result</th><th style="padding:5px 8px;text-align:left">P&L</th></tr>'+rows+'</table></div>';
+  var ov=document.getElementById('tip-ov');
+  if(!ov){ov=document.createElement('div');ov.id='tip-ov';ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center';ov.onclick=function(ev){if(ev.target===ov)ov.remove();};document.body.appendChild(ov);}
+  ov.innerHTML='<div style="background:#fff;border-radius:12px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2)">'+html+'<div style="padding:0.75rem 1rem;border-top:0.5px solid #e8e0d5"><button onclick="document.getElementById('tip-ov').remove()" style="padding:6px 16px;background:#8b3a3a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:inherit">Close</button></div></div>';
 }
 
 // ── Saved searches ────────────────────────────────────────────────────────────
@@ -903,7 +941,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
       + (r.trainer_14_days ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>' : '<br>' + escHtml(r.trainer || '—'))
       + '</div></td>'
-      + '<td><div class="actions-cell">' + tb + tipBadge(r.horse_name) + matchBadges + '</div></td>'
+      + '<td><div class="actions-cell">' + tb + tipsterBadge(r.horse_name) + matchBadges + '</div></td>'
       + posCell + '</tr>';
 
     var cardWinner = (isResult && pos === '1') ? ' winner' : '';
@@ -972,6 +1010,7 @@ function renderResults(data) {
     }
   }
   area.innerHTML = html;
+  injectBadges();
 }
 
 function populateMeetingDropdown(data) {

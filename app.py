@@ -1,4 +1,4 @@
-# MAGNOLIA-APP-20260723_154413
+# MAGNOLIA-APP-20260723_163136
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -1559,6 +1559,39 @@ def get_today_tips():
             'race_time': t.race_time,
         })
     return jsonify({'tips': result, 'date': today})
+
+
+
+@app.route('/api/tipped-horses')
+@login_required  
+def get_tipped_horses():
+    """Return all tipped horse names with their tip history for badge display."""
+    if not is_admin() and not getattr(current_user, 'can_see_tipster', False):
+        return jsonify({'horses': {}})
+    tips = Tip.query.order_by(Tip.race_date.desc()).all()
+    result = {}
+    today = date.today().strftime('%Y-%m-%d')
+    for t in tips:
+        key = t.horse_name.lower().strip()
+        if key not in result:
+            result[key] = {'tips': [], 'tipped_today': False}
+        if t.race_date == today:
+            result[key]['tipped_today'] = True
+        result[key]['tips'].append({
+            'tip_id':    t.id,
+            'race_date': t.race_date or '',
+            'race_time': t.race_time or '',
+            'course':    t.course or '',
+            'odds':      t.odds or '',
+            'bet_type':  t.bet_type or '',
+            'stake_pts': t.stake_pts or 0,
+            'tipster':   t.tipster.name if t.tipster else 'TOF',
+            'result':    t.result.result_type if t.result else None,
+            'position':  t.result.position if t.result else None,
+            'sp':        t.result.sp if t.result else None,
+            'total_pts': t.result.total_pts if t.result else None,
+        })
+    return jsonify({'horses': result})
 
 
 
