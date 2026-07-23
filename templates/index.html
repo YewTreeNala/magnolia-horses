@@ -313,6 +313,15 @@
           <option value="time">Race time</option>
         </select>
       </div>
+      {% if can_tipster %}
+      <div class="filter-group">
+        <label>Tipster</label>
+        <select id="f-tipster" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);min-height:38px;border:0.5px solid var(--border2);background:var(--surface2);color:var(--text)">
+          <option value="">All horses</option>
+          <option value="tof">&#127922; TOF tips only</option>
+        </select>
+      </div>
+      {% endif %}
       <div class="filter-group">
         <label>Country</label>
         <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
@@ -561,7 +570,8 @@ function getFilters() {
     type:    document.getElementById('f-type').value,
     cls:     document.getElementById('f-class').value,
     sort:    document.getElementById('f-sort').value,
-    uk_only: document.getElementById('f-uk-only').checked
+    uk_only: document.getElementById('f-uk-only').checked,
+    tipster: (document.getElementById('f-tipster')||{value:''}).value
   };
 }
 
@@ -579,7 +589,7 @@ function restoreFilters() {
     if (f.type)    document.getElementById('f-type').value   = f.type;
     if (f.cls)     document.getElementById('f-class').value  = f.cls;
     if (f.sort)    document.getElementById('f-sort').value   = f.sort;
-    if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); }
+    if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); var _fte=document.getElementById('f-tipster');if(_fte)_fte.value=f.tipster||''; }
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
     if (f.owner)   { selectedValues.owner   = f.owner;   document.getElementById('f-owner').value   = f.owner; }
@@ -594,6 +604,7 @@ function applyFilters(filters) {
   document.getElementById('f-class').value     = filters.cls     || '';
   document.getElementById('f-sort').value      = filters.sort    || 'meeting';
   document.getElementById('f-uk-only').checked = !!filters.uk_only;
+  var _ftl=document.getElementById('f-tipster');if(_ftl)_ftl.value=filters.tipster||'';
   document.getElementById('f-search-mode').value = filters.ai_mode ? 'ai' : 'text';
   if (typeof syncSearchModeBtn === 'function') syncSearchModeBtn();
   syncUKToggle();
@@ -894,6 +905,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     var tb       = makeTagBtn(rName, isTagged, notes);
     var pos      = r.position || '';
 
+    var _tf=(document.getElementById('f-tipster')||{value:''}).value;
+    if(_tf){var _rk=(rName||'').toLowerCase().trim();var _it=!!tippedHorses[_rk];if(_tf==='tof'&&!_it)continue;}
     var matchBadges = '';
     if (IS_LOGGED_IN) {
       if (r.match_reason) {
@@ -1103,6 +1116,7 @@ function clearFilters() {
   document.getElementById('f-class').value     = '';
   document.getElementById('f-sort').value      = 'meeting';
   document.getElementById('f-uk-only').checked = true;
+  var _ftc=document.getElementById('f-tipster');if(_ftc)_ftc.value='';
   document.getElementById('f-meeting').value   = '';
   document.getElementById('f-search-mode').value = 'text';
   syncUKToggle(); syncSearchModeBtn();
