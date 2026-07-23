@@ -19,10 +19,10 @@
     }
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--surface2);color:var(--text);font-size:15px;padding:0 1rem 3rem}
     .page { max-width: 1100px;margin:0 auto}
-    .brand-header{display:flex;align-items:center;gap:12px;padding:1rem 0 0.75rem;border-bottom:0.5px solid rgba(139,58,58,0.2);margin-bottom:1.5rem}
-    .brand-name{font-family:Georgia,serif;font-size:22px;font-weight:600;color:var(--brand);cursor:pointer}
-    .nav-links{margin-left:auto;display:flex;gap:16px;font-size:13px}
-    .nav-links a{color:var(--brand);text-decoration:none}
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .nav-links { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+    .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
     .page-title{font-size:20px;font-weight:500;margin-bottom:1.25rem}
     .panel{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:1.5rem}
     .panel-title{font-size:15px;font-weight:500;color:var(--brand);margin-bottom:1rem;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -68,6 +68,10 @@
     .chart-wrap{position:relative;height:260px;margin-bottom:0.5rem}
       body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
         body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
+        .nav-links a:hover { text-decoration: underline; }
+        .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
+        .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .brand-tagline { font-size: 11px; color: var(--text2); }
     </style>
 </head>
 <body>
@@ -134,9 +138,9 @@
       <div class="panel" style="margin-bottom:0;padding:0.6rem 0.75rem;flex:1;background:rgba(139,58,58,0.06);border-color:rgba(139,58,58,0.3)">
         <div style="font-size:11px;font-weight:600;color:#8b3a3a;margin-bottom:6px">&#9679; Tipped odds</div>
         <div style="display:flex;gap:6px;flex-wrap:nowrap">
-          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-profit" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
-          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-roi" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
-          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-gbp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:rgba(255,255,255,0.5);border-color:rgba(139,58,58,0.2)"><div class="val" id="s-profit" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:rgba(255,255,255,0.5);border-color:rgba(139,58,58,0.2)"><div class="val" id="s-roi" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:rgba(255,255,255,0.5);border-color:rgba(139,58,58,0.2)"><div class="val" id="s-gbp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
         </div>
       </div>
 

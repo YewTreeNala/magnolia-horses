@@ -20,8 +20,8 @@
     .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
     .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
     .admin-tag { font-size: 11px; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 20px; margin-left: 4px; }
-    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
-    .nav-links a { color: var(--brand); text-decoration: none; font-size:13px; }
+    .nav-links { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+    .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
     .nav-links a:hover { text-decoration: underline; }
     .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
     .nav-links a:hover { text-decoration: underline; }
@@ -56,6 +56,8 @@
     .btn-unban { font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; border:0.5px solid rgba(59,109,17,0.4); background:transparent; color:#3b6d11; }
     body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
         body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
+        .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .brand-tagline { font-size: 11px; color: var(--text2); }
     </style>
 </head>
 <body>
