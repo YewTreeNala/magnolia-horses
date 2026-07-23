@@ -1536,6 +1536,31 @@ def admin_toggle_tipster(user_id):
 
 
 
+@app.route('/api/today-tips')
+@login_required
+def get_today_tips():
+    """Return today's tipped horses for badge display on search page."""
+    if not is_admin() and not getattr(current_user, 'can_see_tipster', False):
+        return jsonify({'tips': {}})
+    today = date.today().strftime('%Y-%m-%d')
+    tips = Tip.query.filter_by(race_date=today).all()
+    result = {}
+    for t in tips:
+        key = t.horse_name.lower().strip()
+        if key not in result:
+            result[key] = []
+        result[key].append({
+            'tipster': t.tipster.name if t.tipster else 'TOF',
+            'odds': t.odds,
+            'bet_type': t.bet_type,
+            'stake_pts': t.stake_pts,
+            'course': t.course,
+            'race_time': t.race_time,
+        })
+    return jsonify({'tips': result, 'date': today})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')

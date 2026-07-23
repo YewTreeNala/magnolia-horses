@@ -18,7 +18,7 @@
       --radius:8px;--radius-lg:12px;
     }
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--surface2);color:var(--text);font-size:15px;padding:0 1rem 3rem}
-    .page { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+    .page{max-width:1100px;margin:0 auto}
     .brand-header{display:flex;align-items:center;gap:12px;padding:1rem 0 0.75rem;border-bottom:0.5px solid rgba(139,58,58,0.2);margin-bottom:1.5rem}
     .brand-name{font-family:Georgia,serif;font-size:22px;font-weight:600;color:var(--brand);cursor:pointer}
     .nav-links{margin-left:auto;display:flex;gap:16px;font-size:13px}
@@ -29,22 +29,22 @@
 
     /* Stats strip */
     .stats-strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem}
-    .stat-box{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;min-width:110px}
+    .stat-box{background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 16px;min-width:80px}
     .stat-box .val{font-size:19px;font-weight:600;color:var(--brand)}
     .stat-box .val.pos{color:var(--green)}
     .stat-box .val.neg{color:var(--red)}
-    .stat-box .lbl{font-size:11px;color:var(--text3);margin-top:2px}
+    .stat-box .lbl{font-size:9px;color:var(--text3);margin-top:2px}
 
     /* Filters */
     .filter-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
-    .filter-bar select,.filter-bar input{padding:6px 10px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);outline:none}
+    .filter-bar select,.filter-bar input{padding:4px 7px;font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);border:0.5px solid var(--border2);border-radius:var(--radius);outline:none}
     .filter-bar select:focus,.filter-bar input:focus{border-color:var(--brand)}
     .btn-sm{border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit;border:0.5px solid var(--border2);background:transparent;color:var(--text2)}
     .btn-sm:hover{background:var(--surface2)}
 
     /* Table */
     table{width:100%;border-collapse:collapse;font-size:13px}
-    th{padding:6px 10px;text-align:left;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap}
+    th{padding:4px 7px;text-align:left;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap}
     td{padding:8px 10px;border-bottom:0.5px solid var(--border);vertical-align:middle}
     tr:last-child td{border-bottom:none}
     tr:hover td{background:var(--brand-light)}
@@ -61,37 +61,21 @@
     .editable{cursor:pointer;border-bottom:1px dashed var(--border2)}
     .editable:hover{background:var(--brand-light)}
     .edit-input{font-size:13px;font-family:inherit;padding:2px 4px;border:1px solid var(--brand);border-radius:3px;width:90px;outline:none}
-    .reasoning-row td{padding:6px 10px 10px 20px;font-size:12px;color:var(--text2);font-style:italic;background:var(--surface2);border-bottom:0.5px solid var(--border)}
+    .reasoning-row td{padding:4px 7px 10px 20px;font-size:12px;color:var(--text2);font-style:italic;background:var(--surface2);border-bottom:0.5px solid var(--border)}
     .empty{text-align:center;padding:2rem;color:var(--text3);font-size:14px}
 
     /* Chart */
     .chart-wrap{position:relative;height:260px;margin-bottom:0.5rem}
-      body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
-        body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
-        .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .brand-logo svg { width: 22px; height: 22px; }
-        .brand-tagline { font-size: 11px; color: var(--text2); }
-        .nav-links a:hover { text-decoration: underline; }
-        .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
-    </style>
+  </style>
 </head>
 <body>
 <div class="page">
   <div class="brand-header">
-    <div class="brand-logo">
-      <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M13 3C10 3 7 5 6 8C5 11 6 13 8 15C9 16 9 17 9 18H17C17 17 17 16 18 15C20 13 21 11 20 8C19 5 16 3 13 3Z" fill="white" opacity="0.9"/>
-        <path d="M9 18H17V20C17 21.1 16.1 22 15 22H11C9.9 22 9 21.1 9 20V18Z" fill="white" opacity="0.7"/>
-        <line x1="11" y1="18" x2="11" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
-        <line x1="13" y1="18" x2="13" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
-        <line x1="15" y1="18" x2="15" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
-      </svg>
-    </div>
     <div>
-      <div class="brand-name">Magnolia Horses</div>
-      <div class="brand-tagline">Horse Racing Runners Search Service</div>
+      <div class="brand-name" onclick="window.location='/'">Magnolia Horses</div>
+      <div class="brand-sub">Horse Racing Runners Search Service</div>
     </div>
-        <div class="nav-links">
+    <div class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
       {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
@@ -117,34 +101,72 @@
     <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem">
       <div style="font-size:12px;font-weight:500;color:#8b3a3a;margin-bottom:8px">&#9679; Tipped odds</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-profit" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-roi" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-gbp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
     <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem">
       <div style="font-size:12px;font-weight:500;color:#185fa5;margin-bottom:8px">&#9679; SP</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-profit-sp" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-roi-sp" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px"><div class="val" id="s-gbp-sp" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-profit-sp" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-roi-sp" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:4px 7px"><div class="val" id="s-gbp-sp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
     <div class="panel" style="margin-bottom:0;padding:0.5rem 0.75rem;border-color:rgba(59,109,17,0.3);background:var(--green-bg)">
       <div style="font-size:12px;font-weight:500;color:var(--green);margin-bottom:8px">&#9679; BOG</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:13px">—</div><div class="lbl">Profit pts</div></div>
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:13px">—</div><div class="lbl">ROI %</div></div>
-        <div class="stat-box" style="padding:6px 10px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:13px">—</div><div class="lbl">P&L £</div></div>
+        <div class="stat-box" style="padding:4px 7px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+        <div class="stat-box" style="padding:4px 7px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+        <div class="stat-box" style="padding:4px 7px;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
       </div>
     </div>
   </div>
 
-  <!-- Chart -->
-  <div class="panel">
-    <div class="panel-title">Cumulative P&L by month</div>
-    <div class="chart-wrap"><canvas id="pnl-chart"></canvas></div>
+  <!-- Chart + Summary side by side -->
+  <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:1.5rem;align-items:stretch">
 
+    <!-- Chart (66%) -->
+    <div class="panel" style="margin-bottom:0;padding:1rem">
+      <div style="font-size:13px;font-weight:500;color:var(--brand);margin-bottom:0.75rem">Cumulative P&L by month</div>
+      <div style="position:relative;height:100%;min-height:220px"><canvas id="pnl-chart"></canvas></div>
+    </div>
+
+    <!-- Stacked summary boxes (33%) — BOG top, Tipped middle, SP bottom -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+
+      <!-- BOG -->
+      <div class="panel" style="margin-bottom:0;padding:0.6rem 0.75rem;flex:1;background:var(--green-bg);border-color:rgba(59,109,17,0.3)">
+        <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:6px">&#9679; BOG</div>
+        <div style="display:flex;gap:6px;flex-wrap:nowrap">
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-profit-bog" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-roi-bog" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(59,109,17,0.2)"><div class="val" id="s-gbp-bog" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
+        </div>
+      </div>
+
+      <!-- Tipped odds -->
+      <div class="panel" style="margin-bottom:0;padding:0.6rem 0.75rem;flex:1;background:rgba(139,58,58,0.06);border-color:rgba(139,58,58,0.3)">
+        <div style="font-size:11px;font-weight:600;color:#8b3a3a;margin-bottom:6px">&#9679; Tipped odds</div>
+        <div style="display:flex;gap:6px;flex-wrap:nowrap">
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-profit" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-roi" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(139,58,58,0.2)"><div class="val" id="s-gbp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
+        </div>
+      </div>
+
+      <!-- SP -->
+      <div class="panel" style="margin-bottom:0;padding:0.6rem 0.75rem;flex:1;background:var(--blue-bg);border-color:rgba(24,95,165,0.3)">
+        <div style="font-size:11px;font-weight:600;color:#185fa5;margin-bottom:6px">&#9679; SP</div>
+        <div style="display:flex;gap:6px;flex-wrap:nowrap">
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(24,95,165,0.2)"><div class="val" id="s-profit-sp" style="font-size:10px">—</div><div class="lbl">Profit pts</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(24,95,165,0.2)"><div class="val" id="s-roi-sp" style="font-size:10px">—</div><div class="lbl">ROI %</div></div>
+          <div class="stat-box" style="padding:4px 7px;flex:1;background:transparent;border-color:rgba(24,95,165,0.2)"><div class="val" id="s-gbp-sp" style="font-size:10px">—</div><div class="lbl">P&L £</div></div>
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Tips -->
@@ -478,10 +500,10 @@ function updateStatsFromFiltered(tips){
       datasets:[
         {label:'Tipped odds (£)',data:cumT,borderColor:'#8b3a3a',backgroundColor:'rgba(139,58,58,0.08)',
          tension:0.3,pointRadius:3,pointBackgroundColor:'#8b3a3a',fill:true,borderWidth:2},
-        {label:'SP (£)',data:cumS,borderColor:'#185fa5',backgroundColor:'transparent',
-         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2},
-        {label:'BOG (£)',data:cumB,borderColor:'#3b6d11',backgroundColor:'transparent',
-         tension:0.3,pointRadius:2,pointBackgroundColor:'#3b6d11',borderDash:[2,3],borderWidth:2}
+        {label:'SP (£)',data:cumS,borderColor:'#185fa5',backgroundColor:'rgba(24,95,165,0.06)',
+         tension:0.3,pointRadius:3,pointBackgroundColor:'#185fa5',borderDash:[5,4],borderWidth:2,fill:true},
+        {label:'BOG (£)',data:cumB,borderColor:'#3b6d11',backgroundColor:'rgba(59,109,17,0.08)',
+         tension:0.3,pointRadius:2,pointBackgroundColor:'#3b6d11',borderDash:[2,3],borderWidth:2,fill:true}
       ]
     },
     options:{
@@ -520,7 +542,7 @@ function renderTable(tips){
   ];
   _cols.forEach(function(col){
     var arrow=sortCol===col.k&&col.k?(sortDir==='asc'?' &#9650;':' &#9660;'):'';
-    var s='padding:6px 10px;text-align:left;font-size:10px;font-weight:500;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap;';
+    var s='padding:4px 7px;text-align:left;font-size:10px;font-weight:500;letter-spacing:0.04em;border-bottom:0.5px solid var(--border);white-space:nowrap;';
     s+=col.k?'cursor:pointer;user-select:none;':'';
     s+=sortCol===col.k&&col.k?'color:var(--brand);':'color:var(--text2);';
     html+='<th style="'+s+'"'+(col.k?' onclick="setSort(\''+col.k+'\')"':'')+'>'+col.l+arrow+'</th>';
