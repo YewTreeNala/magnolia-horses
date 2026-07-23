@@ -701,9 +701,7 @@ function makeTagBtn(horseName, isTagged, notes) {
 
 // ── Today's tips (tipster badges)
 var todayTips = {};
-{% if can_tipster %}
 (function(){ fetch('/api/today-tips').then(function(r){return r.json();}).then(function(d){ todayTips = d.tips||{}; }); })();
-{% endif %}
 
 function tipBadge(horseName){
   if(!horseName) return '';
