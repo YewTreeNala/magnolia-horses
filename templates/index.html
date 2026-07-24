@@ -977,6 +977,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
   var posHeader = isResult ? '<th class="pos-th" style="width:52px">Finish</th>' : '<th style="width:52px"></th>';
 
   var _raceKey = ((meetingLabel || meetingNameOverride || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || ''));
+  if(!tableRows && !mobileCards && (document.getElementById('f-tipster')||{value:''}).value) return '';
   return '<div class="race-block' + blockClass + '" data-race-key="' + escHtml(_raceKey) + '">'
     + '<div class="race-header' + headerClass + '" style="cursor:pointer" title="View full field" onclick="handleRaceHeaderClick(this)">'
     + '<span class="race-time">' + escHtml(race.time || '') + (meetingLabel ? ' — ' + escHtml(meetingLabel) : '') + '</span>'
@@ -1013,13 +1014,13 @@ function renderResults(data) {
     var allRaces = [];
     for (var a = 0; a < data.length; a++) for (var b = 0; b < data[a].races.length; b++) allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
     allRaces.sort(function(x, y) { return timeToMins(x.race.time) - timeToMins(y.race.time); });
-    for (var c = 0; c < allRaces.length; c++) html += '<div class="meeting-block">' + buildRaceBlock(allRaces[c].race, allRaces[c].meeting) + '</div>';
+    for (var c = 0; c < allRaces.length; c++) var _rh=buildRaceBlock(allRaces[c].race, allRaces[c].meeting);if(_rh) html += '<div class="meeting-block">' + _rh + '</div>';
   } else {
     for (var d = 0; d < data.length; d++) {
       var block = data[d];
-      html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>';
-      for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null, block.meeting);
-      html += '</div>';
+      var racesHtml = '';
+      for (var e = 0; e < block.races.length; e++) racesHtml += buildRaceBlock(block.races[e], null, block.meeting);
+      if(racesHtml) html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>' + racesHtml + '</div>';
     }
   }
   area.innerHTML = html;
