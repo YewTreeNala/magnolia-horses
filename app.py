@@ -1769,9 +1769,10 @@ def _get_or_create_tipster(name):
 
 
 def _settle_pending_tips():
-    """Try to settle unsettled tips from Runner (today) and RunnerHistory (historical)."""
+    """Try to settle unsettled tips from RunnerHistory with +/-4 day date fuzzing."""
     from tip_parser import settle_tip as _settle
     import re as _re
+    from datetime import datetime as _dt, timedelta as _td
 
     def _strip(name):
         return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
@@ -1780,49 +1781,61 @@ def _settle_pending_tips():
     settled_count = 0
 
     for tip in unsettled:
-        tip_name    = _strip(tip.horse_name)
-        race_date   = tip.race_date or ''
-        course      = _strip(tip.course) if tip.course else ''
-        race_time   = tip.race_time or ''
+        tip_name  = _strip(tip.horse_name)
+        race_date = tip.race_date or ''
+        course    = _strip(tip.course) if tip.course else ''
 
-        position = None
-        sp_str   = ''
-        sp_dec   = 0.0
-        horse_id = ''
+        if not race_date:
+            continue
 
-        # 1. Check RunnerHistory (permanent historical store)
-        rh_query = RunnerHistory.query.filter(
-            RunnerHistory.race_date == race_date
-        ).all()
-        for rh in rh_query:
-            if _strip(rh.horse_name) == tip_name:
-                if rh.course and _strip(rh.course) != course:
+        position     = None
+        sp_str       = ''
+        sp_dec       = 0.0
+        matched_date = None
+
+        try:
+            base_dt = _dt.strptime(race_date, '%Y-%m-%d')
+        except ValueError:
+            continue
+
+        for offset in [0, 1, -1, 2, -2, 3, -3, 4, -4]:
+            check_date = (base_dt + _td(days=offset)).strftime('%Y-%m-%d')
+
+            # Check RunnerHistory
+            for rh in RunnerHistory.query.filter_by(race_date=check_date).all():
+                if _strip(rh.horse_name) != tip_name:
                     continue
-                if rh.race_time and race_time and rh.race_time != race_time:
+                if rh.course and course and _strip(rh.course) != course:
                     continue
                 if rh.position:
-                    position = rh.position
-                    sp_str   = rh.sp or rh.odds or ''
-                    horse_id = rh.horse_id or ''
+                    position     = rh.position
+                    sp_str       = rh.sp or rh.odds or ''
+                    matched_date = check_date
                     try: sp_dec = float(rh.odds or 0)
                     except: pass
                     break
 
-        # 2. Fall back to today's Runner table
-        if not position:
+            if position:
+                break
+
+            # Fall back to live Runner table
             runner = db.session.query(Runner).join(Race).join(Meeting).filter(
                 Runner.horse_name.ilike(f'%{tip.horse_name}%'),
-                Meeting.date == race_date,
+                Meeting.date == check_date,
             ).first()
             if runner and runner.position:
-                position = runner.position
-                sp_str   = runner.sp or runner.odds or ''
-                horse_id = runner.horse_id or ''
+                position     = runner.position
+                sp_str       = runner.sp or runner.odds or ''
+                matched_date = check_date
                 try: sp_dec = float(runner.odds or 0)
                 except: pass
+                break
 
         if not position:
             continue
+
+        if matched_date and matched_date != race_date:
+            tip.race_date = matched_date
 
         result = _settle(tip, position, sp_dec)
         tr = tip.result
@@ -1838,8 +1851,6 @@ def _settle_pending_tips():
         tr.total_pts   = result['total_pts']
         tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tip.settled    = True
-        if horse_id and not tip.horse_id:
-            tip.horse_id = horse_id
         settled_count += 1
 
     if settled_count:
@@ -1847,7 +1858,6 @@ def _settle_pending_tips():
     return settled_count
 
 
-@app.route('/webhook/tipster', methods=['POST'])
 def tipster_webhook():
     from tip_parser import parse_message
     import hashlib
