@@ -168,6 +168,7 @@
       <span style="margin-left:auto;display:flex;gap:6px">
         <button class="btn-sm" onclick="settleTips()">Settle pending</button>
         <button class="btn-sm" id="btn-settle-api" onclick="settleFromAPI()">Settle from API</button>
+        <button class="btn-sm" id="btn-fix-dates" onclick="fixTipDates()">Fix dates</button>
       </span>
       {% endif %}
     </div>
@@ -695,6 +696,16 @@ function settleTips(){
     alert('Settled: '+d.settled);loadData();
   });
 }
+function fixTipDates(){
+  var btn=document.getElementById('btn-fix-dates');
+  if(btn){btn.textContent='Checking...';btn.disabled=true;}
+  fetch('/api/admin/fix-tip-dates',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    if(btn){btn.textContent='Fix dates';btn.disabled=false;}
+    alert('Fixed: '+d.fixed+' tip dates\nNot found: '+d.not_found_count+(d.not_found.length?' ('+d.not_found.join(', ')+')':''));
+    if(d.fixed>0) loadData();
+  });
+}
+
 function settleFromAPI(){
   var btn=document.getElementById('btn-settle-api');
   if(btn){btn.textContent='Fetching...';btn.disabled=true;}

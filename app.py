@@ -1681,6 +1681,78 @@ def admin_settle_from_api():
 
 
 
+@app.route('/api/admin/fix-tip-dates', methods=['POST'])
+@login_required
+def admin_fix_tip_dates():
+    """Check all tips (settled and unsettled) against RunnerHistory and correct race_date."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    import re as _re
+    from datetime import datetime as _dt, timedelta as _td
+
+    def _strip(name):
+        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+
+    all_tips = Tip.query.all()
+    fixed = 0
+    not_found = []
+
+    for tip in all_tips:
+        tip_name  = _strip(tip.horse_name)
+        race_date = tip.race_date or ''
+        course    = _strip(tip.course) if tip.course else ''
+
+        if not race_date:
+            continue
+
+        # Check if current date matches RunnerHistory
+        try:
+            base_dt = _dt.strptime(race_date, '%Y-%m-%d')
+        except ValueError:
+            continue
+
+        # First check exact date
+        exact = False
+        for rh in RunnerHistory.query.filter_by(race_date=race_date).all():
+            if _strip(rh.horse_name) == tip_name:
+                if not course or not rh.course or _strip(rh.course) == course:
+                    exact = True
+                    break
+
+        if exact:
+            continue
+
+        # Not found on exact date - search ±30 days
+        found_date = None
+        for offset in list(range(1, 31)) + list(range(-1, -31, -1)):
+            check_date = (base_dt + _td(days=offset)).strftime('%Y-%m-%d')
+            for rh in RunnerHistory.query.filter_by(race_date=check_date).all():
+                if _strip(rh.horse_name) == tip_name:
+                    if not course or not rh.course or _strip(rh.course) == course:
+                        found_date = check_date
+                        break
+            if found_date:
+                break
+
+        if found_date:
+            tip.race_date = found_date
+            fixed += 1
+        else:
+            not_found.append(f"{tip.horse_name} ({race_date})")
+
+    if fixed:
+        db.session.commit()
+
+    return jsonify({
+        'status': 'ok',
+        'fixed': fixed,
+        'not_found_count': len(not_found),
+        'not_found': not_found[:20]
+    })
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
