@@ -164,7 +164,12 @@
     <div class="panel-title">
       All tips
       <span id="tips-count" style="font-size:12px;font-weight:400;color:var(--text2)"></span>
-
+      {% if is_admin %}
+      <span style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn-sm" onclick="settleTips()">Settle pending</button>
+        <button class="btn-sm" id="btn-settle-api" onclick="settleFromAPI()">Settle from API</button>
+      </span>
+      {% endif %}
     </div>
 
     <div class="filter-bar">
@@ -688,6 +693,15 @@ function setSort(col){
 function settleTips(){
   fetch('/api/admin/settle-tips',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
     alert('Settled: '+d.settled);loadData();
+  });
+}
+function settleFromAPI(){
+  var btn=document.getElementById('btn-settle-api');
+  if(btn){btn.textContent='Fetching...';btn.disabled=true;}
+  fetch('/api/admin/settle-from-api',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    if(btn){btn.textContent='Settle from API';btn.disabled=false;}
+    alert('Settled: '+d.settled+' tips\n'+(d.log||[]).join('\n'));
+    loadData();
   });
 }
 

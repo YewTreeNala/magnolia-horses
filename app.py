@@ -1595,6 +1595,92 @@ def get_tipped_horses():
 
 
 
+@app.route('/api/admin/settle-from-api', methods=['POST'])
+@login_required
+def admin_settle_from_api():
+    """Fetch results from Racing API for dates with unsettled tips and settle them."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    from tip_parser import settle_tip as _settle
+    import requests as _req
+    import re as _re
+
+    def _strip(name):
+        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+
+    auth = (os.getenv('RACING_API_USER'), os.getenv('RACING_API_KEY'))
+    BASE = 'https://api.theracingapi.com/v1'
+
+    # Get all unsettled tips grouped by race_date
+    unsettled = Tip.query.filter_by(settled=False).filter(Tip.race_date != None).all()
+    if not unsettled:
+        return jsonify({'status': 'ok', 'settled': 0, 'message': 'No unsettled tips'})
+
+    # Group by date
+    by_date = {}
+    for tip in unsettled:
+        by_date.setdefault(tip.race_date, []).append(tip)
+
+    total_settled = 0
+    log = []
+
+    for race_date, tips in sorted(by_date.items()):
+        # Fetch results for this date from Racing API
+        try:
+            resp = _req.get(f'{BASE}/results', auth=auth, params={'start_date': race_date, 'end_date': race_date}, timeout=15)
+            if resp.status_code != 200:
+                log.append(f'{race_date}: API error {resp.status_code}')
+                continue
+            results = resp.json().get('results', [])
+        except Exception as e:
+            log.append(f'{race_date}: request failed {e}')
+            continue
+
+        # Build lookup: horse_name -> {position, sp_dec, sp}
+        horse_results = {}
+        for race in results:
+            for r in race.get('runners', []):
+                name = _strip(r.get('horse', ''))
+                if name and r.get('position'):
+                    horse_results[name] = {
+                        'position': str(r.get('position', '')),
+                        'sp': r.get('sp', '') or '',
+                        'sp_dec': float(r.get('sp_dec') or 0),
+                    }
+
+        # Settle each tip
+        for tip in tips:
+            tip_name = _strip(tip.horse_name)
+            res = horse_results.get(tip_name)
+            if not res or not res['position']:
+                continue
+
+            result = _settle(tip, res['position'], res['sp_dec'])
+            tr = tip.result
+            if not tr:
+                tr = TipResult(tip_id=tip.id)
+                db.session.add(tr)
+            tr.position    = res['position']
+            tr.sp          = res['sp']
+            tr.sp_dec      = res['sp_dec']
+            tr.result_type = result['result_type']
+            tr.win_pts     = result['win_pts']
+            tr.place_pts   = result['place_pts']
+            tr.total_pts   = result['total_pts']
+            tr.settled_at  = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            tip.settled    = True
+            total_settled += 1
+
+        log.append(f'{race_date}: settled {sum(1 for t in tips if t.settled)} of {len(tips)}')
+
+    if total_settled:
+        db.session.commit()
+
+    return jsonify({'status': 'ok', 'settled': total_settled, 'log': log})
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
