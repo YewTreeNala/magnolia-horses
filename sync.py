@@ -311,6 +311,20 @@ def sync_todays_races(app):
                     if position:
                         runner.position = position
                         result_writes += 1
+                        # Immediately update RunnerHistory so positions are captured
+                        try:
+                            rh_exist = RunnerHistory.query.filter_by(
+                                horse_name=horse_name,
+                                race_date=date_str,
+                                course=course,
+                                race_time=off_time
+                            ).first()
+                            if rh_exist:
+                                rh_exist.position = position
+                                if sp_frac: rh_exist.sp = sp_frac
+                                if sp_dec: rh_exist.odds = str(sp_dec)
+                        except Exception:
+                            pass
                     if sp_frac:
                         runner.sp = sp_frac
                     if sp_dec:
