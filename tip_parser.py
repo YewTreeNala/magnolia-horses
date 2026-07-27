@@ -353,6 +353,10 @@ def settle_tip(tip, position_str, sp_dec):
     For Win bets:
     - stake_pts at odds or -stake_pts
     """
+    # NR = non-runner, return zero P&L
+    if str(position_str or '').strip().upper() in ('NR', 'N/R', 'NON-RUNNER'):
+        return {'result_type': 'nr', 'win_pts': 0.0, 'place_pts': 0.0, 'total_pts': 0.0}
+
     try:
         pos = int(position_str)
     except (ValueError, TypeError):

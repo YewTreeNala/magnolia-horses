@@ -225,7 +225,7 @@ function posLabel(p){
 
 function resultBadge(r){
   if(!r) return '<span class="tip-unsettled">Pending</span>';
-  var cls=r.result_type==='win'?'tip-result-win':r.result_type==='place'?'tip-result-place':'tip-result-loss';
+  var cls=r.result_type==='win'?'tip-result-win':r.result_type==='place'?'tip-result-place':r.result_type==='nr'?'':'tip-result-loss';
   var lbl=r.result_type==='win'?'&#9733; Won':r.result_type==='place'?'Placed':r.result_type==='nr'?'NR':'Lost';
   return '<span class="'+cls+'">'+lbl+'</span>';
 }
@@ -553,7 +553,10 @@ function renderTable(tips){
     if(r){
       // total_pts is settled at SP — recalculate tipped P&L from odds_dec
       var _p=parseInt(r.position||'99',10)||99,_sk=t.stake_pts,_ew=t.bet_type==='ew',_pl=t.each_way_places||4;
-      if(r.result_type==='loss'||r.result_type==='nr'){
+      if(r.result_type==='nr'){
+        pnlTips='<span style="color:var(--text3);font-size:11px">NR / £0</span>';
+        pnlSP='<span style="color:var(--text3);font-size:11px">NR / £0</span>';
+      } else if(r.result_type==='loss'){
         pnlTips=ptsLabel(r.total_pts, true);
         pnlSP=pnlTips;
       } else {
@@ -594,7 +597,7 @@ function renderTable(tips){
       else if(_sOdds>_tOdds) spBetter='background:rgba(59,109,17,0.12);border-radius:4px;padding:1px 4px';
     }
     // For losses, show only £ amount in small font
-    var isLoss=r&&(r.result_type==='loss'||r.result_type==='nr');
+    var isLoss=r&&r.result_type==='loss';
     var showTips=isLoss?'<span style="font-size:11px;color:var(--text3)">-£'+Math.abs((t.stake_pts*(t.bet_type==="ew"?2:1))*20).toFixed(0)+'</span>':pnlTips;
     var showSP=isLoss?'<span style="font-size:11px;color:var(--text3)">-£'+Math.abs((t.stake_pts*(t.bet_type==="ew"?2:1))*20).toFixed(0)+'</span>':pnlSP;
     html+='<td><span style="'+tipsBetter+'">'+showTips+'</span></td>';
