@@ -327,21 +327,12 @@
         <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
         <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
-      <div class="filter-group">
-        <label>View</label>
-        <button type="button" id="history-btn" onclick="toggleHistoryView()" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">&#128203; Today</button>
-      </div>
     </div>
-    <!-- Date range row (History mode) -->
-    <div id="date-range-row" style="display:none;gap:8px;padding:0 0 0.75rem;flex-wrap:wrap;align-items:center">
-      <span style="font-size:12px;color:var(--text2);font-weight:500">Date range:</span>
-      <input type="date" id="f-date-from" style="padding:6px 10px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text)"/>
-      <span style="color:var(--text3);font-size:12px">to</span>
-      <input type="date" id="f-date-to" style="padding:6px 10px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text)"/>
-    </div>
+
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
       <button class="btn-secondary" id="btn-clear">Clear</button>
+      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">&#128203; Today</button>
       <span class="spinner" id="spinner"></span>
       {% if current_user.is_authenticated %}
         <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
@@ -999,13 +990,13 @@ function renderResults(data) {
     var allRaces = [];
     for (var a = 0; a < data.length; a++) for (var b = 0; b < data[a].races.length; b++) allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
     allRaces.sort(function(x, y) { return timeToMins(x.race.time) - timeToMins(y.race.time); });
-    for (var c = 0; c < allRaces.length; c++) html += '<div class="meeting-block">' + buildRaceBlock(allRaces[c].race, allRaces[c].meeting) + '</div>';
+    for (var c = 0; c < allRaces.length; c++) var _rh=buildRaceBlock(allRaces[c].race, allRaces[c].meeting);if(_rh) html += '<div class="meeting-block">' + _rh + '</div>';
   } else {
     for (var d = 0; d < data.length; d++) {
       var block = data[d];
-      html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>';
-      for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null, block.meeting);
-      html += '</div>';
+      var racesHtml = '';
+      for (var e = 0; e < block.races.length; e++) racesHtml += buildRaceBlock(block.races[e], null, block.meeting);
+      if(racesHtml) html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>' + racesHtml + '</div>';
     }
   }
   area.innerHTML = html;
@@ -1124,6 +1115,9 @@ function autoSyncIfNeeded() {
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
+document.getElementById('btn-search').addEventListener('click', function(){
+  if(currentView==='history'){ runHistorySearch(); } else { runSearch(); }
+});
 
 document.getElementById('search-mode-btn').addEventListener('click', function() {
   var el = document.getElementById('f-search-mode');
@@ -1663,11 +1657,10 @@ function runHistorySearch(){
   var trainer=(typeof selectedValues!=='undefined'&&selectedValues.trainer)||'';
   var colour=document.getElementById('f-colour')?document.getElementById('f-colour').value.trim():'';
   var course=document.getElementById('f-meeting')?document.getElementById('f-meeting').value.trim():'';
-  var df=document.getElementById('f-date-from').value,dt=document.getElementById('f-date-to').value;
-  if(!horse&&!jockey&&!trainer&&!colour&&!course&&!df&&!dt){alert('Enter at least one filter');return;}
+  if(!horse&&!jockey&&!trainer&&!colour&&!course){alert('Enter at least one filter');return;}
   var p=new URLSearchParams();
   if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
-  if(colour)p.set('colour',colour);if(course)p.set('course',course);if(df)p.set('date_from',df);if(dt)p.set('date_to',dt);
+  if(colour)p.set('colour',colour);if(course)p.set('course',course);
   document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
   fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(renderHistoryResults);
 }
