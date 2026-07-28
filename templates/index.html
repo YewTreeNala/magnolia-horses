@@ -327,15 +327,12 @@
         <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
         <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
-      <div class="filter-group">
-        <label>View</label>
-        <button type="button" id="history-btn" onclick="toggleHistoryView()" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">&#128203; Today</button>
-      </div>
-    </div>
+      
 
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
       <button class="btn-secondary" id="btn-clear">Clear</button>
+      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">Viewing: Today</button>
       <span class="spinner" id="spinner"></span>
       {% if current_user.is_authenticated %}
         <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
@@ -464,7 +461,8 @@ function setView(v){
 }
 function toggleHistoryView(){
   setView(currentView==='history'?'today':'history');
-  autoRun();
+  // Don't auto-run on toggle - user explicitly chose a view
+  // Results stay visible until user runs a new search
 }
 var STORAGE_KEY     = 'magnolia_filters_v4';
 var taggedMap       = {};
@@ -1666,8 +1664,9 @@ function handleEmailDeepLink(race, horse) {
 
 function runHistorySearch(){
   var horse=document.getElementById('f-horse').value.trim();
-  var jockey=(typeof selectedValues!=='undefined'&&selectedValues.jockey)||'';
-  var trainer=(typeof selectedValues!=='undefined'&&selectedValues.trainer)||'';
+  var jockey=((typeof selectedValues!=='undefined'&&selectedValues.jockey)||'').replace(/\s*\(\d+\/\d+\)\s*$/,'').trim();
+  var trainer_raw=(typeof selectedValues!=='undefined'&&selectedValues.trainer)||'';
+  var trainer=trainer_raw.replace(/\s*\(\d+\/\d+\)\s*$/,'').trim();
   var colour=document.getElementById('f-colour')?document.getElementById('f-colour').value.trim():'';
   var course=document.getElementById('f-meeting')?document.getElementById('f-meeting').value.trim():'';
   var ukOnly=document.getElementById('f-uk-only')?document.getElementById('f-uk-only').checked:true;
