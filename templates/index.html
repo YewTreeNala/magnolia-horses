@@ -214,7 +214,6 @@
     </div>
     <div class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
-      <a href="/previous" class="{% if page_id == 'previous' %}active{% endif %}">Previous</a>
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
       {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
       <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
@@ -438,6 +437,8 @@
 <script>
 var IS_LOGGED_IN    = {{ 'true' if current_user.is_authenticated else 'false' }};
 var IS_ADMIN        = {{ 'true' if is_admin else 'false' }};
+var currentView='today';
+function setView(v){currentView=v;var bt=document.getElementById('btn-view-today'),bh=document.getElementById('btn-view-history');bt.style.background=v==='today'?'var(--brand)':'var(--surface2)';bt.style.color=v==='today'?'#fff':'var(--text2)';bh.style.background=v==='history'?'var(--brand)':'var(--surface2)';bh.style.color=v==='history'?'#fff':'var(--text2)';document.getElementById('date-range-row').style.display=v==='history'?'flex':'none';document.getElementById('btn-search').textContent=v==='history'?'Search history':'Search runners';}
 var STORAGE_KEY     = 'magnolia_filters_v4';
 var taggedMap       = {};
 var pendingHorse    = null;
@@ -1094,7 +1095,7 @@ function autoSyncIfNeeded() {
 }
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
-document.getElementById('btn-search').addEventListener('click', runSearch);
+document.getElementById('btn-search').addEventListener('click', function(){if(currentView==='history'){runHistorySearch();}else{runSearch();}});
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
 document.getElementById('search-mode-btn').addEventListener('click', function() {
@@ -1628,6 +1629,39 @@ function handleEmailDeepLink(race, horse) {
   var _dlParams = new URLSearchParams(window.location.search);
   if (_dlParams.get('race')) { handleEmailDeepLink(_dlParams.get('race'), _dlParams.get('horse') || ''); }
 })();
+
+function runHistorySearch(){
+  var horse=document.getElementById('f-horse').value.trim();
+  var jockey=(typeof selectedValues!=='undefined'&&selectedValues.jockey)||'';
+  var trainer=(typeof selectedValues!=='undefined'&&selectedValues.trainer)||'';
+  var colour=document.getElementById('f-colour')?document.getElementById('f-colour').value.trim():'';
+  var course=document.getElementById('f-meeting')?document.getElementById('f-meeting').value.trim():'';
+  var df=document.getElementById('f-date-from').value,dt=document.getElementById('f-date-to').value;
+  if(!horse&&!jockey&&!trainer&&!colour&&!course&&!df&&!dt){alert('Enter at least one filter');return;}
+  var p=new URLSearchParams();
+  if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
+  if(colour)p.set('colour',colour);if(course)p.set('course',course);if(df)p.set('date_from',df);if(dt)p.set('date_to',dt);
+  document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
+  fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(renderHistoryResults);
+}
+function renderHistoryResults(data){
+  var area=document.getElementById('results-area');
+  if(!data||!data.length){area.innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found in history.</div></div>';return;}
+  var html='<div style="color:var(--text2);font-size:12px;margin-bottom:0.75rem">'+data.length+' horse'+(data.length!==1?'s':'')+' found</div>';
+  data.forEach(function(horse){
+    var isTagged=Object.prototype.hasOwnProperty.call(taggedMap,horse.horse_name.toLowerCase());
+    html+='<div style="border:0.5px solid var(--border);border-radius:10px;margin-bottom:1rem;overflow:hidden">';
+    html+='<div style="background:var(--surface2);padding:10px 14px;display:flex;align-items:center;gap:10px;font-weight:600"><span style="flex:1">'+escHtml(horse.horse_name)+'</span><span style="font-size:12px;color:var(--text2);font-weight:400">'+horse.runs.length+' run'+(horse.runs.length!==1?'s':'')+'</span><button class="tag-btn'+(isTagged?' tagged':'')+'" data-horse="'+escHtml(horse.horse_name)+'" onclick="openTagModal(this.dataset.horse)">'+(isTagged?'&#9829;':'&#9825;')+'</button></div>';
+    html+='<div style="display:grid;grid-template-columns:90px 120px 60px 50px 70px 1fr;gap:8px;padding:6px 14px;background:#f8f5f1;font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase"><div>Date</div><div>Course</div><div>Time</div><div>Pos</div><div>SP</div><div>Jockey/Trainer</div></div>';
+    horse.runs.forEach(function(run){
+      var pn=parseInt(run.position,10),ps=pn===1?'color:#3b6d11;font-weight:600':(pn>=2&&pn<=4?'color:#185fa5;font-weight:600':'color:var(--text2)');
+      var pl=run.position?(isNaN(pn)?run.position:pn+(['th','st','nd','rd'][(pn%100-20)%10]||['th','st','nd','rd'][pn%100]||'th')):'—';
+      html+='<div style="display:grid;grid-template-columns:90px 120px 60px 50px 70px 1fr;gap:8px;padding:8px 14px;border-top:0.5px solid var(--border);font-size:12px;align-items:center"><div style="color:var(--text2)">'+escHtml(run.date)+'</div><div>'+escHtml(run.course||'—')+'</div><div style="color:var(--brand);font-weight:500">'+escHtml(run.race_time||'—')+'</div><div style="'+ps+'">'+pl+'</div><div style="font-weight:500">'+escHtml(run.sp||'—')+'</div><div style="color:var(--text2)">'+escHtml(run.jockey||'—')+(run.trainer?' / '+escHtml(run.trainer):'')+'</div></div>';
+    });
+    html+='</div>';
+  });
+  area.innerHTML=html;
+}
 </script>
 </body>
 </html>
