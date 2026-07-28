@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Previous Runners — Magnolia Horses</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --surface: rgba(255,252,248,0.93); --surface2: rgba(245,241,235,0.9);
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --green: #3b6d11; --green-bg: #eaf3de; --red: #a32d2d;
+      --gold: #b8860b; --gold-bg: #fdf8e8;
+      --blue: #185fa5; --blue-bg: rgba(230,241,251,0.9);
+      --slug: #6b7c3a;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); font-size: 15px; line-height: 1.5; min-height: 100vh; }
+    body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
+    body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
+    .brand-logo { width: 40px; height: 40px; border-radius: 50%; background: var(--brand); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .brand-logo svg { width: 22px; height: 22px; }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .brand-tagline { font-size: 11px; color: var(--text2); }
+    .nav-links { margin-left: auto; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
+    .nav-links a { font-size: 13px; color: var(--brand); text-decoration: none; white-space: nowrap; }
+    .nav-links a:hover { text-decoration: underline; }
+    .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
+    .page { max-width: 1100px; margin: 0 auto; padding: 0 1rem 3rem; }
+    .btn-primary { background: var(--brand); color: #fff; border: none; border-radius: var(--radius); padding: 10px 20px; font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; min-height: 44px; }
+    .btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 10px 16px; font-size: 15px; cursor: pointer; font-family: inherit; min-height: 44px; }
+    .tag-btn { background: none; border: 1px solid var(--border2); cursor: pointer; padding: 5px 8px; color: var(--text3); font-size: 20px; line-height: 1; border-radius: var(--radius); transition: all 0.15s; }
+    .tag-btn.tagged { color: var(--brand); border-color: var(--brand); background: var(--brand-light); }
+    .tag-btn:hover { color: var(--brand); border-color: var(--brand); background: var(--brand-light); }
+    .filter-row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1rem; align-items:flex-end; }
+    .filter-group { display:flex; flex-direction:column; gap:4px; min-width:130px; flex:1; }
+    .filter-group label { font-size:11px; font-weight:500; color:var(--text2); text-transform:uppercase; letter-spacing:0.04em; }
+    .filter-group input, .filter-group select { padding:7px 10px; font-size:13px; font-family:inherit; border:0.5px solid var(--border2); border-radius:var(--radius); background:var(--surface2); color:var(--text); }
+    .horse-group { border:0.5px solid var(--border); border-radius:10px; margin-bottom:1rem; overflow:hidden; }
+    .horse-group-header { background:var(--surface2); padding:10px 14px; display:flex; align-items:center; gap:10px; font-weight:600; }
+    .run-row { display:grid; grid-template-columns:90px 120px 60px 50px 70px 1fr; gap:8px; padding:8px 14px; border-top:0.5px solid var(--border); font-size:12px; align-items:center; }
+    .run-row:hover { background:var(--surface2); }
+    .pos-cell { font-weight:600; }
+    .pos-1 { color:#3b6d11; }
+    .pos-placed { color:#185fa5; }
+    .empty-state { text-align:center; padding:3rem; color:var(--text3); }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-header">
+    <div class="brand-logo">
+      <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 3C10 3 7 5 6 8C5 11 6 13 8 15C9 16 9 17 9 18H17C17 17 17 16 18 15C20 13 21 11 20 8C19 5 16 3 13 3Z" fill="white" opacity="0.9"/>
+        <path d="M9 18H17V20C17 21.1 16.1 22 15 22H11C9.9 22 9 21.1 9 20V18Z" fill="white" opacity="0.7"/>
+        <line x1="11" y1="18" x2="11" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="13" y1="18" x2="13" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="15" y1="18" x2="15" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Magnolia Horses</div>
+      <div class="brand-tagline">Horse Racing Runners Search Service</div>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      <a href="/previous" class="{% if page_id == 'previous' %}active{% endif %}">Previous</a>
+      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
+      {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
+      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
+      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
+      <a href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <div style="margin-bottom:1.5rem">
+    <h2 style="font-size:20px;font-weight:600;color:var(--brand);margin-bottom:1rem">Previous Runners</h2>
+
+    <!-- Filters -->
+    <div class="panel">
+      <div class="filter-row">
+        <div class="filter-group" style="flex:2;min-width:180px">
+          <label>Horse name</label>
+          <input type="text" id="f-horse" placeholder="e.g. Desert Crown"/>
+        </div>
+        <div class="filter-group">
+          <label>Course</label>
+          <input type="text" id="f-course" placeholder="e.g. Ascot"/>
+        </div>
+        <div class="filter-group">
+          <label>Jockey</label>
+          <input type="text" id="f-jockey" placeholder="Jockey name"/>
+        </div>
+        <div class="filter-group">
+          <label>Trainer</label>
+          <input type="text" id="f-trainer" placeholder="Trainer name"/>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>Colour</label>
+          <input type="text" id="f-colour" placeholder="e.g. Bay"/>
+        </div>
+        <div class="filter-group">
+          <label>Date from</label>
+          <input type="date" id="f-date-from"/>
+        </div>
+        <div class="filter-group">
+          <label>Date to</label>
+          <input type="date" id="f-date-to"/>
+        </div>
+        <div class="filter-group" style="justify-content:flex-end">
+          <label>&nbsp;</label>
+          <div style="display:flex;gap:8px">
+            <button class="btn-primary" onclick="runSearch()">Search</button>
+            <button class="btn-secondary" onclick="clearFilters()">Clear</button>
+            <button class="btn-sm" onclick="saveSearch()">&#9733; Save search</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div id="results-area">
+      <div class="empty-state">Enter a filter above and click Search</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tag modal (reuse from main search) -->
+<div id="tag-modal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:12px;padding:1.5rem;min-width:320px;max-width:420px">
+    <div style="font-weight:600;font-size:16px;color:var(--brand);margin-bottom:1rem" id="tag-modal-title">Tag horse</div>
+    <textarea id="tag-notes" placeholder="Notes (optional)" style="width:100%;height:80px;padding:8px;border:0.5px solid var(--border2);border-radius:6px;font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+    <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end">
+      <button class="btn-secondary" onclick="closeTagModal()">Cancel</button>
+      <button class="btn-secondary" id="tag-modal-untag" onclick="untagHorse()" style="color:#a32d2d;border-color:rgba(163,45,45,0.4)">Remove tag</button>
+      <button class="btn-primary" onclick="saveTagModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var taggedMap = {};
+var pendingHorse = null;
+
+// Load tags
+fetch('/api/my-tags').then(function(r){return r.json();}).then(function(tags){
+  tags.forEach(function(t){taggedMap[t.horse_name.toLowerCase()]=t.notes||'';}); 
+});
+
+function getFilters(){
+  return {
+    horse:     document.getElementById('f-horse').value.trim(),
+    course:    document.getElementById('f-course').value.trim(),
+    jockey:    document.getElementById('f-jockey').value.trim(),
+    trainer:   document.getElementById('f-trainer').value.trim(),
+    colour:    document.getElementById('f-colour').value.trim(),
+    date_from: document.getElementById('f-date-from').value,
+    date_to:   document.getElementById('f-date-to').value,
+  };
+}
+
+function runSearch(){
+  var f = getFilters();
+  var params = new URLSearchParams();
+  Object.keys(f).forEach(function(k){ if(f[k]) params.set(k, f[k]); });
+  if(!params.toString()){ alert('Enter at least one filter'); return; }
+  document.getElementById('results-area').innerHTML = '<div class="empty-state">Loading...</div>';
+  fetch('/api/previous-runners?' + params.toString())
+    .then(function(r){return r.json();})
+    .then(function(data){renderResults(data);});
+}
+
+function clearFilters(){
+  ['f-horse','f-course','f-jockey','f-trainer','f-colour','f-date-from','f-date-to'].forEach(function(id){
+    document.getElementById(id).value='';
+  });
+}
+
+function saveSearch(){
+  var name = prompt('Name this search:');
+  if(!name) return;
+  fetch('/api/saved-searches', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:name, filters:getFilters(), alert:false})
+  }).then(function(r){return r.json();}).then(function(d){
+    alert('Saved: ' + name);
+  });
+}
+
+function posClass(pos){
+  var p = parseInt(pos, 10);
+  if(p===1) return 'pos-1';
+  if(p>=2&&p<=4) return 'pos-placed';
+  return '';
+}
+
+function posLabel(pos){
+  if(!pos) return '—';
+  var p = parseInt(pos, 10);
+  if(isNaN(p)) return pos;
+  var s = ['th','st','nd','rd'];
+  var v = p%100;
+  return p + (s[(v-20)%10]||s[v]||s[0]);
+}
+
+function escHtml(str){
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function renderResults(data){
+  var area = document.getElementById('results-area');
+  if(!data||!data.length){
+    area.innerHTML='<div class="empty-state">No runners found.</div>';
+    return;
+  }
+  var html='<div style="color:var(--text2);font-size:12px;margin-bottom:0.75rem">'+data.length+' horse'+(data.length!==1?'s':'')+' found</div>';
+  data.forEach(function(horse){
+    var isTagged = Object.prototype.hasOwnProperty.call(taggedMap, horse.horse_name.toLowerCase());
+    html+='<div class="horse-group">';
+    html+='<div class="horse-group-header">';
+    html+='<span style="flex:1">'+escHtml(horse.horse_name)+'</span>';
+    html+='<span style="font-size:12px;color:var(--text2);font-weight:400">'+horse.runs.length+' run'+(horse.runs.length!==1?'s':'')+'</span>';
+    html+='<button class="tag-btn'+(isTagged?' tagged':'')+'" data-horse="'+escHtml(horse.horse_name)+'" onclick="openTagModal(this.dataset.horse)" title="'+(isTagged?'Edit tag':'Tag horse')+'">'+(isTagged?'&#9829;':'&#9825;')+'</button>';
+    html+='</div>';
+    html+='<div style="display:grid;grid-template-columns:90px 120px 60px 50px 70px 1fr;gap:8px;padding:6px 14px;background:var(--surface2);font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:0.04em">';
+    html+='<div>Date</div><div>Course</div><div>Time</div><div>Pos</div><div>SP</div><div>Jockey / Trainer</div>';
+    html+='</div>';
+    horse.runs.forEach(function(run){
+      var pc=posClass(run.position);
+      html+='<div class="run-row">';
+      html+='<div style="color:var(--text2)">'+escHtml(run.date)+'</div>';
+      html+='<div>'+escHtml(run.course||'—')+'</div>';
+      html+='<div style="color:var(--brand);font-weight:500">'+escHtml(run.race_time||'—')+'</div>';
+      html+='<div class="pos-cell '+(pc||'')+'">'+(run.position?posLabel(run.position):'—')+'</div>';
+      html+='<div style="font-weight:500">'+escHtml(run.sp||'—')+'</div>';
+      html+='<div style="color:var(--text2)">'+escHtml(run.jockey||'—')+(run.trainer?' / '+escHtml(run.trainer):'')+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  area.innerHTML=html;
+}
+
+// Tag modal
+function openTagModal(horseName){
+  pendingHorse=horseName;
+  var isTagged=Object.prototype.hasOwnProperty.call(taggedMap,horseName.toLowerCase());
+  document.getElementById('tag-modal-title').textContent=(isTagged?'Edit tag: ':'Tag horse: ')+horseName;
+  document.getElementById('tag-notes').value=taggedMap[horseName.toLowerCase()]||'';
+  document.getElementById('tag-modal-untag').style.display=isTagged?'':'none';
+  document.getElementById('tag-modal').style.display='flex';
+}
+function closeTagModal(){
+  document.getElementById('tag-modal').style.display='none';
+  pendingHorse=null;
+}
+function saveTagModal(){
+  var notes=document.getElementById('tag-notes').value.trim();
+  fetch('/api/tag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({horse_name:pendingHorse,notes:notes})})
+    .then(function(r){return r.json();}).then(function(){
+      taggedMap[pendingHorse.toLowerCase()]=notes;
+      closeTagModal();
+      runSearch();
+    });
+}
+function untagHorse(){
+  fetch('/api/untag',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({horse_name:pendingHorse})})
+    .then(function(r){return r.json();}).then(function(){
+      delete taggedMap[pendingHorse.toLowerCase()];
+      closeTagModal();
+      runSearch();
+    });
+}
+
+// Allow Enter key to search
+document.addEventListener('keydown',function(e){if(e.key==='Enter')runSearch();});
+</script>
+</body>
+</html>

@@ -1753,6 +1753,64 @@ def admin_fix_tip_dates():
 
 
 
+@app.route('/previous')
+@login_required
+def previous_runners():
+    can_tipster = is_admin() or getattr(current_user, 'can_see_tipster', False)
+    return render_template('previous.html', is_admin=is_admin(), page_id='previous', can_tipster=can_tipster)
+
+
+@app.route('/api/previous-runners')
+@login_required
+def api_previous_runners():
+    horse   = request.args.get('horse',   '').strip()
+    jockey  = request.args.get('jockey',  '').strip()
+    trainer = request.args.get('trainer', '').strip()
+    colour  = request.args.get('colour',  '').strip()
+    course  = request.args.get('course',  '').strip()
+    date_from = request.args.get('date_from', '').strip()
+    date_to   = request.args.get('date_to',   '').strip()
+
+    if not any([horse, jockey, trainer, colour, course, date_from, date_to]):
+        return jsonify([])
+
+    q = RunnerHistory.query
+    if horse:   q = q.filter(RunnerHistory.horse_name.ilike(f'%{horse}%'))
+    if jockey:  q = q.filter(RunnerHistory.jockey.ilike(f'%{jockey}%'))
+    if trainer: q = q.filter(RunnerHistory.trainer.ilike(f'%{trainer}%'))
+    if colour:  q = q.filter(RunnerHistory.colour.ilike(f'%{colour}%'))
+    if course:  q = q.filter(RunnerHistory.course.ilike(f'%{course}%'))
+    if date_from: q = q.filter(RunnerHistory.race_date >= date_from)
+    if date_to:   q = q.filter(RunnerHistory.race_date <= date_to)
+
+    runners = q.order_by(RunnerHistory.horse_name, RunnerHistory.race_date.desc()).limit(500).all()
+
+    # Group by horse name
+    grouped = {}
+    for r in runners:
+        name = r.horse_name
+        if name not in grouped:
+            grouped[name] = []
+        grouped[name].append({
+            'date':      r.race_date or '',
+            'course':    r.course or '',
+            'race_time': r.race_time or '',
+            'race_name': r.race_name or '',
+            'position':  r.position or '',
+            'sp':        r.sp or r.odds or '',
+            'jockey':    r.jockey or '',
+            'trainer':   r.trainer or '',
+            'colour':    r.colour or '',
+        })
+
+    result = [{        'horse_name': name,
+        'runs': runs
+    } for name, runs in sorted(grouped.items())]
+
+    return jsonify(result)
+
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
