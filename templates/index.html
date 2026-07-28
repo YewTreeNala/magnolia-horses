@@ -443,15 +443,12 @@ var currentView='today';
 function setView(v){
   currentView=v;
   var hb=document.getElementById('history-btn');
-  var dr=document.getElementById('date-range-row');
   var sb=document.getElementById('btn-search');
   if(v==='history'){
     if(hb){hb.style.background='var(--slug)';hb.style.color='#fff';hb.style.border='0.5px solid var(--slug)';hb.textContent='\uD83D\uDCCB History';}
-    if(dr) dr.style.display='flex';
     if(sb) sb.textContent='Search history';
   } else {
     if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='\uD83D\uDCCB Today';}
-    if(dr) dr.style.display='none';
     if(sb) sb.textContent='Search runners';
   }
 }
@@ -573,6 +570,7 @@ function getMatchingSearches(r, meetingName) {
     if (f.trainer  && (r.trainer || '').toLowerCase() !== f.trainer.toLowerCase()) continue;
     if (f.owner    && (r.owner   || '').toLowerCase() !== f.owner.toLowerCase())   continue;
     if (f.horse && f.horse.trim() && r.name.toLowerCase().indexOf(f.horse.trim().toLowerCase()) === -1) continue;
+    if (f.tipster === 'tof' && !tippedHorses[(r.name||'').toLowerCase().trim()]) continue;
     matches.push(savedSearches[i].name);
   }
   return matches;
@@ -592,7 +590,8 @@ function getFilters() {
     cls:     document.getElementById('f-class').value,
     sort:    document.getElementById('f-sort').value,
     uk_only: document.getElementById('f-uk-only').checked,
-    tipster: (document.getElementById('f-tipster')||{value:''}).value
+    tipster: (document.getElementById('f-tipster')||{value:''}).value,
+    view: currentView
   };
 }
 
@@ -610,7 +609,7 @@ function restoreFilters() {
     if (f.type)    document.getElementById('f-type').value   = f.type;
     if (f.cls)     document.getElementById('f-class').value  = f.cls;
     if (f.sort)    document.getElementById('f-sort').value   = f.sort;
-    if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); var _fte=document.getElementById('f-tipster');if(_fte)_fte.value=f.tipster||''; }
+    if (f.uk_only !== undefined) { document.getElementById('f-uk-only').checked = f.uk_only; syncUKToggle(); var _fte=document.getElementById('f-tipster');if(_fte)_fte.value=f.tipster||''; if(f.view) setView(f.view); }
     if (f.jockey)  { selectedValues.jockey  = f.jockey;  document.getElementById('f-jockey').value  = f.jockey; }
     if (f.trainer) { selectedValues.trainer = f.trainer; document.getElementById('f-trainer').value = f.trainer; }
     if (f.owner)   { selectedValues.owner   = f.owner;   document.getElementById('f-owner').value   = f.owner; }
@@ -1093,6 +1092,7 @@ function clearFilters() {
   document.getElementById('f-sort').value      = 'meeting';
   document.getElementById('f-uk-only').checked = true;
   var _ftc=document.getElementById('f-tipster');if(_ftc)_ftc.value='';
+  setView('today');
   document.getElementById('f-meeting').value   = '';
   document.getElementById('f-search-mode').value = 'text';
   syncUKToggle(); syncSearchModeBtn();
@@ -1657,12 +1657,20 @@ function runHistorySearch(){
   var trainer=(typeof selectedValues!=='undefined'&&selectedValues.trainer)||'';
   var colour=document.getElementById('f-colour')?document.getElementById('f-colour').value.trim():'';
   var course=document.getElementById('f-meeting')?document.getElementById('f-meeting').value.trim():'';
-  if(!horse&&!jockey&&!trainer&&!colour&&!course){alert('Enter at least one filter');return;}
+  var ukOnly=document.getElementById('f-uk-only')?document.getElementById('f-uk-only').checked:true;
+  var tipsterFilter=document.getElementById('f-tipster')?(document.getElementById('f-tipster').value||''):'';
   var p=new URLSearchParams();
   if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
   if(colour)p.set('colour',colour);if(course)p.set('course',course);
+  if(ukOnly)p.set('uk_only','true');
   document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
-  fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(renderHistoryResults);
+  fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(function(data){
+    // Apply tipster filter client-side if set
+    if(tipsterFilter==='tof'&&Object.keys(tippedHorses).length){
+      data=data.filter(function(h){return !!tippedHorses[h.horse_name.toLowerCase().trim()];});
+    }
+    renderHistoryResults(data);
+  });
 }
 function renderHistoryResults(data){
   var area=document.getElementById('results-area');

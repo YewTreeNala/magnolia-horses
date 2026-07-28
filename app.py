@@ -1771,8 +1771,7 @@ def api_previous_runners():
     date_from = request.args.get('date_from', '').strip()
     date_to   = request.args.get('date_to',   '').strip()
 
-    if not any([horse, jockey, trainer, colour, course, date_from, date_to]):
-        return jsonify([])
+    uk_only = request.args.get('uk_only', '').lower() in ('true', '1')
 
     q = RunnerHistory.query
     if horse:   q = q.filter(RunnerHistory.horse_name.ilike(f'%{horse}%'))
@@ -1782,6 +1781,16 @@ def api_previous_runners():
     if course:  q = q.filter(RunnerHistory.course.ilike(f'%{course}%'))
     if date_from: q = q.filter(RunnerHistory.race_date >= date_from)
     if date_to:   q = q.filter(RunnerHistory.race_date <= date_to)
+    if uk_only:
+        UK_COURSES = ['ascot','bath','beverley','brighton','carlisle','catterick','chelmsford',
+            'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las','fontwell',
+            'goodwood','hamilton','haydock','hereford','hexham','huntingdon','kempton',
+            'leicester','lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
+            'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon','salisbury',
+            'sandown','sedgefield','southwell','stratford','taunton','thirsk','uttoxeter',
+            'warwick','wetherby','wincanton','windsor','wolverhampton','worcester','yarmouth','york',
+            'ayr','bangor','kelso','chester']
+        q = q.filter(db.func.lower(RunnerHistory.course).in_(UK_COURSES))
 
     runners = q.order_by(RunnerHistory.horse_name, RunnerHistory.race_date.desc()).limit(500).all()
 
