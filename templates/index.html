@@ -308,7 +308,7 @@
       </div>
       <div class="filter-group">
         <label>Sort by</label>
-        <select id="f-sort" onchange="autoRun()">
+        <select id="f-sort" onchange="if(currentView!=='history') autoRun()">
           <option value="meeting">Meeting then time</option>
           <option value="time">Race time</option>
         </select>
@@ -452,11 +452,13 @@ function setView(v){
   currentView=v;
   var hb=document.getElementById('history-btn');
   var sb=document.getElementById('btn-search');
+  var sortEl=document.getElementById('f-sort');
+  if(sortEl){sortEl.disabled=(v==='history');sortEl.style.opacity=(v==='history'?'0.4':'1');}
   if(v==='history'){
-    if(hb){hb.style.background='var(--slug)';hb.style.color='#fff';hb.style.border='0.5px solid var(--slug)';hb.textContent='\uD83D\uDCCB History';}
+    if(hb){hb.style.background='var(--brand)';hb.style.color='#fff';hb.style.border='0.5px solid var(--brand)';hb.textContent='Viewing: History';}
     if(sb) sb.textContent='Search history';
   } else {
-    if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='\uD83D\uDCCB Today';}
+    if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='Viewing: Today';}
     if(sb) sb.textContent='Search runners';
   }
 }
@@ -1101,7 +1103,7 @@ function clearFilters() {
   document.getElementById('f-sort').value      = 'meeting';
   document.getElementById('f-uk-only').checked = true;
   var _ftc=document.getElementById('f-tipster');if(_ftc)_ftc.value='';
-  setView('today');
+
   document.getElementById('f-meeting').value   = '';
   document.getElementById('f-search-mode').value = 'text';
   syncUKToggle(); syncSearchModeBtn();
@@ -1228,7 +1230,7 @@ function checkEditSearchParam() {
       .then(function(data) {
         if (data.error) { window.alert('Could not load that search: ' + data.error); return; }
         applyFilters(data.filters);
-        runSearch();
+        autoRun();
         var ownerLabel = data.user_name + ' (' + data.user_email + ')';
         setTimeout(function() { openSaveSearchModal(data.name, data.alert, data.id, true, ownerLabel); }, 200);
       })
@@ -1243,7 +1245,7 @@ function checkEditSearchParam() {
   if (!match) return;
   applyFilters(match.filters);
   saveFilters();
-  runSearch();
+  autoRun();
   setTimeout(function() { openSaveSearchModal(match.name, match.alert, match.id); }, 200);
 }
 
@@ -1253,7 +1255,7 @@ autoSyncIfNeeded()
   .then(function() { return loadSavedSearches(); })
   .then(function() {
     checkEditSearchParam();
-    if (!new URLSearchParams(window.location.search).get('race')) runSearch();
+    if (!new URLSearchParams(window.location.search).get('race')) autoRun();
   });
 </script>
 
