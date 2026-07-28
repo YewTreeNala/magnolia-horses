@@ -327,6 +327,17 @@
         <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
         <input type="checkbox" id="f-uk-only" checked style="display:none"/>
       </div>
+      <div class="filter-group">
+        <label>View</label>
+        <button type="button" id="history-btn" onclick="toggleHistoryView()" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">&#128203; Today</button>
+      </div>
+    </div>
+    <!-- Date range row (History mode) -->
+    <div id="date-range-row" style="display:none;gap:8px;padding:0 0 0.75rem;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:var(--text2);font-weight:500">Date range:</span>
+      <input type="date" id="f-date-from" style="padding:6px 10px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text)"/>
+      <span style="color:var(--text3);font-size:12px">to</span>
+      <input type="date" id="f-date-to" style="padding:6px 10px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text)"/>
     </div>
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
@@ -438,7 +449,24 @@
 var IS_LOGGED_IN    = {{ 'true' if current_user.is_authenticated else 'false' }};
 var IS_ADMIN        = {{ 'true' if is_admin else 'false' }};
 var currentView='today';
-function setView(v){currentView=v;var bt=document.getElementById('btn-view-today'),bh=document.getElementById('btn-view-history');bt.style.background=v==='today'?'var(--brand)':'var(--surface2)';bt.style.color=v==='today'?'#fff':'var(--text2)';bh.style.background=v==='history'?'var(--brand)':'var(--surface2)';bh.style.color=v==='history'?'#fff':'var(--text2)';document.getElementById('date-range-row').style.display=v==='history'?'flex':'none';document.getElementById('btn-search').textContent=v==='history'?'Search history':'Search runners';}
+function setView(v){
+  currentView=v;
+  var hb=document.getElementById('history-btn');
+  var dr=document.getElementById('date-range-row');
+  var sb=document.getElementById('btn-search');
+  if(v==='history'){
+    if(hb){hb.style.background='var(--slug)';hb.style.color='#fff';hb.style.border='0.5px solid var(--slug)';hb.textContent='\uD83D\uDCCB History';}
+    if(dr) dr.style.display='flex';
+    if(sb) sb.textContent='Search history';
+  } else {
+    if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='\uD83D\uDCCB Today';}
+    if(dr) dr.style.display='none';
+    if(sb) sb.textContent='Search runners';
+  }
+}
+function toggleHistoryView(){
+  setView(currentView==='history'?'today':'history');
+}
 var STORAGE_KEY     = 'magnolia_filters_v4';
 var taggedMap       = {};
 var pendingHorse    = null;
@@ -1095,7 +1123,6 @@ function autoSyncIfNeeded() {
 }
 
 // ── Event wiring ──────────────────────────────────────────────────────────────
-document.getElementById('btn-search').addEventListener('click', function(){if(currentView==='history'){runHistorySearch();}else{runSearch();}});
 document.getElementById('btn-clear').addEventListener('click', clearFilters);
 
 document.getElementById('search-mode-btn').addEventListener('click', function() {
