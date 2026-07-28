@@ -552,6 +552,8 @@ function getMatchingSearches(r, meetingName) {
     if (f.trainer  && (r.trainer || '').toLowerCase() !== f.trainer.toLowerCase()) continue;
     if (f.owner    && (r.owner   || '').toLowerCase() !== f.owner.toLowerCase())   continue;
     if (f.horse && f.horse.trim() && r.name.toLowerCase().indexOf(f.horse.trim().toLowerCase()) === -1) continue;
+    // Tipster filter - check if horse is in tippedHorses
+    if (f.tipster === 'tof' && !tippedHorses[(r.name||'').toLowerCase().trim()]) continue;
     matches.push(savedSearches[i].name);
   }
   return matches;
@@ -1014,13 +1016,13 @@ function renderResults(data) {
     var allRaces = [];
     for (var a = 0; a < data.length; a++) for (var b = 0; b < data[a].races.length; b++) allRaces.push({ race: data[a].races[b], meeting: data[a].meeting });
     allRaces.sort(function(x, y) { return timeToMins(x.race.time) - timeToMins(y.race.time); });
-    for (var c = 0; c < allRaces.length; c++) var _rh=buildRaceBlock(allRaces[c].race, allRaces[c].meeting);if(_rh) html += '<div class="meeting-block">' + _rh + '</div>';
+    for (var c = 0; c < allRaces.length; c++) html += '<div class="meeting-block">' + buildRaceBlock(allRaces[c].race, allRaces[c].meeting) + '</div>';
   } else {
     for (var d = 0; d < data.length; d++) {
       var block = data[d];
-      var racesHtml = '';
-      for (var e = 0; e < block.races.length; e++) racesHtml += buildRaceBlock(block.races[e], null, block.meeting);
-      if(racesHtml) html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>' + racesHtml + '</div>';
+      html += '<div class="meeting-block"><div class="meeting-header"><div class="meeting-name">' + escHtml(block.meeting) + '</div><div class="meeting-meta">' + escHtml(block.date || '') + '</div></div>';
+      for (var e = 0; e < block.races.length; e++) html += buildRaceBlock(block.races[e], null, block.meeting);
+      html += '</div>';
     }
   }
   area.innerHTML = html;
