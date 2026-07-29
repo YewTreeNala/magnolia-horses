@@ -330,10 +330,10 @@
     </div>
 
     <div class="btn-row">
-      <button class="btn-primary" id="btn-search">Search runners</button>
+      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">Today</button>
+      <button class="btn-primary" id="btn-search">Search Today</button>
       <button class="btn-secondary" id="btn-clear">Clear</button>
       <span class="spinner" id="spinner"></span>
-      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="margin-left:auto;padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">Viewing: Today</button>
       {% if current_user.is_authenticated %}
         <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
       {% endif %}
@@ -440,6 +440,12 @@
 var IS_LOGGED_IN    = {{ 'true' if current_user.is_authenticated else 'false' }};
 var IS_ADMIN        = {{ 'true' if is_admin else 'false' }};
 var currentView='today';
+var _lastRenderedData=null, _lastRenderedMeetings=null;
+function refreshMatchBadges(){
+  // Re-render results if tipster saved search exists and tippedHorses now loaded
+  var hasTipsterSearch=savedSearches.some(function(s){return s.filters&&s.filters.tipster==='tof';});
+  if(hasTipsterSearch&&_lastRenderedData) renderResults(_lastRenderedData);
+}
 function autoRun(){
   if(currentView==='history') runHistorySearch();
   else runSearch();
@@ -452,11 +458,13 @@ function setView(v){
   var sortEl=document.getElementById('f-sort');
   if(sortEl){sortEl.disabled=(v==='history');sortEl.style.opacity=(v==='history'?'0.4':'1');}
   if(v==='history'){
-    if(hb){hb.style.background='var(--brand)';hb.style.color='#fff';hb.style.border='0.5px solid var(--brand)';hb.textContent='Viewing: History';}
-    if(sb) sb.textContent='Search history';
+    if(hb){hb.style.background='var(--brand)';hb.style.color='#fff';hb.style.border='0.5px solid var(--brand)';hb.textContent='History';}
+    if(sortEl){sortEl.disabled=true;sortEl.style.opacity='0.4';}
+    if(sb) sb.textContent='Search History';
   } else {
-    if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='Viewing: Today';}
-    if(sb) sb.textContent='Search runners';
+    if(hb){hb.style.background='var(--surface2)';hb.style.color='var(--text2)';hb.style.border='0.5px solid var(--border2)';hb.textContent='Today';}
+    if(sortEl){sortEl.disabled=false;sortEl.style.opacity='1';}
+    if(sb) sb.textContent='Search Today';
   }
 }
 function toggleHistoryView(){
@@ -740,7 +748,7 @@ function makeTagBtn(horseName, isTagged, notes) {
 
 // ── Tipster badges
 var tippedHorses = {};
-(function(){ fetch('/api/tipped-horses').then(function(r){return r.json();}).then(function(d){ tippedHorses = d.horses||{}; }); })();
+(function(){ fetch('/api/tipped-horses').then(function(r){return r.json();}).then(function(d){ tippedHorses = d.horses||{}; if(typeof refreshMatchBadges==='function') refreshMatchBadges(); }); })();
 
 
 
@@ -1667,18 +1675,39 @@ function runHistorySearch(){
   var course=document.getElementById('f-meeting')?document.getElementById('f-meeting').value.trim():'';
   var ukOnly=document.getElementById('f-uk-only')?document.getElementById('f-uk-only').checked:true;
   var tipsterFilter=document.getElementById('f-tipster')?(document.getElementById('f-tipster').value||''):'';
-  var p=new URLSearchParams();
-  if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
-  if(colour)p.set('colour',colour);if(course)p.set('course',course);
-  if(ukOnly)p.set('uk_only','true');
-  document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
-  fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(function(data){
-    // Apply tipster filter client-side if set
-    if(tipsterFilter==='tof'&&Object.keys(tippedHorses).length){
-      data=data.filter(function(h){return !!tippedHorses[h.horse_name.toLowerCase().trim()];});
+
+  // Require at least one filter
+  if(!horse&&!jockey&&!trainer&&!colour&&!course&&!tipsterFilter){
+    document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Please select at least one filter to search history.</div></div>';
+    return;
+  }
+
+  function doSearch(){
+    var p=new URLSearchParams();
+    if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
+    if(colour)p.set('colour',colour);if(course)p.set('course',course);
+    if(ukOnly)p.set('uk_only','true');
+    // If tipster only filter, pass all tipped horse names
+    if(tipsterFilter==='tof' && !horse && !jockey && !trainer && !colour && !course){
+      var names=Object.keys(tippedHorses);
+      if(names.length) p.set('horse_list', names.join(','));
     }
-    renderHistoryResults(data);
-  });
+    document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
+    fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(function(data){
+      if(tipsterFilter==='tof'){
+        data=data.filter(function(h){return !!tippedHorses[h.horse_name.toLowerCase().trim()];});
+      }
+      renderHistoryResults(data);
+    });
+  }
+
+  // Ensure tippedHorses loaded if tipster filter set
+  if(tipsterFilter==='tof' && !Object.keys(tippedHorses).length){
+    fetch('/api/tipped-horses').then(function(r){return r.json();}).then(function(d){
+      tippedHorses=d.horses||{};
+      doSearch();
+    });
+  } else { doSearch(); }
 }
 function renderHistoryResults(data){
   var area=document.getElementById('results-area');
