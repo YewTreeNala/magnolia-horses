@@ -151,7 +151,7 @@
 
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 500; align-items: center; justify-content: center; padding: 1rem; }
     .modal-overlay.open { display: flex; }
-    .modal { background: rgba(255,252,248,0.98); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 480px; width: 100%; border: 0.5px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
+    .modal { background: rgba(255,252,248,0.98); border-radius: var(--radius-lg); padding: 1.5rem; max-width: 860px; width: 100%; border: 0.5px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
     .modal h3 { font-size: 17px; font-weight: 500; margin-bottom: 0.75rem; color: var(--brand); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .modal-field { margin-bottom: 0.75rem; }
     .modal-field label { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px; }
@@ -411,6 +411,10 @@
       <button class="modal-btn-primary" id="tag-modal-save">&#9825; Tag horse</button>
       <button class="modal-btn-secondary" id="tag-modal-cancel">Cancel</button>
       <button class="modal-btn-danger" id="tag-modal-remove" style="display:none">Remove tag</button>
+    </div>
+    <div id="tag-modal-history" style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;max-height:400px;overflow-y:auto;display:none">
+      <div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">Form history</div>
+      <div id="tag-modal-history-body"><div style="text-align:center;padding:1rem;color:var(--text3)">Loading...</div></div>
     </div>
   </div>
 </div>
@@ -709,6 +713,36 @@ function openTagModal(horseName) {
   document.getElementById('tag-modal-remove').style.display = isTagged ? 'inline-block' : 'none';
   document.getElementById('tag-modal').classList.add('open');
   setTimeout(function() { document.getElementById('tag-notes').focus(); }, 50);
+
+  // Load form history and tipster history
+  var histSection = document.getElementById('tag-modal-history');
+  var histBody = document.getElementById('tag-modal-history-body');
+  if(histSection && histBody) {
+    histSection.style.display = 'none';
+    histBody.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--text3)">Loading...</div>';
+    // Get horse_id from allRunnersCache
+    var rr = allRunnersCache[horseName.toLowerCase()] || {};
+    var hId = rr.horse_id || null;
+    if(hId) {
+      histSection.style.display = 'block';
+      fetch('/api/horse-history/' + hId).then(function(r){return r.json();}).then(function(runs){
+        var html = renderHistoryRunsHtml(runs, []);
+        // Append tipster section
+        var tkey=horseName.toLowerCase().trim();
+        var tdata=tippedHorses[tkey];
+        if(tdata&&tdata.tips&&tdata.tips.length) html+=buildTipsterHistoryHtml(tdata.tips);
+        histBody.innerHTML = html || '<div style="text-align:center;padding:1rem;color:var(--text3)">No history available.</div>';
+      });
+    } else {
+      // No horse_id but check tipster history
+      var tkey2=horseName.toLowerCase().trim();
+      var tdata2=tippedHorses[tkey2];
+      if(tdata2&&tdata2.tips&&tdata2.tips.length){
+        histSection.style.display='block';
+        histBody.innerHTML=buildTipsterHistoryHtml(tdata2.tips);
+      }
+    }
+  }
 }
 
 function saveTag() {
@@ -1359,6 +1393,53 @@ function posLabel(p) {
   return n + s;
 }
 
+function renderHistoryRunsHtml(runs, coRunners) {
+  coRunners = coRunners || [];
+  if (!runs || !runs.length) return '';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Race</th><th style="padding:5px 8px;text-align:left">Pos</th><th style="padding:5px 8px;text-align:left">SP</th><th style="padding:5px 8px;text-align:left">OR</th></tr>';
+  for (var i = 0; i < runs.length; i++) {
+    var run = runs[i];
+    var posNum = parseInt(run.position, 10);
+    var posCls = posNum===1?'color:#3b6d11;font-weight:600':posNum<=3?'color:#185fa5;font-weight:600':'color:var(--text2)';
+    var isToday = coRunners.indexOf(run.horse_id) !== -1;
+    html += '<tr style="border-bottom:0.5px solid #e8e0d5'+(isToday?';background:rgba(139,58,58,0.04)':'')+'">';
+    html += '<td style="padding:5px 8px;color:var(--text2)">'+escHtml(run.date||'')+'</td>';
+    html += '<td style="padding:5px 8px">'+escHtml(run.course||'—')+'</td>';
+    html += '<td style="padding:5px 8px;color:var(--text2);font-size:11px">'+escHtml((run.race_name||'').substring(0,30))+'</td>';
+    html += '<td style="padding:5px 8px;'+posCls+'">'+(run.position||'—')+'</td>';
+    html += '<td style="padding:5px 8px;font-weight:500">'+escHtml(run.sp||'—')+'</td>';
+    html += '<td style="padding:5px 8px">'+escHtml(run.or||'—')+'</td>';
+    html += '</tr>';
+  }
+  html += '</table>';
+  return html;
+}
+
+function buildTipsterHistoryHtml(tips) {
+  var th='<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">';
+  th+='<div style="font-size:13px;font-weight:600;color:#8b3a3a;margin-bottom:8px">&#127922; Tipster history ('+tips.length+' tip'+(tips.length>1?'s':'')+')</div>';
+  th+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  th+='<tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Bet</th><th style="padding:5px 8px;text-align:left">Odds</th><th style="padding:5px 8px;text-align:left">Result</th><th style="padding:5px 8px;text-align:left">P&L</th></tr>';
+  for(var ti=0;ti<tips.length;ti++){
+    var t=tips[ti];
+    var rc=t.result==='win'?'color:#3b6d11;font-weight:600':t.result==='place'?'color:#185fa5':t.result==='loss'?'color:#a32d2d':'color:#888';
+    var rl=t.result==='win'?'Won':t.result==='place'?'Placed':t.result==='loss'?'Lost':t.result==='nr'?'NR':'Pending';
+    var pnl=t.total_pts!=null?(t.total_pts>=0?'+':'')+t.total_pts.toFixed(2)+'pts':'—';
+    th+='<tr style="border-bottom:0.5px solid #e8e0d5">';
+    th+='<td style="padding:5px 8px">'+escHtml(t.race_date||'')+'</td>';
+    th+='<td style="padding:5px 8px">'+escHtml(t.course||'—')+'</td>';
+    th+='<td style="padding:5px 8px;color:#8b3a3a">'+escHtml(t.race_time||'—')+'</td>';
+    th+='<td style="padding:5px 8px">'+escHtml(t.stake_pts+'pt '+(t.bet_type==='ew'?'E/W':'Win'))+'</td>';
+    th+='<td style="padding:5px 8px;font-weight:500">'+escHtml(t.odds||'—')+'</td>';
+    th+='<td style="padding:5px 8px;'+rc+'">'+rl+(t.position?' ('+t.position+')':'')+'</td>';
+    th+='<td style="padding:5px 8px">'+pnl+'</td>';
+    th+='</tr>';
+  }
+  th+='</table></div>';
+  return th;
+}
+
 function renderHistoryRuns(runs, coRunners, horseInfo) {
   coRunners = coRunners || [];
   var body = document.getElementById('history-body');
@@ -1416,33 +1497,11 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
 
   body.innerHTML = html;
 
-  // Append tipster history if any
+  // Append tipster history
   var hname = document.getElementById('history-horse-name').textContent;
   var tkey = (hname||'').toLowerCase().trim();
   var tdata = tippedHorses[tkey];
-  if(tdata && tdata.tips && tdata.tips.length){
-    var th = '<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">';
-    th += '<div style="font-size:13px;font-weight:600;color:#8b3a3a;margin-bottom:8px">&#127922; Tipster history ('+tdata.tips.length+' tip'+(tdata.tips.length>1?'s':'')+')</div>';
-    th += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-    th += '<tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Bet</th><th style="padding:5px 8px;text-align:left">Odds</th><th style="padding:5px 8px;text-align:left">Result</th><th style="padding:5px 8px;text-align:left">P&L</th></tr>';
-    for(var ti=0;ti<tdata.tips.length;ti++){
-      var t=tdata.tips[ti];
-      var rc=t.result==='win'?'color:#3b6d11;font-weight:600':t.result==='place'?'color:#185fa5':t.result==='loss'?'color:#a32d2d':'color:#888';
-      var rl=t.result==='win'?'Won':t.result==='place'?'Placed':t.result==='loss'?'Lost':t.result==='nr'?'NR':'Pending';
-      var pnl=t.total_pts!=null?(t.total_pts>=0?'+':'')+t.total_pts.toFixed(2)+'pts':'—';
-      th+='<tr style="border-bottom:0.5px solid #e8e0d5">';
-      th+='<td style="padding:5px 8px">'+escHtml(t.race_date||'')+'</td>';
-      th+='<td style="padding:5px 8px">'+escHtml(t.course||'—')+'</td>';
-      th+='<td style="padding:5px 8px;color:#8b3a3a">'+escHtml(t.race_time||'—')+'</td>';
-      th+='<td style="padding:5px 8px">'+escHtml(t.stake_pts+'pt '+(t.bet_type==='ew'?'E/W':'Win'))+'</td>';
-      th+='<td style="padding:5px 8px;font-weight:500">'+escHtml(t.odds||'—')+'</td>';
-      th+='<td style="padding:5px 8px;'+rc+'">'+rl+(t.position?' ('+t.position+')':'')+'</td>';
-      th+='<td style="padding:5px 8px">'+pnl+'</td>';
-      th+='</tr>';
-    }
-    th+='</table></div>';
-    body.innerHTML += th;
-  }
+  if(tdata && tdata.tips && tdata.tips.length) body.innerHTML += buildTipsterHistoryHtml(tdata.tips);
 }
 
 function toggleHistoryField(idx) {
