@@ -1322,7 +1322,16 @@ function buildHorseInfoHtml(info){
 function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   coRunners = coRunners || [];
   document.getElementById('history-horse-name').textContent = horseName;
-  document.getElementById('history-horse-sub').textContent  = 'Race history';
+  var sub='Race history';
+  if(horseInfo){
+    var parts=[];
+    if(horseInfo.age) parts.push(horseInfo.age+'yo');
+    if(horseInfo.colour) parts.push(horseInfo.colour);
+    if(horseInfo.sex) parts.push(horseInfo.sex);
+    if(horseInfo.or) parts.push('OR '+horseInfo.or);
+    if(parts.length) sub=parts.join(' · ');
+  }
+  document.getElementById('history-horse-sub').textContent = sub;
   document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Loading...</div>';
   document.getElementById('history-modal').classList.add('open');
 
@@ -1353,9 +1362,9 @@ function posLabel(p) {
 function renderHistoryRuns(runs, coRunners, horseInfo) {
   coRunners = coRunners || [];
   var body = document.getElementById('history-body');
-  var infoHtml = buildHorseInfoHtml ? buildHorseInfoHtml(horseInfo||null) : '';
+
   if (!runs || !runs.length) {
-    body.innerHTML = infoHtml + '<div style="text-align:center;padding:2rem;color:var(--text3)">No history available yet — history builds up after each racing day.</div>';
+    body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">No history available yet — history builds up after each racing day.</div>';
     return;
   }
 
@@ -1405,7 +1414,7 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
     html += '</div>'; // end run
   }
 
-  body.innerHTML = infoHtml + html;
+  body.innerHTML = html;
 
   // Append tipster history if any
   var hname = document.getElementById('history-horse-name').textContent;
