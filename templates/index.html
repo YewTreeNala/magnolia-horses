@@ -1687,11 +1687,7 @@ function runHistorySearch(){
     if(horse)p.set('horse',horse);if(jockey)p.set('jockey',jockey);if(trainer)p.set('trainer',trainer);
     if(colour)p.set('colour',colour);if(course)p.set('course',course);
     if(ukOnly)p.set('uk_only','true');
-    // If tipster only filter, pass all tipped horse names
-    if(tipsterFilter==='tof' && !horse && !jockey && !trainer && !colour && !course){
-      var names=Object.keys(tippedHorses);
-      if(names.length) p.set('horse_list', names.join(','));
-    }
+    // tipster-only: no extra params needed, client-side filter applied after
     document.getElementById('results-area').innerHTML='<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Searching history...</div></div>';
     fetch('/api/previous-runners?'+p.toString()).then(function(r){return r.json();}).then(function(data){
       if(tipsterFilter==='tof'){

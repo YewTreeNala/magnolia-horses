@@ -800,6 +800,11 @@ def run_all_searches():
             if f.get('jockey')  and f['jockey'].lower()  != (r.jockey or '').lower():       continue
             if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():       continue
             if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():         continue
+            if f.get('tipster') == 'tof':
+                tipped = db.session.query(Tip.horse_name).all()
+                tipped_names = {t[0].lower().strip() for t in tipped}
+                if r.horse_name.lower().strip() not in tipped_names:
+                    continue
             if hf:
                 if ai_names_set is not None:
                     if r.horse_name.lower() not in ai_names_set:
@@ -1774,7 +1779,7 @@ def api_previous_runners():
     uk_only = request.args.get('uk_only', '').lower() in ('true', '1')
 
     q = RunnerHistory.query
-    if horse:   q = q.filter(RunnerHistory.horse_name.ilike(f'%{horse}%'))
+    if horse: q = q.filter(RunnerHistory.horse_name.ilike(f'%{horse}%'))
     if jockey:  q = q.filter(RunnerHistory.jockey.ilike(f'%{jockey}%'))
     if trainer: q = q.filter(RunnerHistory.trainer.ilike(f'%{trainer}%'))
     if colour:  q = q.filter(RunnerHistory.colour.ilike(f'%{colour}%'))
@@ -1792,7 +1797,9 @@ def api_previous_runners():
             'ayr','bangor','kelso','chester']
         q = q.filter(db.func.lower(RunnerHistory.course).in_(UK_COURSES))
 
-    runners = q.order_by(RunnerHistory.horse_name, RunnerHistory.race_date.desc()).limit(500).all()
+    # Use higher limit when tipster filter will be applied client-side
+    lim = 5000 if not any([horse, jockey, trainer, colour, course]) else 500
+    runners = q.order_by(RunnerHistory.horse_name, RunnerHistory.race_date.desc()).limit(lim).all()
 
     # Group by horse name
     grouped = {}
