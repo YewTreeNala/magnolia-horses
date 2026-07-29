@@ -1582,19 +1582,29 @@ def get_tipped_horses():
             result[key] = {'tips': [], 'tipped_today': False}
         if t.race_date == today:
             result[key]['tipped_today'] = True
+        # Count runners in this race from RunnerHistory
+        field_size = None
+        if t.race_date and t.course and t.race_time:
+            field_size = RunnerHistory.query.filter_by(
+                race_date=t.race_date,
+                course=t.course,
+                race_time=t.race_time
+            ).count() or None
+
         result[key]['tips'].append({
-            'tip_id':    t.id,
-            'race_date': t.race_date or '',
-            'race_time': t.race_time or '',
-            'course':    t.course or '',
-            'odds':      t.odds or '',
-            'bet_type':  t.bet_type or '',
-            'stake_pts': t.stake_pts or 0,
-            'tipster':   t.tipster.name if t.tipster else 'TOF',
-            'result':    t.result.result_type if t.result else None,
-            'position':  t.result.position if t.result else None,
-            'sp':        t.result.sp if t.result else None,
-            'total_pts': t.result.total_pts if t.result else None,
+            'tip_id':     t.id,
+            'race_date':  t.race_date or '',
+            'race_time':  t.race_time or '',
+            'course':     t.course or '',
+            'odds':       t.odds or '',
+            'bet_type':   t.bet_type or '',
+            'stake_pts':  t.stake_pts or 0,
+            'tipster':    t.tipster.name if t.tipster else 'TOF',
+            'result':     t.result.result_type if t.result else None,
+            'position':   t.result.position if t.result else None,
+            'field_size': field_size,
+            'sp':         t.result.sp if t.result else None,
+            'total_pts':  t.result.total_pts if t.result else None,
         })
     return jsonify({'horses': result})
 
@@ -1824,6 +1834,19 @@ def api_previous_runners():
     } for name, runs in sorted(grouped.items())]
 
     return jsonify(result)
+
+
+
+@app.route('/api/horse-id-by-name/<path:horse_name>')
+@login_required
+def horse_id_by_name(horse_name):
+    """Look up horse_id from RunnerHistory by name."""
+    rh = RunnerHistory.query.filter(
+        RunnerHistory.horse_name.ilike(horse_name)
+    ).filter(RunnerHistory.horse_id != None).order_by(RunnerHistory.race_date.desc()).first()
+    if rh and rh.horse_id:
+        return jsonify({'horse_id': rh.horse_id, 'horse_name': rh.horse_name})
+    return jsonify({'horse_id': None})
 
 
 

@@ -1314,12 +1314,13 @@ autoSyncIfNeeded()
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
         <button onclick="closeHistoryModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">&#215;</button>
-        <div style="display:flex;gap:6px;align-items:center">
-          <textarea id="history-notes" placeholder="My notes..." style="padding:5px 8px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:6px;resize:none;width:180px;height:34px;line-height:1.3"></textarea>
-          <button id="history-tag-btn" onclick="saveHistoryTag()" style="padding:5px 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--brand);background:var(--surface);color:var(--brand)">&#9825; Tag</button>
-          <button id="history-untag-btn" onclick="removeHistoryTag()" style="display:none;padding:5px 12px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid #a32d2d;background:var(--surface);color:#a32d2d">Remove</button>
-        </div>
+
       </div>
+    </div>
+    <div style="padding:8px 18px;border-top:0.5px solid var(--border);display:flex;gap:8px;align-items:center">
+      <textarea id="history-notes" placeholder="My notes..." onblur="autoSaveHistoryTag()" style="flex:1;padding:6px 8px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:6px;resize:none;height:36px;line-height:1.4"></textarea>
+      <button id="history-tag-btn" onclick="saveHistoryTag()" style="padding:6px 14px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--brand);background:var(--surface);color:var(--brand);white-space:nowrap">&#9825; Tag</button>
+      <button id="history-untag-btn" onclick="removeHistoryTag()" style="display:none;padding:6px 14px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid #a32d2d;background:var(--surface);color:#a32d2d;white-space:nowrap">Remove</button>
     </div>
     <div id="history-body" style="overflow-y:auto;padding:12px 18px 18px;flex:1">
       <div style="text-align:center;padding:2rem;color:var(--text3)">Loading...</div>
@@ -1381,10 +1382,11 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   if(dg){
     var dgHtml='';
     if(rc.jockey) dgHtml+='<span><strong>'+escHtml(rc.jockey)+'</strong></span>';
-    if(rc.trainer) dgHtml+='<span>'+escHtml(rc.trainer)+'</span>';
+    if(rc.trainer) dgHtml+='<span>T: '+escHtml(rc.trainer)+'</span>';
+    if(rc.owner) dgHtml+='<span>O: '+escHtml(rc.owner)+'</span>';
     if(rc.weight) dgHtml+='<span>Wt: '+escHtml(rc.weight)+'</span>';
     if(rc.draw) dgHtml+='<span>Draw: '+escHtml(rc.draw)+'</span>';
-    if(rc.headgear&&rc.headgear!=='None') dgHtml+='<span>'+escHtml(rc.headgear)+'</span>';
+    if(rc.headgear&&rc.headgear!=='None'&&rc.headgear!=='') dgHtml+='<span>'+escHtml(rc.headgear)+'</span>';
     if(rc.last_run) dgHtml+='<span>Last ran: '+escHtml(rc.last_run)+' days</span>';
     if(rc.odds) dgHtml+='<span>Odds: <strong>'+escHtml(rc.odds)+'</strong></span>';
     dg.innerHTML=dgHtml;
@@ -1409,6 +1411,15 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
     });
 }
 
+function autoSaveHistoryTag(){
+  var horseName=document.getElementById('history-horse-name').textContent;
+  if(!horseName) return;
+  var notes=document.getElementById('history-notes').value.trim();
+  var key=horseName.toLowerCase();
+  var isTagged=Object.prototype.hasOwnProperty.call(taggedMap,key);
+  if(!isTagged&&!notes) return;
+  saveHistoryTag();
+}
 function saveHistoryTag(){
   var horseName=document.getElementById('history-horse-name').textContent;
   var notes=document.getElementById('history-notes').value.trim();
@@ -1453,19 +1464,20 @@ function renderHistoryRunsHtml(runs, coRunners) {
   coRunners = coRunners || [];
   if (!runs || !runs.length) return '';
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Race</th><th style="padding:5px 8px;text-align:left">Pos</th><th style="padding:5px 8px;text-align:left">SP</th><th style="padding:5px 8px;text-align:left">OR</th></tr>';
+  html += '<tr style="background:#f5f1eb;font-size:10px"><th style="padding:3px 6px;text-align:left">Date</th><th style="padding:3px 6px;text-align:left">Course</th><th style="padding:3px 6px;text-align:left">Class · Jockey</th><th style="padding:3px 6px;text-align:right">Pos</th><th style="padding:3px 6px;text-align:right">SP</th><th style="padding:3px 6px;text-align:right">Going</th></tr>';
   for (var i = 0; i < runs.length; i++) {
     var run = runs[i];
     var posNum = parseInt(run.position, 10);
-    var posCls = posNum===1?'color:#3b6d11;font-weight:600':posNum<=3?'color:#185fa5;font-weight:600':'color:var(--text2)';
+    var posCls = posNum===1?'color:#3b6d11;font-weight:600':posNum<=3?'color:#185fa5;font-weight:600':'color:var(--text)';
+    var ordinal = run.position?(isNaN(posNum)?run.position:posNum+(['th','st','nd','rd'][(posNum%100-20)%10]||['th','st','nd','rd'][posNum%100]||'th')):'—';
     var isToday = coRunners.indexOf(run.horse_id) !== -1;
-    html += '<tr style="border-bottom:0.5px solid #e8e0d5'+(isToday?';background:rgba(139,58,58,0.04)':'')+'">';
-    html += '<td style="padding:5px 8px;color:var(--text2)">'+escHtml(run.date||'')+'</td>';
-    html += '<td style="padding:5px 8px">'+escHtml(run.course||'—')+'</td>';
-    html += '<td style="padding:5px 8px;color:var(--text2);font-size:11px">'+escHtml((run.race_name||'').substring(0,30))+'</td>';
-    html += '<td style="padding:5px 8px;'+posCls+'">'+(run.position||'—')+'</td>';
-    html += '<td style="padding:5px 8px;font-weight:500">'+escHtml(run.sp||'—')+'</td>';
-    html += '<td style="padding:5px 8px">'+escHtml(run.or||'—')+'</td>';
+    html += '<tr style="border-bottom:0.5px solid #e8e0d5;font-size:12px'+(isToday?';background:rgba(139,58,58,0.04)':'')+'">';
+    html += '<td style="padding:3px 6px;color:var(--text2);white-space:nowrap">'+escHtml(run.date||'')+'</td>';
+    html += '<td style="padding:3px 6px;white-space:nowrap">'+escHtml(run.course||'—')+'</td>';
+    html += '<td style="padding:3px 6px;color:var(--text2)">'+escHtml(run.race_class||'')+(run.jockey?' · <em>'+escHtml(run.jockey)+'</em>':'')+'</td>';
+    html += '<td style="padding:3px 6px;'+posCls+';text-align:right;white-space:nowrap">'+ordinal+'</td>';
+    html += '<td style="padding:3px 6px;font-weight:500;text-align:right;white-space:nowrap">'+escHtml(run.sp||'—')+'</td>';
+    html += '<td style="padding:3px 6px;text-align:right;white-space:nowrap">'+escHtml(run.going||run.ground||run.going_detailed||'—')+'</td>';
     html += '</tr>';
   }
   html += '</table>';
@@ -1480,7 +1492,10 @@ function buildTipsterHistoryHtml(tips) {
   for(var ti=0;ti<tips.length;ti++){
     var t=tips[ti];
     var rc=t.result==='win'?'color:#3b6d11;font-weight:600':t.result==='place'?'color:#185fa5':t.result==='loss'?'color:#a32d2d':'color:#888';
-    var rl=t.result==='win'?'Won':t.result==='place'?'Placed':t.result==='loss'?'Lost':t.result==='nr'?'NR':'Pending';
+    var tPos=t.position?parseInt(t.position,10):null;
+      var tOrd=tPos?(tPos+(['th','st','nd','rd'][(tPos%100-20)%10]||['th','st','nd','rd'][tPos%100]||'th')):null;
+      var fStr=t.field_size?(' of '+t.field_size):'';
+      var rl=t.result==='nr'?'NR':(!t.result||t.result==='pending')?'Pending':(tOrd?(tOrd+fStr):(t.result==='win'?'Won':t.result==='place'?'Placed':'Lost'));
     var pnl=t.total_pts!=null?(t.total_pts>=0?'+':'')+t.total_pts.toFixed(2)+'pts':'—';
     th+='<tr style="border-bottom:0.5px solid #e8e0d5">';
     th+='<td style="padding:5px 8px">'+escHtml(t.race_date||'')+'</td>';
@@ -1534,7 +1549,6 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
     html += '<div style="font-size:11px;color:var(--text2)">' + escHtml(run.going || '') + '</div>';
     html += '<div style="font-size:10px;color:var(--text3)">going</div>';
     html += '</div>';
-    html += '<div style="font-size:11px;color:var(--text3);min-width:20px;text-align:right">&#9660;</div>';
     html += '</div>'; // end header
 
     // Jockey/trainer sub-row
@@ -1551,7 +1565,7 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
     html += '</div>'; // end run
   }
 
-  body.innerHTML = html;
+  body.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">Previous Runs</div>' + html;
 
   // Append tipster history
   var hname = document.getElementById('history-horse-name').textContent;
