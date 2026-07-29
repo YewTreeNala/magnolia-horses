@@ -936,7 +936,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     tableRows += '<tr>'
       + '<td class="num-cell">' + escHtml(r.number || '—') + '</td>'
       + '<td><div class="horse-name-cell">' + silkHtml
-      + '<div style="min-width:0"><span class="horse-name-link" data-horse="' + escHtml(rName) + '" style="font-weight:500;cursor:pointer" onclick="openHistoryByName(' + JSON.stringify(rName) + ');event.stopPropagation()">' + escHtml(rName) + '</span>' + windBadge
+      + '<div style="min-width:0"><span class="horse-name-link" data-horse="' + escHtml(rName) + '" data-horseinfo=\''+JSON.stringify({age:r.age,colour:r.colour,sex:r.sex,trainer:r.trainer,jockey:r.jockey,weight:r.weight,or:r.or,rpr:r.rpr,odds:r.odds}).replace(/\'/g,"&#39;")+'\'  style="font-weight:500;cursor:pointer" onclick="openHistoryByName(' + JSON.stringify(rName) + ',this.dataset.horseinfo);event.stopPropagation()">' + escHtml(rName) + '</span>' + windBadge
       + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
       + '<td>' + spBtn + '</td>'
       + '<td>' + colourChip(r.colour) + '</td>'
@@ -1289,18 +1289,37 @@ autoSyncIfNeeded()
 
 // ── Horse History ─────────────────────────────────────────────────────────────
 
-function openHistoryByName(name){
+function openHistoryByName(name, horseInfoStr){
+  var info=null;
+  try{ info=horseInfoStr?JSON.parse(decodeURIComponent(horseInfoStr)):null; }catch(e){}
   fetch('/api/horse-id-by-name/'+encodeURIComponent(name)).then(function(r){return r.json();}).then(function(d){
-    if(d.horse_id) openHistoryModal(d.horse_id, name, []);
+    if(d.horse_id) openHistoryModal(d.horse_id, name, [], info);
     else {
       document.getElementById('history-horse-name').textContent=name;
       document.getElementById('history-horse-sub').textContent='Race history';
-      document.getElementById('history-body').innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3)">No form data found.</div>';
+      document.getElementById('history-body').innerHTML=(info?buildHorseInfoHtml(info):'')+'<div style="text-align:center;padding:2rem;color:var(--text3)">No form data found.</div>';
       document.getElementById('history-modal').classList.add('open');
     }
   });
 }
-function openHistoryModal(horseId, horseName, coRunners) {
+
+function buildHorseInfoHtml(info){
+  if(!info) return '';
+  var items=[];
+  if(info.age) items.push('<span>Age: <strong>'+escHtml(info.age)+'</strong></span>');
+  if(info.colour) items.push('<span>'+escHtml(info.colour)+'</span>');
+  if(info.sex) items.push('<span>'+escHtml(info.sex)+'</span>');
+  if(info.weight) items.push('<span>Weight: <strong>'+escHtml(info.weight)+'</strong></span>');
+  if(info.or) items.push('<span>OR: <strong>'+escHtml(info.or)+'</strong></span>');
+  if(info.rpr) items.push('<span>RPR: <strong>'+escHtml(info.rpr)+'</strong></span>');
+  if(info.odds) items.push('<span>Odds: <strong>'+escHtml(info.odds)+'</strong></span>');
+  var jt='';
+  if(info.jockey) jt+='<div style="font-size:12px;margin-top:4px"><strong>'+escHtml(info.jockey)+'</strong>';
+  if(info.trainer) jt+=' / '+escHtml(info.trainer);
+  if(jt) jt+='</div>';
+  return '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:10px 0 12px;border-bottom:0.5px solid var(--border);margin-bottom:12px;font-size:12px;color:var(--text2)">'+items.join('')+jt+'</div>';
+}
+function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   coRunners = coRunners || [];
   document.getElementById('history-horse-name').textContent = horseName;
   document.getElementById('history-horse-sub').textContent  = 'Race history';
@@ -1309,7 +1328,7 @@ function openHistoryModal(horseId, horseName, coRunners) {
 
   fetch('/api/horse-history/' + horseId)
     .then(function(r) { return r.json(); })
-    .then(function(runs) { renderHistoryRuns(runs, coRunners); })
+    .then(function(runs) { renderHistoryRuns(runs, coRunners, horseInfo); })
     .catch(function() {
       document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Could not load history.</div>';
     });
@@ -1331,11 +1350,12 @@ function posLabel(p) {
   return n + s;
 }
 
-function renderHistoryRuns(runs, coRunners) {
+function renderHistoryRuns(runs, coRunners, horseInfo) {
   coRunners = coRunners || [];
   var body = document.getElementById('history-body');
+  var infoHtml = buildHorseInfoHtml ? buildHorseInfoHtml(horseInfo||null) : '';
   if (!runs || !runs.length) {
-    body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">No history available yet — history builds up after each racing day.</div>';
+    body.innerHTML = infoHtml + '<div style="text-align:center;padding:2rem;color:var(--text3)">No history available yet — history builds up after each racing day.</div>';
     return;
   }
 
@@ -1385,7 +1405,7 @@ function renderHistoryRuns(runs, coRunners) {
     html += '</div>'; // end run
   }
 
-  body.innerHTML = html;
+  body.innerHTML = infoHtml + html;
 
   // Append tipster history if any
   var hname = document.getElementById('history-horse-name').textContent;
