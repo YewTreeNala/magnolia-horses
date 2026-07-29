@@ -332,8 +332,8 @@
     <div class="btn-row">
       <button class="btn-primary" id="btn-search">Search runners</button>
       <button class="btn-secondary" id="btn-clear">Clear</button>
-      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">Viewing: Today</button>
       <span class="spinner" id="spinner"></span>
+      <button type="button" id="history-btn" onclick="toggleHistoryView()" style="margin-left:auto;padding:7px 14px;font-size:13px;font-family:inherit;border-radius:var(--radius);cursor:pointer;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--surface2);color:var(--text2);border:0.5px solid var(--border2);font-weight:500">Viewing: Today</button>
       {% if current_user.is_authenticated %}
         <button class="btn-save-search" id="btn-save-search">&#9733; Save search</button>
       {% endif %}
@@ -461,8 +461,7 @@ function setView(v){
 }
 function toggleHistoryView(){
   setView(currentView==='history'?'today':'history');
-  // Don't auto-run on toggle - user explicitly chose a view
-  // Results stay visible until user runs a new search
+  autoRun();
 }
 var STORAGE_KEY     = 'magnolia_filters_v4';
 var taggedMap       = {};
@@ -845,7 +844,7 @@ function initDropdown(field) {
     selectedValues[field] = item.dataset.value;
     input.value = item.dataset.value;
     dd.classList.remove('open');
-    saveFilters(); runSearch();
+    saveFilters(); autoRun();
   });
   document.addEventListener('click', function(e) {
     if (!wrap.contains(e.target)) { dd.classList.remove('open'); if (input.value !== selectedValues[field]) input.value = selectedValues[field]; }
@@ -1110,7 +1109,6 @@ function clearFilters() {
   document.getElementById('f-trainer').value = '';
   document.getElementById('f-owner').value   = '';
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
-  runSearch();
 }
 
 function autoSyncIfNeeded() {
@@ -1141,11 +1139,9 @@ document.getElementById('search-info-modal').addEventListener('click', function(
 document.getElementById('uk-btn').addEventListener('click', function() {
   var cb = document.getElementById('f-uk-only');
   cb.checked = !cb.checked;
-  syncUKToggle(); saveFilters(); runSearch();
-
-  autoRun();
+  syncUKToggle(); saveFilters(); autoRun();
 });
-document.getElementById('f-uk-only').addEventListener('change', function() { syncUKToggle(); saveFilters(); runSearch(); });
+document.getElementById('f-uk-only').addEventListener('change', function() { syncUKToggle(); saveFilters(); autoRun(); });
 
 var saveBtn = document.getElementById('btn-save-search');
 if (saveBtn) saveBtn.addEventListener('click', function() { openSaveSearchModal(); });
@@ -1187,7 +1183,7 @@ document.getElementById('saved-chips').addEventListener('click', function(e) {
   if (chip) {
     var chipId = parseInt(chip.dataset.id);
     for (var i = 0; i < savedSearches.length; i++) {
-      if (savedSearches[i].id === chipId) { applyFilters(savedSearches[i].filters); saveFilters(); runSearch(); break; }
+      if (savedSearches[i].id === chipId) { applyFilters(savedSearches[i].filters); saveFilters(); autoRun(); break; }
     }
   }
 });
@@ -1206,9 +1202,9 @@ if (runAllBtn) {
 
 var changeIds = ['f-meeting', 'f-colour', 'f-type', 'f-class', 'f-sort'];
 for (var ci = 0; ci < changeIds.length; ci++) {
-  document.getElementById(changeIds[ci]).addEventListener('change', function() { saveFilters(); runSearch(); });
+  document.getElementById(changeIds[ci]).addEventListener('change', function() { saveFilters(); autoRun(); });
 }
-document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); runSearch(); } });
+document.getElementById('f-horse').addEventListener('keydown', function(e) { if (e.key === 'Enter') { saveFilters(); autoRun(); } });
 
 initDropdown('jockey'); initDropdown('trainer'); initDropdown('owner');
 restoreFilters(); syncSearchModeBtn(); syncUKToggle();
