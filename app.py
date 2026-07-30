@@ -1584,12 +1584,21 @@ def get_tipped_horses():
             result[key]['tipped_today'] = True
         # Count runners in this race from RunnerHistory
         field_size = None
-        if t.race_date and t.course and t.race_time:
-            field_size = RunnerHistory.query.filter_by(
-                race_date=t.race_date,
-                course=t.course,
-                race_time=t.race_time
-            ).count() or None
+        if t.race_date and t.course:
+            # Count by date+course+time, using ilike for course
+            q = RunnerHistory.query.filter(
+                RunnerHistory.race_date == t.race_date,
+                db.func.lower(RunnerHistory.course) == (t.course or '').lower().strip()
+            )
+            if t.race_time:
+                q = q.filter(RunnerHistory.race_time == t.race_time)
+            field_size = q.count() or None
+            # Fallback: date+course only if no time match
+            if not field_size and t.race_date and t.course:
+                field_size = RunnerHistory.query.filter(
+                    RunnerHistory.race_date == t.race_date,
+                    db.func.lower(RunnerHistory.course) == (t.course or '').lower().strip()
+                ).count() or None
 
         result[key]['tips'].append({
             'tip_id':     t.id,

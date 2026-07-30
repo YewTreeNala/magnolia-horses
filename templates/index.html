@@ -1538,7 +1538,8 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
     html += '<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">' + escHtml(run.race_name || '') + '</div>';
     html += '</div>';
     html += '<div style="text-align:center;min-width:38px">';
-    html += '<div style="font-size:15px;' + posCls + '">' + escHtml(posLabel(run.position)) + '</div>';
+    var fieldN=(run.field&&run.field.length)||run.total_runners||0;
+    html += '<div style="font-size:15px;' + posCls + '">' + escHtml(posLabel(run.position)) + (fieldN?' of '+fieldN:'') + '</div>';
     html += '<div style="font-size:10px;color:var(--text3)">pos</div>';
     html += '</div>';
     html += '<div style="text-align:center;min-width:50px">';
