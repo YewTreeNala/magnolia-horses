@@ -1531,32 +1531,30 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
     html += '<div class="history-run" id="hrun-' + i + '" style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden">';
 
     // Run header — clickable to expand field
-    html += '<div class="history-run-header" onclick="toggleHistoryField(' + i + ')" style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;background:#fff;transition:background 0.1s">';
-    html += '<div style="min-width:80px;font-size:12px;color:var(--text3)">' + escHtml(run.date || '') + '</div>';
+    html += '<div class="history-run-header" onclick="toggleHistoryField(' + i + ')" style="display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;background:#fff;transition:background 0.1s">';
+    html += '<div style="width:80px;flex-shrink:0;font-size:12px;color:var(--text3)">' + escHtml(run.date || '') + '<div style="font-size:11px;color:var(--brand);margin-top:1px">' + escHtml(run.time || '') + '</div></div>';
     html += '<div style="flex:1;min-width:0">';
-    html += '<div style="font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(run.course || '') + ' <span style="color:var(--text2);font-weight:400">' + escHtml(run.dist || '') + '</span>' + patBadge + clsBadge + '</div>';
-    html += '<div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">' + escHtml(run.race_name || '') + '</div>';
+    html += '<div style="font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + escHtml(run.course || '') + ' <span style="color:var(--text2);font-weight:400">' + escHtml(run.dist || '') + '</span>' + patBadge + clsBadge + '<span style="font-size:11px;color:var(--text3);font-weight:400;margin-left:6px">' + escHtml(run.jockey || '') + '</span></div>';
+    html += '<div style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px">' + escHtml(run.race_name || '') + '</div>';
     html += '</div>';
-    html += '<div style="text-align:center;min-width:38px">';
+    html += '<div style="text-align:right;width:70px;flex-shrink:0">';
     var fieldN=(run.field&&run.field.length)||run.total_runners||0;
-    html += '<div style="font-size:15px;' + posCls + '">' + escHtml(posLabel(run.position)) + (fieldN?' of '+fieldN:'') + '</div>';
+    html += '<div style="font-size:14px;' + posCls + '">' + escHtml(posLabel(run.position)) + (fieldN?' of '+fieldN:'') + '</div>';
     html += '<div style="font-size:10px;color:var(--text3)">pos</div>';
     html += '</div>';
-    html += '<div style="text-align:center;min-width:50px">';
+    html += '<div style="text-align:right;width:48px;flex-shrink:0">';
     html += '<div style="font-size:13px;font-weight:500;color:var(--text)">' + escHtml(run.sp || '—') + '</div>';
     html += '<div style="font-size:10px;color:var(--text3)">SP</div>';
     html += '</div>';
-    html += '<div style="text-align:center;min-width:30px">';
+    html += '<div style="text-align:right;width:90px;flex-shrink:0">';
     html += '<div style="font-size:11px;color:var(--text2)">' + escHtml(run.going || '') + '</div>';
     html += '<div style="font-size:10px;color:var(--text3)">going</div>';
     html += '</div>';
     html += '</div>'; // end header
 
-    // Jockey/trainer sub-row
-    html += '<div style="padding:0 14px 8px;font-size:11px;color:var(--text3);background:#fff">';
-    html += escHtml(run.jockey || '—') + ' &middot; ' + escHtml(run.trainer || '—');
-    if (run.comment) html += '<div style="margin-top:3px;font-style:italic;color:var(--text2)">' + escHtml(run.comment) + '</div>';
-    html += '</div>';
+    if (run.comment) {
+      html += '<div style="padding:0 14px 6px;font-size:11px;font-style:italic;color:var(--text2);background:#fff">' + escHtml(run.comment) + '</div>';
+    }
 
     // Expandable field
     html += '<div id="hfield-' + i + '" style="display:none;border-top:0.5px solid var(--border)">';
