@@ -1463,7 +1463,7 @@ function posLabel(p) {
 function renderHistoryRunsHtml(runs, coRunners) {
   coRunners = coRunners || [];
   if (!runs || !runs.length) return '';
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed"><colgroup><col style="width:80px"><col style="width:90px"><col style="width:auto"><col style="width:45px"><col style="width:55px"><col style="width:90px"></colgroup>';
   html += '<tr style="background:#f5f1eb;font-size:10px"><th style="padding:3px 6px;text-align:left">Date</th><th style="padding:3px 6px;text-align:left">Course</th><th style="padding:3px 6px;text-align:left">Class · Jockey</th><th style="padding:3px 6px;text-align:right">Pos</th><th style="padding:3px 6px;text-align:right">SP</th><th style="padding:3px 6px;text-align:right">Going</th></tr>';
   for (var i = 0; i < runs.length; i++) {
     var run = runs[i];
@@ -1503,7 +1503,7 @@ function buildTipsterHistoryHtml(tips) {
     th+='<td style="padding:5px 8px;color:#8b3a3a">'+escHtml(t.race_time||'—')+'</td>';
     th+='<td style="padding:5px 8px">'+escHtml(t.stake_pts+'pt '+(t.bet_type==='ew'?'E/W':'Win'))+'</td>';
     th+='<td style="padding:5px 8px;font-weight:500">'+escHtml(t.odds||'—')+'</td>';
-    th+='<td style="padding:5px 8px;'+rc+'">'+rl+(t.position?' ('+t.position+')':'')+'</td>';
+    th+='<td style="padding:5px 8px;'+rc+'">'+rl+'</td>';
     th+='<td style="padding:5px 8px">'+pnl+'</td>';
     th+='</tr>';
   }
@@ -1587,7 +1587,7 @@ function renderHistoryField(field, run, coRunners) {
   coRunners = coRunners || [];
   if (!field || !field.length) return '<div style="padding:10px 14px;font-size:12px;color:var(--text3)">Field not available.</div>';
 
-  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed"><colgroup><col style="width:80px"><col style="width:90px"><col style="width:auto"><col style="width:45px"><col style="width:55px"><col style="width:90px"></colgroup>';
   html += '<thead><tr style="background:var(--surface2)">';
   html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Pos</th>';
   html += '<th style="padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Horse</th>';
