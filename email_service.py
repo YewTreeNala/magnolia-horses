@@ -2,10 +2,9 @@ import os
 import requests
 from datetime import datetime
 
-RESEND_API_KEY = os.getenv('RESEND_API_KEY')
-_last_email_error = ''
-FROM_EMAIL     = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
-SITE_URL       = os.getenv('SITE_URL', 'https://magnoliahorses.com')
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+FROM_EMAIL       = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
+SITE_URL         = os.getenv('SITE_URL', 'https://magnoliahorses.com')
 
 UK_COURSES = {
     'ascot', 'ayr', 'bath', 'beverley', 'brighton', 'carlisle', 'catterick',
@@ -28,32 +27,29 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
     from datetime import datetime as _dt
     status = 'sent'
 
-    if not RESEND_API_KEY:
+    if not SENDGRID_API_KEY:
         print(f'[Email] No API key - would have sent to {to_email}: {subject}')
         status = 'no_api_key'
     else:
         payload = {
-            'from':    f'Magnolia Horses <{FROM_EMAIL}>',
-            'to':      [to_email],
+            'personalizations': [{'to': [{'email': to_email, 'name': to_name}]}],
+            'from':    {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
             'subject': subject,
-            'html':    html_body,
+            'content': [{'type': 'text/html', 'value': html_body}]
         }
         response = requests.post(
-            'https://api.resend.com/emails',
+            'https://api.sendgrid.com/v3/mail/send',
             json=payload,
             headers={
-                'Authorization': f'Bearer {RESEND_API_KEY}',
+                'Authorization': f'Bearer {SENDGRID_API_KEY}',
                 'Content-Type': 'application/json'
             }
         )
-        if response.status_code == 200 or response.status_code == 201:
+        if response.status_code == 202:
             print(f'[Email] Sent to {to_email}: {subject}')
         else:
-            error_detail = f'Email failed ({response.status_code}): {response.text[:300]}'
-            print(f'[Email] {error_detail}')
+            print(f'[Email] Failed ({response.status_code}): {response.text}')
             status = 'failed'
-            global _last_email_error
-            _last_email_error = error_detail
 
     if user_id is not None:
         try:
@@ -87,7 +83,7 @@ def _badge(reason):
     )
 
 
-def build_combined_email(user_name, runners, token=''):
+def build_combined_email(user_name, runners):
     today_str = datetime.now().strftime('%A %d %B %Y')
     n         = len(runners)
     n_label   = str(n) + ' runner' + ('s' if n != 1 else '')
@@ -109,26 +105,13 @@ def build_combined_email(user_name, runners, token=''):
     for meeting_name in meetings_order:
         rows = ''
         for r in meetings_map[meeting_name]:
-            import urllib.parse
-            race_key   = urllib.parse.quote(meeting_name.lower().replace(' ', '') + '_' + (r['time'] or ''))
-            horse_enc  = urllib.parse.quote(r['horse_name'] or '')
-            if token:
-                deep_link = (SITE_URL + '/auth/email?token=' + token
-                             + '&race=' + race_key + '&horse=' + horse_enc)
-                time_cell  = ('<a href="' + deep_link + '" style="color:#8b3a3a;font-weight:600;text-decoration:none">'
-                              + (r['time'] or '') + '</a>')
-                horse_cell = ('<a href="' + deep_link + '" style="color:#2a1f14;font-weight:600;text-decoration:none">'
-                              + (r['horse_name'] or '') + '</a>')
-            else:
-                time_cell  = r['time'] or ''
-                horse_cell = r['horse_name'] or ''
             rows += (
                 '<tr style="border-bottom:1px solid #f0e8e4;">'
-                '<td style="padding:7px 10px;white-space:nowrap;width:56px">'
-                + time_cell +
+                '<td style="padding:7px 10px;color:#8b3a3a;font-weight:600;white-space:nowrap;width:56px">'
+                + (r['time'] or '') +
                 '</td>'
-                '<td style="padding:7px 10px">'
-                + horse_cell +
+                '<td style="padding:7px 10px;font-weight:600;color:#2a1f14">'
+                + (r['horse_name'] or '') +
                 '</td>'
                 '<td style="padding:7px 10px;color:#6b5a48;font-size:12px">'
                 + (r['jockey'] or '-') +
@@ -205,12 +188,8 @@ def build_combined_email(user_name, runners, token=''):
     )
 
 
-def _matches_filters(r, f, ai_names_set=None):
-    """Check if a runner matches a saved search filter dict.
-    If ai_names_set is provided (a lowercase set of resolved AI theme names),
-    the horse filter is matched against that set instead of substring/fuzzy
-    matching — used for saved searches created via AI search.
-    """
+def _matches_filters(r, f):
+    """Check if a runner matches a saved search filter dict."""
     from rapidfuzz import fuzz
     import jellyfish
 
@@ -229,28 +208,30 @@ def _matches_filters(r, f, ai_names_set=None):
         return False
     hf = (f.get('horse') or '').strip()
     if hf:
-        if ai_names_set is not None:
-            if r.horse_name.lower() not in ai_names_set:
-                return False
-        else:
-            use_fuzzy = f.get('fuzzy', False)  # match site search behaviour by default
-            nl = r.horse_name.lower()
-            sl = hf.lower()
-            if use_fuzzy:
-                match = (
-                    sl in nl
-                    or fuzz.partial_ratio(sl, nl) >= 75
-                    or any(
-                        jellyfish.soundex(w) == jellyfish.soundex(s)
-                        for w in nl.split()
-                        for s in sl.split()
-                        if len(w) > 2 and len(s) > 2
-                    )
+        use_fuzzy = f.get('fuzzy', True)
+        nl = r.horse_name.lower()
+        sl = hf.lower()
+        if use_fuzzy:
+            match = (
+                sl in nl
+                or fuzz.partial_ratio(sl, nl) >= 75
+                or any(
+                    jellyfish.soundex(w) == jellyfish.soundex(s)
+                    for w in nl.split()
+                    for s in sl.split()
+                    if len(w) > 2 and len(s) > 2
                 )
-            else:
-                match = sl in nl
-            if not match:
-                return False
+            )
+        else:
+            match = sl in nl
+        if not match:
+            return False
+    # Tipster filter
+    if f.get('tipster') == 'tof':
+        from models import Tip
+        tipped = {t.horse_name.lower().strip() for t in Tip.query.all()}
+        if r.horse_name.lower().strip() not in tipped:
+            return False
     return True
 
 
@@ -271,24 +252,8 @@ def _build_combined_for_user(user, all_runners):
             f = json.loads(saved.filters)
         except Exception:
             continue
-
-        ai_names_set = None
-        hf = (f.get('horse') or '').strip()
-        if hf and f.get('ai_mode'):
-            try:
-                from app import resolve_ai_theme
-                uk_only_pref = f.get('uk_only', True)
-                pool = all_runners
-                if uk_only_pref:
-                    pool = [r for r in pool if is_uk_course(r.race.meeting.name)]
-                resolved = resolve_ai_theme(hf, uk_only=uk_only_pref, all_runners=pool)
-                ai_names_set = {n.lower() for n in resolved}
-            except Exception as e:
-                print(f'[Email] AI theme resolution failed for search "{saved.name}": {e}')
-                continue  # skip this search, keep other matches in the email
-
         for r in all_runners:
-            if _matches_filters(r, f, ai_names_set=ai_names_set):
+            if _matches_filters(r, f):
                 runner_reasons.setdefault(r.id, {'runner': r, 'reasons': []})
                 runner_reasons[r.id]['reasons'].append('Search: ' + saved.name)
 
@@ -328,14 +293,9 @@ def send_morning_alerts(app):
             n       = len(combined)
             subject = ('Magnolia Horses: ' + str(n) + ' runner' +
                        ('s' if n != 1 else '') + ' to follow today')
-            try:
-                from app import _make_email_token
-                email_token = _make_email_token(user.id)
-            except Exception:
-                email_token = ''
             send_email(
                 user.email, user.name, subject,
-                build_combined_email(user.name, combined, token=email_token),
+                build_combined_email(user.name, combined),
                 user_id=user.id
             )
             alerts_sent += 1
@@ -366,16 +326,11 @@ def send_morning_alerts_for_user(user_id, app):
         n       = len(combined)
         subject = ('[Test] Magnolia Horses: ' + str(n) + ' runner' +
                    ('s' if n != 1 else '') + ' to follow today')
-        try:
-            from app import _make_email_token
-            email_token = _make_email_token(user.id)
-        except Exception:
-            email_token = ''
         ok = send_email(
             user.email, user.name, subject,
-            build_combined_email(user.name, combined, token=email_token),
+            build_combined_email(user.name, combined),
             user_id=user_id
         )
         if ok:
             return {'status': 'sent', 'message': 'Test email sent to ' + user.email + ' with ' + str(n) + ' runners'}
-        return {'status': 'failed', 'message': _last_email_error or 'Email send failed'}
+        return {'status': 'failed', 'message': 'Email send failed - check SendGrid API key'}

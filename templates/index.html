@@ -1026,10 +1026,22 @@ function renderResults(data) {
     area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>No runners found matching your search.</div></div>';
     return;
   }
+  var _tf=(document.getElementById('f-tipster')||{value:''}).value;
   var totalRunners = 0, totalRaces = 0, ms = {};
   for (var i = 0; i < data.length; i++) {
-    ms[data[i].meeting] = 1; totalRaces += data[i].races.length;
-    for (var j = 0; j < data[i].races.length; j++) totalRunners += data[i].races[j].runners.length;
+    var meetingHasRace = false;
+    for (var j = 0; j < data[i].races.length; j++) {
+      var raceRunners = data[i].races[j].runners;
+      var filteredCount = 0;
+      for (var k = 0; k < raceRunners.length; k++) {
+        var rn = (raceRunners[k].name||'').toLowerCase().trim();
+        if(_tf==='tof' && !tippedHorses[rn]) continue;
+        filteredCount++;
+      }
+      if(filteredCount>0){totalRaces++;meetingHasRace=true;}
+      totalRunners += filteredCount;
+    }
+    if(meetingHasRace) ms[data[i].meeting]=1;
   }
   var totalMeetings = Object.keys(ms).length;
   var sortMode = document.getElementById('f-sort').value;
