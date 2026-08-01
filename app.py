@@ -1859,6 +1859,146 @@ def horse_id_by_name(horse_name):
 
 
 
+@app.route('/webhook/tipster', methods=['POST'])
+def tipster_webhook():
+    from tip_parser import parse_message
+    import hashlib
+
+    # Verify shared secret
+    secret = request.headers.get('X-Webhook-Secret', '')
+    if TIPSTER_WEBHOOK_SECRET and secret != TIPSTER_WEBHOOK_SECRET:
+        return jsonify({'error': 'Forbidden'}), 403
+
+    data = request.get_json() or {}
+    tipster_name = data.get('tipster', 'Turn Of Foot')
+    raw_text     = data.get('text', '').strip()
+    msg_id       = data.get('message_id', 0)
+    msg_datetime = data.get('datetime', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    # Apply midday rule: tips posted at midday or after are for the next day's racing
+    if data.get('race_date'):
+        race_date = data.get('race_date')
+    else:
+        try:
+            from datetime import timedelta
+            msg_dt = datetime.strptime(msg_datetime[:19], '%Y-%m-%d %H:%M:%S')
+            today_str    = msg_dt.strftime('%Y-%m-%d')
+            tomorrow_str = (msg_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            # Default: after midday = tomorrow
+            race_date = tomorrow_str if msg_dt.hour >= 12 else today_str
+        except Exception:
+            today_str    = date.today().strftime('%Y-%m-%d')
+            tomorrow_str = (date.today() + __import__('datetime').timedelta(days=1)).strftime('%Y-%m-%d')
+            race_date    = today_str
+
+    if not raw_text:
+        return jsonify({'status': 'ignored', 'reason': 'empty text'})
+
+    tips = parse_message(raw_text)
+    if not tips:
+        return jsonify({'status': 'ignored', 'reason': 'no tips found'})
+
+    tipster = _get_or_create_tipster(tipster_name)
+
+    # Check for duplicate (same message_id already stored)
+    if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
+        return jsonify({'status': 'duplicate'})
+
+    created_tips = []
+    uncertain_tips = []
+
+    # Ensure today's runners are loaded for date-matching
+    try:
+        today_runners = {
+            r.horse_name.lower(): r.race.meeting.date
+            for r in db.session.query(Runner).join(Race).join(Meeting)
+            .filter(Meeting.date.in_([today_str, tomorrow_str])).all()
+        }
+    except Exception:
+        today_runners = {}
+
+    import re as _re
+    def _strip_course(c):
+        # Remove parenthetical day: "Newmarket (Sat)" -> "Newmarket"
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', (c or '').strip())
+
+    for t in tips:
+        course_clean = _strip_course(t.get('course', ''))
+
+        # Smarter race_date: check if horse runs today or tomorrow
+        horse_lower = t['horse_name'].lower()
+        tip_race_date = race_date  # default from midday rule
+        if horse_lower in today_runners:
+            tip_race_date = today_runners[horse_lower]
+        else:
+            # Check two days out
+            try:
+                two_days = (msg_dt + __import__('datetime').timedelta(days=2)).strftime('%Y-%m-%d')
+                two_day_runners = {
+                    r.horse_name.lower()
+                    for r in db.session.query(Runner).join(Race).join(Meeting)
+                    .filter(Meeting.date == two_days).all()
+                }
+                if horse_lower in two_day_runners:
+                    tip_race_date = two_days
+            except Exception:
+                pass
+
+        tip = Tip(
+            tipster_id       = tipster.id,
+            horse_name       = t['horse_name'],
+            tip_date         = msg_datetime[:10],
+            tip_datetime     = msg_datetime,
+            course           = course_clean,
+            race_time        = t.get('race_time', ''),
+            race_date        = tip_race_date,
+            bet_type         = t.get('bet_type', 'ew'),
+            stake_pts        = t.get('stake_pts', 0.5),
+            odds             = t.get('odds', ''),
+            odds_dec         = t.get('odds_dec', 0.0),
+            each_way_places  = t.get('each_way_places', 4),
+            each_way_fraction= t.get('each_way_fraction', 5),
+            reasoning        = t.get('reasoning', ''),
+            raw_message      = raw_text,
+            telegram_msg_id  = msg_id,
+            uncertain        = t.get('uncertain', False),
+            created_at       = datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        )
+        db.session.add(tip)
+        db.session.flush()
+
+        # Try to link to HorseProfile
+        profile = HorseProfile.query.filter(
+            HorseProfile.name.ilike(f'%{t["horse_name"]}%')
+        ).first()
+        if profile:
+            tip.horse_id = profile.horse_id
+
+        created_tips.append({'horse': t['horse_name'], 'odds': t['odds']})
+        if t.get('uncertain'):
+            uncertain_tips.append(t)
+
+    db.session.commit()
+
+    # Email admin about uncertain tips
+    if uncertain_tips:
+        try:
+            from email_service import send_email
+            body = '<br>'.join([
+                f"<b>{t.get('horse_name') or 'Unknown'}</b> — {t.get('uncertain_reason','')}<br>"
+                f"<pre>{raw_text[:500]}</pre>"
+                for t in uncertain_tips
+            ])
+            send_email(
+                ADMIN_EMAIL, 'Admin',
+                f'Magnolia Horses: {len(uncertain_tips)} uncertain tip(s) need review',
+                f'<html><body><p>The following tips from Turn Of Foot could not be fully parsed:</p>{body}</body></html>'
+            )
+        except Exception as e:
+            print(f'[Tipster] Email error: {e}')
+
+    return jsonify({'status': 'ok', 'tips_created': len(created_tips), 'tips': created_tips})
+
+
 # ── Horse history API ──────────────────────────────────────────────────────────
 
 @app.route('/api/horse-history/<horse_id>')
@@ -2057,9 +2197,14 @@ def tipster_webhook():
         try:
             from datetime import timedelta
             msg_dt = datetime.strptime(msg_datetime[:19], '%Y-%m-%d %H:%M:%S')
-            race_date = (msg_dt + timedelta(days=1)).strftime('%Y-%m-%d') if msg_dt.hour >= 12 else msg_dt.strftime('%Y-%m-%d')
+            today_str    = msg_dt.strftime('%Y-%m-%d')
+            tomorrow_str = (msg_dt + timedelta(days=1)).strftime('%Y-%m-%d')
+            # Default: after midday = tomorrow
+            race_date = tomorrow_str if msg_dt.hour >= 12 else today_str
         except Exception:
-            race_date = date.today().strftime('%Y-%m-%d')
+            today_str    = date.today().strftime('%Y-%m-%d')
+            tomorrow_str = (date.today() + __import__('datetime').timedelta(days=1)).strftime('%Y-%m-%d')
+            race_date    = today_str
 
     if not raw_text:
         return jsonify({'status': 'ignored', 'reason': 'empty text'})
@@ -2077,15 +2222,51 @@ def tipster_webhook():
     created_tips = []
     uncertain_tips = []
 
+    # Ensure today's runners are loaded for date-matching
+    try:
+        today_runners = {
+            r.horse_name.lower(): r.race.meeting.date
+            for r in db.session.query(Runner).join(Race).join(Meeting)
+            .filter(Meeting.date.in_([today_str, tomorrow_str])).all()
+        }
+    except Exception:
+        today_runners = {}
+
+    import re as _re
+    def _strip_course(c):
+        # Remove parenthetical day: "Newmarket (Sat)" -> "Newmarket"
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', (c or '').strip())
+
     for t in tips:
+        course_clean = _strip_course(t.get('course', ''))
+
+        # Smarter race_date: check if horse runs today or tomorrow
+        horse_lower = t['horse_name'].lower()
+        tip_race_date = race_date  # default from midday rule
+        if horse_lower in today_runners:
+            tip_race_date = today_runners[horse_lower]
+        else:
+            # Check two days out
+            try:
+                two_days = (msg_dt + __import__('datetime').timedelta(days=2)).strftime('%Y-%m-%d')
+                two_day_runners = {
+                    r.horse_name.lower()
+                    for r in db.session.query(Runner).join(Race).join(Meeting)
+                    .filter(Meeting.date == two_days).all()
+                }
+                if horse_lower in two_day_runners:
+                    tip_race_date = two_days
+            except Exception:
+                pass
+
         tip = Tip(
             tipster_id       = tipster.id,
             horse_name       = t['horse_name'],
             tip_date         = msg_datetime[:10],
             tip_datetime     = msg_datetime,
-            course           = t.get('course', ''),
+            course           = course_clean,
             race_time        = t.get('race_time', ''),
-            race_date        = race_date,
+            race_date        = tip_race_date,
             bet_type         = t.get('bet_type', 'ew'),
             stake_pts        = t.get('stake_pts', 0.5),
             odds             = t.get('odds', ''),
