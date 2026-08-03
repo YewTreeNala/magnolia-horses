@@ -28,24 +28,24 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
     status = 'sent'
 
     if not SENDGRID_API_KEY:
-        print(f'[Email] No API key - would have sent to {to_email}: {subject}')
+        print(f'[Email] No Brevo API key - would have sent to {to_email}: {subject}')
         status = 'no_api_key'
     else:
         payload = {
-            'personalizations': [{'to': [{'email': to_email, 'name': to_name}]}],
-            'from':    {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
-            'subject': subject,
-            'content': [{'type': 'text/html', 'value': html_body}]
+            'sender':   {'email': FROM_EMAIL, 'name': 'Magnolia Horses'},
+            'to':       [{'email': to_email, 'name': to_name}],
+            'subject':  subject,
+            'htmlContent': html_body
         }
         response = requests.post(
-            'https://api.sendgrid.com/v3/mail/send',
+            'https://api.brevo.com/v3/smtp/email',
             json=payload,
             headers={
-                'Authorization': f'Bearer {SENDGRID_API_KEY}',
+                'api-key': SENDGRID_API_KEY,
                 'Content-Type': 'application/json'
             }
         )
-        if response.status_code == 202:
+        if response.status_code in (200, 201):
             print(f'[Email] Sent to {to_email}: {subject}')
         else:
             print(f'[Email] Failed ({response.status_code}): {response.text}')
@@ -225,12 +225,6 @@ def _matches_filters(r, f):
         else:
             match = sl in nl
         if not match:
-            return False
-    # Tipster filter
-    if f.get('tipster') == 'tof':
-        from models import Tip
-        tipped = {t.horse_name.lower().strip() for t in Tip.query.all()}
-        if r.horse_name.lower().strip() not in tipped:
             return False
     return True
 
