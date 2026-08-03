@@ -208,10 +208,9 @@ def _matches_filters(r, f):
         return False
     hf = (f.get('horse') or '').strip()
     if hf:
-        use_fuzzy = f.get('fuzzy', True)
         nl = r.horse_name.lower()
         sl = hf.lower()
-        if use_fuzzy:
+        if f.get('ai_mode'):
             match = (
                 sl in nl
                 or fuzz.partial_ratio(sl, nl) >= 75
