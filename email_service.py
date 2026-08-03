@@ -226,6 +226,12 @@ def _matches_filters(r, f):
             match = sl in nl
         if not match:
             return False
+    # Tipster filter
+    if f.get('tipster') == 'tof':
+        from models import Tip
+        tipped = {t.horse_name.lower().strip() for t in Tip.query.all()}
+        if r.horse_name.lower().strip() not in tipped:
+            return False
     return True
 
 
