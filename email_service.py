@@ -208,7 +208,7 @@ def _matches_filters(r, f):
         return False
     hf = (f.get('horse') or '').strip()
     if hf:
-        use_fuzzy = f.get('fuzzy', False)
+        use_fuzzy = f.get('fuzzy', True)
         nl = r.horse_name.lower()
         sl = hf.lower()
         if use_fuzzy:
