@@ -185,5 +185,62 @@ function adminDeleteSearch(searchId, rowId) {
     });
 }
 </script>
+
+<div class="panel" style="margin-top:2rem">
+  <div class="panel-title">&#128196; Database Console</div>
+  <div style="margin-bottom:0.75rem;font-size:12px;color:var(--text2)">SELECT and UPDATE only. DELETE, DROP, ALTER and TRUNCATE are blocked.</div>
+  <textarea id="db-sql" placeholder="Enter SQL query..." style="width:100%;height:120px;padding:10px;font-family:monospace;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+  <div style="margin-top:0.5rem;display:flex;gap:8px;align-items:center">
+    <button class="btn-primary" onclick="runDbQuery()" id="db-run-btn">Run Query</button>
+    <button class="btn-secondary" onclick="document.getElementById('db-sql').value='';document.getElementById('db-results').innerHTML=''">Clear</button>
+    <span id="db-status" style="font-size:12px;color:var(--text2)"></span>
+  </div>
+  <div id="db-results" style="margin-top:1rem;overflow-x:auto;font-size:12px"></div>
+</div>
+
+<script>
+function runDbQuery(){
+  var sql=document.getElementById('db-sql').value.trim();
+  if(!sql) return;
+  var btn=document.getElementById('db-run-btn');
+  var status=document.getElementById('db-status');
+  btn.disabled=true; btn.textContent='Running...'; status.textContent='';
+  fetch('/admin/db-query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sql:sql})
+  }).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent='Run Query';
+    if(d.error){
+      status.style.color='#a32d2d'; status.textContent=d.error;
+      document.getElementById('db-results').innerHTML='';
+      return;
+    }
+    if(d.message){
+      status.style.color='#3b6d11'; status.textContent=d.message;
+      document.getElementById('db-results').innerHTML='';
+      return;
+    }
+    status.style.color='var(--text2)'; status.textContent=d.rowcount+' row'+(d.rowcount!==1?'s':'');
+    if(!d.columns.length){document.getElementById('db-results').innerHTML='';return;}
+    var t='<table style="border-collapse:collapse;width:100%"><thead><tr>';
+    d.columns.forEach(function(c){t+='<th style="padding:5px 10px;text-align:left;background:#f5f1eb;border:0.5px solid var(--border);white-space:nowrap">'+c+'</th>';});
+    t+='</tr></thead><tbody>';
+    d.rows.forEach(function(row,i){
+      t+='<tr style="background:'+(i%2?'var(--surface2)':'#fff')+'">';
+      row.forEach(function(v){t+='<td style="padding:5px 10px;border:0.5px solid var(--border);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v+'</td>';});
+      t+='</tr>';
+    });
+    t+='</tbody></table>';
+    document.getElementById('db-results').innerHTML=t;
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='Run Query';
+    status.style.color='#a32d2d'; status.textContent='Request failed: '+e.message;
+  });
+}
+document.getElementById('db-sql').addEventListener('keydown',function(e){
+  if(e.ctrlKey&&e.key==='Enter') runDbQuery();
+});
+</script>
 </body>
 </html>

@@ -70,6 +70,38 @@ def sync_and_settle(app):
         _settle_pending_tips()
 
 
+
+@app.route('/admin/db-query', methods=['POST'])
+@login_required
+def admin_db_query():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    
+    sql = (request.json or {}).get('sql', '').strip()
+    if not sql:
+        return jsonify({'error': 'No SQL provided'}), 400
+    
+    # Block DELETE and DROP
+    sql_upper = sql.upper().lstrip()
+    for blocked in ['DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE']:
+        if sql_upper.startswith(blocked):
+            return jsonify({'error': f'{blocked} statements are not allowed'}), 400
+    
+    try:
+        result = db.session.execute(db.text(sql))
+        db.session.commit()
+        
+        if result.returns_rows:
+            keys = list(result.keys())
+            rows = [list(str(v) if v is not None else '' for v in row) for row in result.fetchall()]
+            return jsonify({'columns': keys, 'rows': rows, 'rowcount': len(rows)})
+        else:
+            return jsonify({'columns': [], 'rows': [], 'rowcount': result.rowcount, 'message': f'{result.rowcount} rows affected'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
