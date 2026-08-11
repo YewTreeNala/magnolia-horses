@@ -1,3 +1,4 @@
+# deployed: 20260723_1456
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -11,25 +12,21 @@ class User(UserMixin, db.Model):
     email      = db.Column(db.String(150), unique=True, nullable=False)
     password   = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.String(30))
+    is_banned       = db.Column(db.Boolean, default=False)
+    banned_at       = db.Column(db.String(30))
+    can_see_tipster = db.Column(db.Boolean, default=False)
     tagged     = db.relationship('TaggedHorse', backref='user', lazy=True)
     searches   = db.relationship('SavedSearch', backref='user', lazy=True)
-
-    # Optional personal Betfair credentials (encrypted at rest — see
-    # betfair_crypto.py). NULL means "use the shared default account"
-    # configured via Railway env vars. No UI to set these yet — schema
-    # groundwork for a future per-user override; the feature itself is
-    # admin-only for now regardless of which credentials would be used.
-    betfair_app_key_enc  = db.Column(db.Text, nullable=True)
-    betfair_username_enc = db.Column(db.Text, nullable=True)
-    betfair_password_enc = db.Column(db.Text, nullable=True)
-    betfair_cert_enc      = db.Column(db.Text, nullable=True)
-    betfair_key_enc       = db.Column(db.Text, nullable=True)
 
     def set_password(self, password):
         self.password = generate_password_hash(password)
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
+
+    @property
+    def is_active(self):
+        return not bool(self.is_banned)
 
 
 class TaggedHorse(db.Model):
@@ -62,43 +59,204 @@ class Race(db.Model):
     id             = db.Column(db.Integer, primary_key=True)
     meeting_id     = db.Column(db.Integer, db.ForeignKey('meeting.id'))
     time           = db.Column(db.String(10))
-    name           = db.Column(db.String(200))
+    name           = db.Column(db.Text)
     distance       = db.Column(db.String(20))
     race_class     = db.Column(db.String(50))
     prize          = db.Column(db.String(50))
     race_status    = db.Column(db.String(20),  default='')
-    going_detailed = db.Column(db.String(100), default='')
-    weather        = db.Column(db.String(100), default='')
+    going_detailed = db.Column(db.Text,        default='')
+    weather        = db.Column(db.Text,        default='')
     runners        = db.relationship('Runner', backref='race', lazy=True)
 
 
 class Runner(db.Model):
     id              = db.Column(db.Integer, primary_key=True)
     race_id         = db.Column(db.Integer, db.ForeignKey('race.id'))
+    horse_id        = db.Column(db.String(30),  default='')
     horse_name      = db.Column(db.String(100))
-    number          = db.Column(db.String(10))
-    draw            = db.Column(db.String(10),  default='')
+    number          = db.Column(db.String(20))
+    draw            = db.Column(db.String(20),  default='')
     colour          = db.Column(db.String(30))
-    age             = db.Column(db.String(5))
-    sex             = db.Column(db.String(10))
+    age             = db.Column(db.String(10))
+    sex             = db.Column(db.String(20))
     trainer         = db.Column(db.String(100))
     jockey          = db.Column(db.String(100))
     owner           = db.Column(db.String(100))
     form            = db.Column(db.String(30))
-    weight          = db.Column(db.String(10))
-    official_rating = db.Column(db.String(10))
-    rpr             = db.Column(db.String(10),  default='')
-    ts              = db.Column(db.String(10),  default='')
+    weight          = db.Column(db.String(20))
+    official_rating = db.Column(db.String(20))
+    rpr             = db.Column(db.String(20),  default='')
+    ts              = db.Column(db.String(20),  default='')
     odds            = db.Column(db.String(20))
+    sp              = db.Column(db.String(20),  default='')
     headgear        = db.Column(db.String(20),  default='')
-    headgear_run    = db.Column(db.String(10),  default='')
-    last_run        = db.Column(db.String(10),  default='')
-    position        = db.Column(db.String(5),   default='')
-    silk_url        = db.Column(db.String(300), default='')
+    headgear_run    = db.Column(db.String(20),  default='')
+    last_run        = db.Column(db.String(20),  default='')
+    position        = db.Column(db.String(20),  default='')
+    silk_url        = db.Column(db.Text,        default='')
     spotlight       = db.Column(db.Text,        default='')
     comment         = db.Column(db.Text,        default='')
-    wind_surgery    = db.Column(db.String(5),   default='')
-    trainer_14_days = db.Column(db.String(50),  default='')
+    wind_surgery    = db.Column(db.String(10),  default='')
+    trainer_14_days = db.Column(db.String(20),  default='')
+
+
+class HorseProfile(db.Model):
+    """One row per unique horse — keyed by API horse_id."""
+    __tablename__ = 'horse_profile'
+    horse_id   = db.Column(db.String(30), primary_key=True)
+    name       = db.Column(db.String(100))
+    colour     = db.Column(db.String(30))
+    sex        = db.Column(db.String(20))
+    dob        = db.Column(db.String(20))
+    region     = db.Column(db.String(10))
+    sire       = db.Column(db.String(100))
+    dam        = db.Column(db.String(100))
+    trainer    = db.Column(db.String(100))
+    owner      = db.Column(db.String(100))
+    updated_at = db.Column(db.String(30))
+    runs       = db.relationship('HorseRun', backref='horse', lazy=True)
+
+
+class HorseRun(db.Model):
+    """One row per historical run for a horse."""
+    __tablename__ = 'horse_run'
+    id            = db.Column(db.Integer, primary_key=True)
+    horse_id      = db.Column(db.String(30), db.ForeignKey('horse_profile.horse_id'), nullable=False)
+    race_id       = db.Column(db.String(30))
+    date          = db.Column(db.String(20))
+    course        = db.Column(db.String(100))
+    race_name     = db.Column(db.Text)
+    race_type     = db.Column(db.String(20))
+    race_class    = db.Column(db.String(20))
+    pattern       = db.Column(db.String(30))
+    dist          = db.Column(db.String(20))
+    going         = db.Column(db.String(50))
+    surface       = db.Column(db.String(20))
+    position      = db.Column(db.String(10))
+    sp            = db.Column(db.String(20))
+    sp_dec        = db.Column(db.String(20))
+    jockey        = db.Column(db.String(100))
+    trainer       = db.Column(db.String(100))
+    weight        = db.Column(db.String(20))
+    btn           = db.Column(db.String(20))
+    ovr_btn       = db.Column(db.String(20))
+    official_rating = db.Column(db.String(10))
+    prize         = db.Column(db.String(20))
+    comment       = db.Column(db.Text)
+    field         = db.relationship('HorseRunField', backref='run', lazy=True,
+                                    cascade='all, delete-orphan')
+    __table_args__ = (db.UniqueConstraint('horse_id', 'race_id', name='uq_horse_race'),)
+
+
+class HorseRunField(db.Model):
+    """Every runner in a race stored against a HorseRun."""
+    __tablename__ = 'horse_run_field'
+    id         = db.Column(db.Integer, primary_key=True)
+    run_id     = db.Column(db.Integer, db.ForeignKey('horse_run.id'), nullable=False)
+    horse_id   = db.Column(db.String(30))
+    horse_name = db.Column(db.String(100))
+    position   = db.Column(db.String(10))
+    sp         = db.Column(db.String(20))
+    sp_dec     = db.Column(db.String(20))
+    jockey     = db.Column(db.String(100))
+    trainer    = db.Column(db.String(100))
+    weight     = db.Column(db.String(20))
+    btn        = db.Column(db.String(20))
+    official_rating = db.Column(db.String(10))
+    silk_url   = db.Column(db.Text)
+
+
+class Tipster(db.Model):
+    """One row per tipster source."""
+    __tablename__ = 'tipster'
+    id         = db.Column(db.Integer, primary_key=True)
+    name       = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.String(30))
+    tips       = db.relationship('Tip', backref='tipster', lazy=True)
+
+
+class Tip(db.Model):
+    """One row per horse tip from a tipster."""
+    __tablename__ = 'tip'
+    id            = db.Column(db.Integer, primary_key=True)
+    tipster_id    = db.Column(db.Integer, db.ForeignKey('tipster.id'), nullable=False)
+    horse_name    = db.Column(db.String(100), nullable=False)
+    horse_id      = db.Column(db.String(30),  default='')
+    tip_date      = db.Column(db.String(20))
+    tip_datetime  = db.Column(db.String(30))
+    course        = db.Column(db.String(100), default='')
+    race_time     = db.Column(db.String(10),  default='')
+    race_date     = db.Column(db.String(20),  default='')
+    bet_type      = db.Column(db.String(10),  default='ew')
+    stake_pts     = db.Column(db.Float,       default=0.5)
+    odds          = db.Column(db.String(20),  default='')
+    odds_dec      = db.Column(db.Float,       default=0.0)
+    each_way_places   = db.Column(db.Integer, default=0)
+    each_way_fraction = db.Column(db.Integer, default=5)
+    reasoning     = db.Column(db.Text,        default='')
+    raw_message   = db.Column(db.Text,        default='')
+    telegram_msg_id = db.Column(db.Integer,   default=0)
+    uncertain     = db.Column(db.Boolean,     default=False)
+    settled       = db.Column(db.Boolean,     default=False)
+    created_at    = db.Column(db.String(30))
+    result        = db.relationship('TipResult', backref='tip', lazy=True,
+                                    uselist=False, cascade='all, delete-orphan')
+
+
+class TipResult(db.Model):
+    """Settlement result for a tip."""
+    __tablename__ = 'tip_result'
+    id            = db.Column(db.Integer, primary_key=True)
+    tip_id        = db.Column(db.Integer, db.ForeignKey('tip.id'), nullable=False)
+    position      = db.Column(db.String(10),  default='')
+    sp            = db.Column(db.String(20),  default='')
+    sp_dec        = db.Column(db.Float,       default=0.0)
+    result_type   = db.Column(db.String(10),  default='')
+    win_pts       = db.Column(db.Float,       default=0.0)
+    place_pts     = db.Column(db.Float,       default=0.0)
+    total_pts     = db.Column(db.Float,       default=0.0)
+    settled_at    = db.Column(db.String(30))
+
+
+
+class RunnerHistory(db.Model):
+    """Permanent historical record of all runners — copied from Runner after each day's results."""
+    __tablename__ = 'runner_history'
+    id              = db.Column(db.Integer, primary_key=True)
+    race_date       = db.Column(db.String(20),  nullable=False)
+    course          = db.Column(db.String(100), default='')
+    race_time       = db.Column(db.String(10),  default='')
+    race_name       = db.Column(db.Text,        default='')
+    race_class      = db.Column(db.String(50),  default='')
+    distance        = db.Column(db.String(20),  default='')
+    going           = db.Column(db.Text,        default='')
+    horse_id        = db.Column(db.String(30),  default='')
+    horse_name      = db.Column(db.String(100), nullable=False)
+    number          = db.Column(db.String(20),  default='')
+    draw            = db.Column(db.String(20),  default='')
+    colour          = db.Column(db.String(30),  default='')
+    age             = db.Column(db.String(10),  default='')
+    sex             = db.Column(db.String(20),  default='')
+    trainer         = db.Column(db.String(100), default='')
+    jockey          = db.Column(db.String(100), default='')
+    owner           = db.Column(db.String(100), default='')
+    form            = db.Column(db.String(30),  default='')
+    weight          = db.Column(db.String(20),  default='')
+    official_rating = db.Column(db.String(20),  default='')
+    rpr             = db.Column(db.String(20),  default='')
+    ts              = db.Column(db.String(20),  default='')
+    odds            = db.Column(db.String(20),  default='')
+    sp              = db.Column(db.String(20),  default='')
+    headgear        = db.Column(db.String(20),  default='')
+    last_run        = db.Column(db.String(20),  default='')
+    position        = db.Column(db.String(20),  default='')
+    silk_url        = db.Column(db.Text,        default='')
+    wind_surgery    = db.Column(db.String(10),  default='')
+    trainer_14_days = db.Column(db.String(20),  default='')
+    __table_args__ = (
+        db.UniqueConstraint('horse_name', 'race_date', 'course', 'race_time',
+                            name='uq_runner_history'),
+    )
 
 
 class ColourOverride(db.Model):
@@ -121,5 +279,5 @@ class EmailLog(db.Model):
 class SyncLog(db.Model):
     id         = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.String(30))
-    level      = db.Column(db.String(10))  # INFO, WARN, ERROR
+    level      = db.Column(db.String(10))
     message    = db.Column(db.Text)

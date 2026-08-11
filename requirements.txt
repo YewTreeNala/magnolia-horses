@@ -10,5 +10,3 @@ jellyfish
 gunicorn
 psycopg2-binary
 anthropic
-cryptography
-pytz
