@@ -402,6 +402,12 @@
       <div class="tag-spotlight-title"><span class="rp-logo">RP</span> Racing Post Spotlight</div>
       <div id="tag-modal-spotlight-text"></div>
     </div>
+    <div id="tag-modal-betfair" style="display:none;margin-bottom:0.75rem">
+      <a id="tag-modal-betfair-link" href="#" target="_blank" rel="noopener"
+         class="modal-btn-secondary" style="display:inline-block;text-decoration:none;text-align:center">
+        Bet on Betfair Exchange &#8599;
+      </a>
+    </div>
     <div class="tag-detail-grid" id="tag-detail-grid"></div>
     <div class="modal-field">
       <label for="tag-notes">My notes</label>
@@ -725,6 +731,26 @@ function openTagModal(horseName) {
   document.getElementById('tag-modal-remove').style.display = isTagged ? 'inline-block' : 'none';
   document.getElementById('tag-modal').classList.add('open');
   setTimeout(function() { document.getElementById('tag-notes').focus(); }, 50);
+
+  // Betfair Exchange link — admin-only, looked up live each time the
+  // modal opens since odds/markets change constantly and this is a
+  // low-frequency, on-demand call (not run across every search result).
+  var bfWrap = document.getElementById('tag-modal-betfair');
+  if (IS_ADMIN && bfWrap) {
+    bfWrap.style.display = 'none';
+    if (r._meeting && r._time && r._date) {
+      var q = '/api/betfair-link?course=' + encodeURIComponent(r._meeting)
+            + '&time=' + encodeURIComponent(r._time)
+            + '&horse=' + encodeURIComponent(horseName)
+            + '&date=' + encodeURIComponent(r._date);
+      fetch(q).then(function(resp) { return resp.json(); }).then(function(res) {
+        if (res && res.url) {
+          document.getElementById('tag-modal-betfair-link').href = res.url;
+          bfWrap.style.display = 'block';
+        }
+      }).catch(function() { /* silently omit the button on failure */ });
+    }
+  }
 
   // Load form history and tipster history
   var histSection = document.getElementById('tag-modal-history');
@@ -1091,8 +1117,16 @@ function populateMeetingDropdown(data) {
 function cacheRunners(data) {
   for (var i = 0; i < data.length; i++)
     for (var j = 0; j < data[i].races.length; j++)
-      for (var k = 0; k < data[i].races[j].runners.length; k++)
-        allRunnersCache[data[i].races[j].runners[k].name.toLowerCase()] = data[i].races[j].runners[k];
+      for (var k = 0; k < data[i].races[j].runners.length; k++) {
+        var runner = data[i].races[j].runners[k];
+        // Stash meeting/race context on the runner itself so the horse
+        // detail modal (which only receives the runner object) can look
+        // up a Betfair link without a separate data structure.
+        runner._meeting = data[i].meeting;
+        runner._date    = data[i].date;
+        runner._time    = data[i].races[j].time;
+        allRunnersCache[runner.name.toLowerCase()] = runner;
+      }
 }
 
 // ── Run search ────────────────────────────────────────────────────────────────
