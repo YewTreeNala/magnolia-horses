@@ -18,6 +18,17 @@ class User(UserMixin, db.Model):
     tagged     = db.relationship('TaggedHorse', backref='user', lazy=True)
     searches   = db.relationship('SavedSearch', backref='user', lazy=True)
 
+    # Optional personal Betfair credentials (encrypted at rest — see
+    # betfair_crypto.py). NULL means "use the shared default account"
+    # configured via Railway env vars. No UI to set these yet — schema
+    # groundwork for a future per-user override; the feature itself is
+    # admin-only for now regardless of which credentials would be used.
+    betfair_app_key_enc  = db.Column(db.Text, nullable=True)
+    betfair_username_enc = db.Column(db.Text, nullable=True)
+    betfair_password_enc = db.Column(db.Text, nullable=True)
+    betfair_cert_enc      = db.Column(db.Text, nullable=True)
+    betfair_key_enc       = db.Column(db.Text, nullable=True)
+
     def set_password(self, password):
         self.password = generate_password_hash(password)
 

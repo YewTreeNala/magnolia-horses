@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
 from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history, update_horse_ids_from_runners
 from email_service import send_morning_alerts
+from betfair_lookup import get_betfair_market_url
 import json
 import os
 import hmac
@@ -880,6 +881,32 @@ def sync_log():
         return jsonify({'error': 'Forbidden'}), 403
     logs = SyncLog.query.order_by(SyncLog.id.desc()).limit(100).all()
     return jsonify([{'id': l.id, 'created_at': l.created_at, 'level': l.level, 'message': l.message} for l in logs])
+
+
+@app.route('/api/betfair-link')
+@login_required
+def betfair_link():
+    # Admin-only for now — no per-user credential UI exists yet, and
+    # this feature is being trialled before wider rollout.
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    course     = request.args.get('course', '').strip()
+    time_str   = request.args.get('time', '').strip()
+    horse      = request.args.get('horse', '').strip()
+    date_str   = request.args.get('date', '').strip()
+    if not (course and time_str and horse and date_str):
+        return jsonify({'error': 'course, time, horse and date are all required'}), 400
+
+    try:
+        race_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
+
+    url = get_betfair_market_url(course, time_str, horse, race_date, user=current_user)
+    if url is None:
+        return jsonify({'url': None})
+    return jsonify({'url': url})
 
 
 @app.route('/api/email-log')
