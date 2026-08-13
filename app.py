@@ -889,49 +889,42 @@ def betfair_diagnose():
     """Self-diagnosing check for the Betfair link feature — picks a real
     race from today's card automatically and reports which stage fails,
     instead of collapsing everything into a null url. Never returns
-    secret values, only whether each is present."""
+    secret values, only whether each is present.
+
+    Betfair only accepts UK/IE connections, so the actual lookup runs on
+    the UK VPS proxy — this checks that path end to end."""
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
     import os as _os
+    from betfair_lookup import proxy_health, get_betfair_market_info
     steps = []
 
-    # 1. Env vars present?
-    required = ['FERNET_KEY', 'BETFAIR_APP_KEY', 'BETFAIR_USERNAME',
-                'BETFAIR_PASSWORD', 'BETFAIR_CERT_PEM', 'BETFAIR_KEY_PEM']
+    # 1. Proxy env vars present?
+    required = ['BETFAIR_PROXY_URL', 'BETFAIR_PROXY_SECRET']
     present = {k: bool((_os.environ.get(k) or '').strip()) for k in required}
     missing = [k for k, v in present.items() if not v]
     steps.append({'step': 'env_vars', 'ok': not missing,
                   'present': present, 'missing': missing})
     if missing:
-        return jsonify({'result': 'FAIL — missing env vars', 'steps': steps})
+        return jsonify({'result': 'FAIL — missing proxy env vars', 'steps': steps})
 
-    # PEM sanity — a common failure is pasting without the BEGIN/END
-    # armour, or with escaped \n instead of real newlines.
-    cert_pem = _os.environ.get('BETFAIR_CERT_PEM', '')
-    key_pem  = _os.environ.get('BETFAIR_KEY_PEM', '')
-    pem_ok = ('BEGIN' in cert_pem and 'END' in cert_pem
-              and 'BEGIN' in key_pem and 'END' in key_pem)
-    steps.append({'step': 'pem_format', 'ok': pem_ok,
-                  'cert_has_armour': 'BEGIN' in cert_pem and 'END' in cert_pem,
-                  'key_has_armour': 'BEGIN' in key_pem and 'END' in key_pem,
-                  'cert_has_real_newlines': '\n' in cert_pem,
-                  'key_has_real_newlines': '\n' in key_pem,
-                  'note': 'PEM blocks need real newlines, not literal backslash-n'})
-
-    # 2. Betfair login works?
-    try:
-        from betfair_lookup import _default_credentials, _login
-        creds = _default_credentials()
-        if creds is None:
-            steps.append({'step': 'login', 'ok': False,
-                          'error': 'credentials could not be assembled'})
-            return jsonify({'result': 'FAIL — credentials incomplete', 'steps': steps})
-        _login(creds)
-        steps.append({'step': 'login', 'ok': True})
-    except Exception as e:
-        steps.append({'step': 'login', 'ok': False, 'error': str(e)})
-        return jsonify({'result': 'FAIL — Betfair login rejected', 'steps': steps})
+    # 2. Proxy reachable, and can IT log in to Betfair?
+    health = proxy_health()
+    reachable = health.get('reachable') and health.get('status_code') == 200
+    steps.append({'step': 'proxy_health', 'ok': bool(reachable), 'detail': health})
+    if not health.get('reachable'):
+        return jsonify({
+            'result': 'FAIL — cannot reach the UK VPS proxy',
+            'hint': 'Is betfair_proxy.py running on the VPS, and is its port '
+                    'open to inbound connections from Railway?',
+            'steps': steps})
+    if not reachable:
+        return jsonify({
+            'result': 'FAIL — proxy reachable but its Betfair login failed',
+            'hint': 'Check the VPS: betfair_proxy.py logs, and that '
+                    'betfair_client credentials still work there.',
+            'steps': steps})
 
     # 3. Pick a REAL race from today's card rather than guessing params.
     today = date.today().strftime('%Y-%m-%d')
@@ -942,26 +935,27 @@ def betfair_diagnose():
     if runner is None:
         steps.append({'step': 'pick_race', 'ok': False,
                       'error': f'no runners in DB for {today} — cannot test lookup'})
-        return jsonify({'result': 'INCONCLUSIVE — login works, but no race data to test',
+        return jsonify({'result': 'INCONCLUSIVE — proxy healthy, but no race data to test',
                         'steps': steps})
 
     sample = {'course': runner.race.meeting.name, 'time': runner.race.time,
               'horse': runner.horse_name, 'date': today}
     steps.append({'step': 'pick_race', 'ok': True, 'using': sample})
 
-    # 4. Full lookup against that real race.
+    # 4. Full lookup through the proxy against that real race.
     try:
-        url = get_betfair_market_url(sample['course'], sample['time'],
-                                     sample['horse'], date.today(), user=current_user)
-        steps.append({'step': 'market_lookup', 'ok': url is not None, 'url': url})
+        info = get_betfair_market_info(sample['course'], sample['time'],
+                                       sample['horse'], date.today(),
+                                       user=current_user)
+        steps.append({'step': 'market_lookup', 'ok': info is not None, 'result': info})
     except Exception as e:
         steps.append({'step': 'market_lookup', 'ok': False, 'error': str(e)})
         return jsonify({'result': 'FAIL — market lookup raised', 'steps': steps})
 
-    if url:
+    if info:
         return jsonify({'result': 'PASS — everything working', 'steps': steps})
     return jsonify({
-        'result': 'PARTIAL — login fine, but no market matched for this race',
+        'result': 'PARTIAL — proxy healthy, but no market matched for this race',
         'hint': 'Race may have finished, may not be on Betfair, or the course '
                 'name/time in the DB may not match Betfair closely enough.',
         'steps': steps})

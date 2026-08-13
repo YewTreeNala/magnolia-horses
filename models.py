@@ -19,10 +19,11 @@ class User(UserMixin, db.Model):
     searches   = db.relationship('SavedSearch', backref='user', lazy=True)
 
     # Optional personal Betfair credentials (encrypted at rest — see
-    # betfair_crypto.py). NULL means "use the shared default account"
-    # configured via Railway env vars. No UI to set these yet — schema
-    # groundwork for a future per-user override; the feature itself is
-    # admin-only for now regardless of which credentials would be used.
+    # betfair_crypto.py). Currently UNUSED: Betfair only accepts UK/IE
+    # connections, so all lookups go through the UK VPS proxy using its
+    # own shared account (see betfair_lookup.py). Kept as groundwork in
+    # case per-user credentials are supported later — that would require
+    # forwarding them to the proxy, since Railway can't reach Betfair.
     betfair_app_key_enc  = db.Column(db.Text, nullable=True)
     betfair_username_enc = db.Column(db.Text, nullable=True)
     betfair_password_enc = db.Column(db.Text, nullable=True)
