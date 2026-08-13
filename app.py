@@ -1030,10 +1030,18 @@ def betfair_link():
     except ValueError:
         return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
 
-    url = get_betfair_market_url(course, time_str, horse, race_date, user=current_user)
-    if url is None:
+    from betfair_lookup import get_betfair_market_info
+    info = get_betfair_market_info(course, time_str, horse, race_date, user=current_user)
+    if not info:
         return jsonify({'url': None})
-    return jsonify({'url': url})
+    # Pass through the live price alongside the link. best_back_price is
+    # only present when the runner matched confidently on the market.
+    return jsonify({
+        'url': info.get('url'),
+        'best_back_price': info.get('best_back_price'),
+        'best_back_size': info.get('best_back_size'),
+        'matched_name': info.get('matched_name'),
+    })
 
 
 @app.route('/api/email-log')

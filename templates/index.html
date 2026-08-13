@@ -1477,7 +1477,21 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
             + '&date=' + encodeURIComponent(rc._date))
         .then(function(r){ return r.json(); })
         .then(function(res){
-          if (res && res.url) { hbf.href = res.url; hbf.style.display = 'inline-block'; }
+          if (res && res.url) {
+            hbf.href = res.url;
+            // Show the live best-back price when the runner matched on the
+            // market; fall back to a plain label when it didn't.
+            if (res.best_back_price) {
+              hbf.innerHTML = '<strong>' + res.best_back_price + '</strong> on Betfair &#8599;';
+              hbf.title = 'Best available back price'
+                        + (res.best_back_size ? ' (\u00a3' + res.best_back_size + ' available)' : '')
+                        + ' - opens the Betfair Exchange market';
+            } else {
+              hbf.innerHTML = 'Bet on Betfair &#8599;';
+              hbf.title = 'Opens the Betfair Exchange market for this race';
+            }
+            hbf.style.display = 'inline-block';
+          }
         })
         .catch(function(){});
     }
