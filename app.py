@@ -945,7 +945,20 @@ def betfair_diagnose():
         by_race.setdefault(r.race.id, r)
     races = list(by_race.values())
 
-    upcoming = [r for r in races if r.race.time >= now_hhmm]
+    def _race_time_24h(t):
+        """Racecard times are 12-hour with no am/pm ('2:15' means 14:15).
+        Convert to a comparable 24-hour 'HH:MM'. UK racing effectively
+        never starts before 10am, so hours 1-9 are afternoon/evening."""
+        try:
+            hh, mm = str(t).strip().split(':')
+            hh, mm = int(hh), int(mm)
+        except (ValueError, AttributeError):
+            return '99:99'  # unparseable sorts last
+        if 1 <= hh <= 9:
+            hh += 12
+        return f'{hh:02d}:{mm:02d}'
+
+    upcoming = [r for r in races if _race_time_24h(r.race.time) >= now_hhmm]
     # Prefer races still to come; otherwise walk backwards from the most
     # recent, which is most likely to still have an open market.
     ordered = upcoming or list(reversed(races))
@@ -967,14 +980,15 @@ def betfair_diagnose():
     for cand in ordered[:8]:
         sample = {'course': cand.race.meeting.name, 'time': cand.race.time,
                   'horse': cand.horse_name, 'date': today}
+        sample_dbg = dict(sample, time_24h=_race_time_24h(cand.race.time))
         try:
             got = get_betfair_market_info(sample['course'], sample['time'],
                                           sample['horse'], date.today(),
                                           user=current_user)
         except Exception as e:
-            attempts.append({**sample, 'ok': False, 'error': str(e)})
+            attempts.append({**sample_dbg, 'ok': False, 'error': str(e)})
             continue
-        attempts.append({**sample, 'ok': got is not None,
+        attempts.append({**sample_dbg, 'ok': got is not None,
                          'url': (got or {}).get('url'),
                          'best_back_price': (got or {}).get('best_back_price')})
         if got:
