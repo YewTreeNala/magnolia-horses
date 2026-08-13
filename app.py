@@ -926,51 +926,73 @@ def betfair_diagnose():
                     'betfair_client credentials still work there.',
             'steps': steps})
 
-    # 3. Pick a REAL race from today's card rather than guessing params.
-    #    Must be a GB/IE course (the proxy only searches those markets)
-    #    and ideally still upcoming — a finished or foreign race would
-    #    correctly return no market and make the test look like a failure.
+    # 3. Try SEVERAL real races rather than betting on one guess.
+    #    Races that have finished, or that aren't on Betfair's GB/IE
+    #    markets (e.g. French cards, which the proxy doesn't search),
+    #    correctly return no market — so testing a single race can
+    #    look like a failure when the plumbing is actually fine.
     today = date.today().strftime('%Y-%m-%d')
     now_hhmm = datetime.now().strftime('%H:%M')
-    candidates = (db.session.query(Runner).join(Race).join(Meeting)
-                  .filter(Meeting.date == today)
-                  .filter(Race.time != '')
-                  .order_by(Race.time).all())
-    candidates = [r for r in candidates if is_uk_course(r.race.meeting.name)]
 
-    upcoming = [r for r in candidates if r.race.time >= now_hhmm]
-    runner = (upcoming[0] if upcoming else (candidates[-1] if candidates else None))
+    all_today = (db.session.query(Runner).join(Race).join(Meeting)
+                 .filter(Meeting.date == today)
+                 .filter(Race.time != '')
+                 .order_by(Race.time).all())
 
-    if runner is None:
+    # One runner per race — no point testing 12 horses in the same race.
+    by_race = {}
+    for r in all_today:
+        by_race.setdefault(r.race.id, r)
+    races = list(by_race.values())
+
+    upcoming = [r for r in races if r.race.time >= now_hhmm]
+    # Prefer races still to come; otherwise walk backwards from the most
+    # recent, which is most likely to still have an open market.
+    ordered = upcoming or list(reversed(races))
+
+    if not ordered:
         steps.append({'step': 'pick_race', 'ok': False,
-                      'error': f'no GB/IE runners in DB for {today} — cannot test lookup'})
-        return jsonify({'result': 'INCONCLUSIVE — proxy healthy, but no GB/IE race data to test',
+                      'error': f'no races in DB for {today} — cannot test lookup'})
+        return jsonify({'result': 'INCONCLUSIVE — proxy healthy, but no race data to test',
                         'steps': steps})
 
-    sample = {'course': runner.race.meeting.name, 'time': runner.race.time,
-              'horse': runner.horse_name, 'date': today}
-    steps.append({'step': 'pick_race', 'ok': True, 'using': sample,
-                  'is_upcoming': bool(upcoming),
-                  'note': None if upcoming else
-                          'All GB/IE races today have finished — testing against the '
-                          'last one, which may legitimately have no open market.'})
+    steps.append({'step': 'pick_race', 'ok': True,
+                  'races_today': len(races),
+                  'upcoming': len(upcoming),
+                  'will_try': min(8, len(ordered))})
 
-    # 4. Full lookup through the proxy against that real race.
-    try:
-        info = get_betfair_market_info(sample['course'], sample['time'],
-                                       sample['horse'], date.today(),
-                                       user=current_user)
-        steps.append({'step': 'market_lookup', 'ok': info is not None, 'result': info})
-    except Exception as e:
-        steps.append({'step': 'market_lookup', 'ok': False, 'error': str(e)})
-        return jsonify({'result': 'FAIL — market lookup raised', 'steps': steps})
+    # 4. Try each in turn until one resolves to a market.
+    attempts = []
+    info = None
+    for cand in ordered[:8]:
+        sample = {'course': cand.race.meeting.name, 'time': cand.race.time,
+                  'horse': cand.horse_name, 'date': today}
+        try:
+            got = get_betfair_market_info(sample['course'], sample['time'],
+                                          sample['horse'], date.today(),
+                                          user=current_user)
+        except Exception as e:
+            attempts.append({**sample, 'ok': False, 'error': str(e)})
+            continue
+        attempts.append({**sample, 'ok': got is not None,
+                         'url': (got or {}).get('url'),
+                         'best_back_price': (got or {}).get('best_back_price')})
+        if got:
+            info = got
+            break
+
+    steps.append({'step': 'market_lookup', 'ok': info is not None,
+                  'attempts': attempts, 'result': info})
 
     if info:
         return jsonify({'result': 'PASS — everything working', 'steps': steps})
     return jsonify({
-        'result': 'PARTIAL — proxy healthy, but no market matched for this race',
-        'hint': 'Race may have finished, may not be on Betfair, or the course '
-                'name/time in the DB may not match Betfair closely enough.',
+        'result': 'PARTIAL — proxy healthy, but no market matched on any race tried',
+        'hint': 'See attempts above. If all the races tried have finished, or were '
+                'foreign meetings (the proxy searches GB/IE only), this is expected '
+                'rather than a fault — retry when GB/IE racing is upcoming. If '
+                'upcoming GB/IE races are failing, the course name or time in the '
+                'DB may not match Betfair closely enough.',
         'steps': steps})
 
 
