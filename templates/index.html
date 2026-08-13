@@ -1372,6 +1372,11 @@ autoSyncIfNeeded()
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0">
         <button onclick="closeHistoryModal()" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);line-height:1">&#215;</button>
+        <a id="history-betfair-link" href="#" target="_blank" rel="noopener"
+           style="display:none;padding:6px 12px;font-size:12px;border-radius:var(--radius);
+                  border:0.5px solid var(--brand);color:var(--brand);text-decoration:none;white-space:nowrap">
+          Bet on Betfair &#8599;
+        </a>
 
       </div>
     </div>
@@ -1460,6 +1465,23 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   if(ub) ub.style.display=isTagged?'inline-block':'none';
   document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Loading...</div>';
   document.getElementById('history-modal').classList.add('open');
+
+  // Betfair Exchange link - admin only, looked up live on open.
+  var hbf = document.getElementById('history-betfair-link');
+  if (hbf) {
+    hbf.style.display = 'none';
+    if (IS_ADMIN && rc._meeting && rc._time && rc._date) {
+      fetch('/api/betfair-link?course=' + encodeURIComponent(rc._meeting)
+            + '&time=' + encodeURIComponent(rc._time)
+            + '&horse=' + encodeURIComponent(horseName)
+            + '&date=' + encodeURIComponent(rc._date))
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (res && res.url) { hbf.href = res.url; hbf.style.display = 'inline-block'; }
+        })
+        .catch(function(){});
+    }
+  }
 
   fetch('/api/horse-history/' + horseId)
     .then(function(r) { return r.json(); })
