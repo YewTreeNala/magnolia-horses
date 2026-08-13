@@ -927,20 +927,33 @@ def betfair_diagnose():
             'steps': steps})
 
     # 3. Pick a REAL race from today's card rather than guessing params.
+    #    Must be a GB/IE course (the proxy only searches those markets)
+    #    and ideally still upcoming — a finished or foreign race would
+    #    correctly return no market and make the test look like a failure.
     today = date.today().strftime('%Y-%m-%d')
-    runner = (db.session.query(Runner).join(Race).join(Meeting)
-              .filter(Meeting.date == today)
-              .filter(Race.time != '')
-              .order_by(Race.time).first())
+    now_hhmm = datetime.now().strftime('%H:%M')
+    candidates = (db.session.query(Runner).join(Race).join(Meeting)
+                  .filter(Meeting.date == today)
+                  .filter(Race.time != '')
+                  .order_by(Race.time).all())
+    candidates = [r for r in candidates if is_uk_course(r.race.meeting.name)]
+
+    upcoming = [r for r in candidates if r.race.time >= now_hhmm]
+    runner = (upcoming[0] if upcoming else (candidates[-1] if candidates else None))
+
     if runner is None:
         steps.append({'step': 'pick_race', 'ok': False,
-                      'error': f'no runners in DB for {today} — cannot test lookup'})
-        return jsonify({'result': 'INCONCLUSIVE — proxy healthy, but no race data to test',
+                      'error': f'no GB/IE runners in DB for {today} — cannot test lookup'})
+        return jsonify({'result': 'INCONCLUSIVE — proxy healthy, but no GB/IE race data to test',
                         'steps': steps})
 
     sample = {'course': runner.race.meeting.name, 'time': runner.race.time,
               'horse': runner.horse_name, 'date': today}
-    steps.append({'step': 'pick_race', 'ok': True, 'using': sample})
+    steps.append({'step': 'pick_race', 'ok': True, 'using': sample,
+                  'is_upcoming': bool(upcoming),
+                  'note': None if upcoming else
+                          'All GB/IE races today have finished — testing against the '
+                          'last one, which may legitimately have no open market.'})
 
     # 4. Full lookup through the proxy against that real race.
     try:
