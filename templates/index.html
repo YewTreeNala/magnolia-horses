@@ -1150,6 +1150,16 @@ function cacheRunners(data) {
         runner._meeting = data[i].meeting;
         runner._date    = data[i].date;
         runner._time    = data[i].races[j].time;
+        // Today's race conditions, so the detail modal can show them
+        // alongside previous runs for comparison.
+        runner._race = {
+          name:     data[i].races[j].name,
+          distance: data[i].races[j].distance,
+          cls:      data[i].races[j]['class'],
+          going:    data[i].races[j].going_detailed,
+          weather:  data[i].races[j].weather,
+          runners:  data[i].races[j].total_runners
+        };
         allRunnersCache[runner.name.toLowerCase()] = runner;
       }
 }
@@ -1405,6 +1415,10 @@ autoSyncIfNeeded()
 
       </div>
     </div>
+    <div id="history-today-race" style="display:none;padding:8px 18px;border-top:0.5px solid var(--border);background:var(--surface2)">
+      <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.04em;color:var(--text3);margin-bottom:3px">Today&#39;s race</div>
+      <div id="history-today-race-body" style="font-size:12px;color:var(--text2);line-height:1.5"></div>
+    </div>
     <div style="padding:8px 18px;border-top:0.5px solid var(--border);display:flex;gap:8px;align-items:center">
       <textarea id="history-notes" placeholder="My notes..." onblur="autoSaveHistoryTag()" style="flex:1;padding:6px 8px;font-size:12px;font-family:inherit;border:0.5px solid var(--border2);border-radius:6px;resize:none;height:36px;line-height:1.4"></textarea>
       <button id="history-tag-btn" onclick="saveHistoryTag()" style="padding:6px 14px;font-size:12px;font-family:inherit;border-radius:var(--radius);cursor:pointer;border:0.5px solid var(--brand);background:var(--surface);color:var(--brand);white-space:nowrap">&#9825; Tag</button>
@@ -1490,6 +1504,28 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   if(ub) ub.style.display=isTagged?'inline-block':'none';
   document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text3)">Loading...</div>';
   document.getElementById('history-modal').classList.add('open');
+
+  // Today's race conditions, so previous runs can be compared against
+  // the going/class/field size the horse faces now.
+  var todayWrap = document.getElementById('history-today-race');
+  if (todayWrap) {
+    var tr = rc._race;
+    if (tr && (rc._meeting || tr.name)) {
+      var bits = [];
+      if (rc._meeting) bits.push('<strong>' + escHtml(rc._meeting) + '</strong>');
+      if (rc._time)    bits.push('<span style="color:var(--brand);font-weight:600">' + escHtml(rc._time) + '</span>');
+      if (tr.distance) bits.push(escHtml(String(tr.distance)) + 'f');
+      if (tr.cls)      bits.push('<span class="race-badge">' + escHtml(tr.cls) + '</span>');
+      if (tr.runners)  bits.push(escHtml(String(tr.runners)) + ' runners');
+      if (tr.going)    bits.push(escHtml(tr.going) + ' going');
+      if (tr.weather)  bits.push(escHtml(tr.weather));
+      var line2 = tr.name ? '<div style="margin-top:2px;color:var(--text3)">' + escHtml(tr.name) + '</div>' : '';
+      document.getElementById('history-today-race-body').innerHTML = bits.join(' &middot; ') + line2;
+      todayWrap.style.display = 'block';
+    } else {
+      todayWrap.style.display = 'none';
+    }
+  }
 
   // Betfair Exchange link - admin only, looked up live on open.
   var hbf = document.getElementById('history-betfair-link');
