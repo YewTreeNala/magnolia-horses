@@ -8,6 +8,11 @@ from models import db, Meeting, Race, Runner, RunnerHistory, ColourOverride, Syn
 
 BASE_URL = "https://api.theracingapi.com/v1"
 
+# Delay between per-horse history requests. The Racing API rate
+# limits sustained bursts; without this the nightly job got ~50
+# horses through and failed the remaining several hundred.
+REQUEST_DELAY_SECONDS = 0.5
+
 
 def get_auth():
     return (os.getenv("RACING_API_USER"), os.getenv("RACING_API_KEY"))
@@ -378,6 +383,8 @@ def sync_horse_history(app):
 
         fetched = 0
         errors  = 0
+        error_codes   = {}
+        error_samples = []
 
         for horse_id, row in seen.items():
             try:
@@ -394,16 +401,37 @@ def sync_horse_history(app):
                 profile.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 db.session.flush()
 
-                # Fetch history from API
-                resp = requests.get(
-                    f"{BASE_URL}/racecards/{horse_id}/results",
-                    auth=get_auth(),
-                    timeout=10
-                )
+                # Fetch history from API.
+                # Throttled + retried: this job fetches hundreds of horses
+                # back to back, which trips the Racing API's rate limit
+                # after the first ~50. Previously every non-200 was counted
+                # as a generic error and skipped, so a rate limit was
+                # indistinguishable from a real miss and most horses never
+                # got history.
+                resp = None
+                for attempt in range(4):
+                    resp = requests.get(
+                        f"{BASE_URL}/racecards/{horse_id}/results",
+                        auth=get_auth(),
+                        timeout=15
+                    )
+                    if resp.status_code == 429:
+                        wait = float(resp.headers.get('Retry-After') or (2 ** attempt))
+                        time.sleep(min(wait, 30))
+                        continue
+                    break
 
-                if resp.status_code != 200:
+                if resp is None or resp.status_code != 200:
                     errors += 1
+                    code = resp.status_code if resp is not None else 'no_response'
+                    error_codes[code] = error_codes.get(code, 0) + 1
+                    if len(error_samples) < 5:
+                        body = (resp.text[:200] if resp is not None else '')
+                        error_samples.append(f"{horse_id}: HTTP {code} {body}")
                     continue
+
+                # Stay under the rate limit for the next horse.
+                time.sleep(REQUEST_DELAY_SECONDS)
 
                 results = resp.json().get("results", [])
 
@@ -480,6 +508,10 @@ def sync_horse_history(app):
                 db.session.rollback()
                 continue
 
+        if error_codes:
+            _log("WARN", f"Horse history errors by HTTP status: {error_codes}")
+            for s in error_samples:
+                _log("WARN", f"Horse history error sample — {s}")
         _log("INFO", f"Horse history sync complete — {fetched} horses fetched, {errors} errors")
         db.session.commit()
 
