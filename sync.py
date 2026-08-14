@@ -386,7 +386,12 @@ def sync_horse_history(app):
         error_codes   = {}
         error_samples = []
 
-        for horse_id, row in seen.items():
+        for _idx, (horse_id, row) in enumerate(seen.items(), 1):
+            if _idx % 100 == 0:
+                _log("INFO", f"Horse history progress: {_idx}/{len(seen)} "
+                             f"({fetched} fetched, {errors} errors, "
+                             f"codes={error_codes})")
+                db.session.commit()
             try:
                 # Upsert HorseProfile
                 profile = HorseProfile.query.get(horse_id)
@@ -577,9 +582,11 @@ def backfill_horse_history(app):
             horse_id = row.horse_id
             if not horse_id:
                 continue
-            if idx % 250 == 0:
+            if idx % 100 == 0:
                 _log("INFO", f"Backfill progress: {idx}/{len(todo)} "
-                             f"({fetched} fetched, {errors} errors)")
+                             f"({fetched} fetched, {errors} errors, "
+                             f"codes={error_codes})")
+                db.session.commit()
             try:
                 profile = HorseProfile.query.get(horse_id)
                 if not profile:
