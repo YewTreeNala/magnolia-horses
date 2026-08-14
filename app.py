@@ -1018,12 +1018,30 @@ def betfair_link():
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
 
-    course     = request.args.get('course', '').strip()
-    time_str   = request.args.get('time', '').strip()
-    horse      = request.args.get('horse', '').strip()
-    date_str   = request.args.get('date', '').strip()
-    if not (course and time_str and horse and date_str):
-        return jsonify({'error': 'course, time, horse and date are all required'}), 400
+    horse    = request.args.get('horse', '').strip()
+    course   = request.args.get('course', '').strip()
+    time_str = request.args.get('time', '').strip()
+    date_str = request.args.get('date', '').strip()
+
+    if not horse:
+        return jsonify({'error': 'horse is required'}), 400
+
+    # Course/time/date are optional: the client can't always supply them
+    # (some render paths don't cache race context), and the server already
+    # knows each runner's race. Look up anything missing from the DB.
+    if not (course and time_str and date_str):
+        q = (db.session.query(Runner).join(Race).join(Meeting)
+             .filter(db.func.lower(Runner.horse_name) == horse.lower()))
+        if date_str:
+            q = q.filter(Meeting.date == date_str)
+        else:
+            q = q.filter(Meeting.date >= date.today().strftime('%Y-%m-%d'))
+        found = q.order_by(Meeting.date, Race.time).first()
+        if found is None:
+            return jsonify({'url': None, 'reason': 'no upcoming race found for this horse'})
+        course   = course or found.race.meeting.name
+        time_str = time_str or found.race.time
+        date_str = date_str or found.race.meeting.date
 
     try:
         race_date = datetime.strptime(date_str, '%Y-%m-%d').date()

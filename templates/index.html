@@ -1495,11 +1495,15 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   var hbf = document.getElementById('history-betfair-link');
   if (hbf) {
     hbf.style.display = 'none';
-    if (IS_ADMIN && rc._meeting && rc._time && rc._date) {
-      fetch('/api/betfair-link?course=' + encodeURIComponent(rc._meeting)
-            + '&time=' + encodeURIComponent(rc._time)
-            + '&horse=' + encodeURIComponent(horseName)
-            + '&date=' + encodeURIComponent(rc._date))
+    if (IS_ADMIN) {
+      // Only the horse name is required - the server looks up the race
+      // from the DB when the client has no cached race context (some
+      // render paths don't populate it).
+      var bfq = '/api/betfair-link?horse=' + encodeURIComponent(horseName);
+      if (rc._meeting) bfq += '&course=' + encodeURIComponent(rc._meeting);
+      if (rc._time)    bfq += '&time='   + encodeURIComponent(rc._time);
+      if (rc._date)    bfq += '&date='   + encodeURIComponent(rc._date);
+      fetch(bfq)
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (res && res.url) {
