@@ -10,6 +10,7 @@ from email_service import send_morning_alerts
 from betfair_lookup import get_betfair_market_url
 import json
 import os
+import re
 import hmac
 import hashlib
 import base64
@@ -2061,13 +2062,54 @@ def api_previous_runners():
 @app.route('/api/horse-id-by-name/<path:horse_name>')
 @login_required
 def horse_id_by_name(horse_name):
-    """Look up horse_id from RunnerHistory by name."""
-    rh = RunnerHistory.query.filter(
-        RunnerHistory.horse_name.ilike(horse_name)
-    ).filter(RunnerHistory.horse_id != None).order_by(RunnerHistory.race_date.desc()).first()
-    if rh and rh.horse_id:
-        return jsonify({'horse_id': rh.horse_id, 'horse_name': rh.horse_name})
+    """Look up horse_id by name, trying every source that holds one."""
+    hid = _resolve_horse_id(horse_name)
+    if hid:
+        return jsonify({'horse_id': hid, 'horse_name': horse_name})
     return jsonify({'horse_id': None})
+
+
+def _resolve_horse_id(horse_name):
+    """Resolve a horse_id from a name, checking every table that carries
+    one. Results feeds include a country suffix ('Ebn Sabt (GB)') while
+    racecards don't, so both forms are tried.
+
+    Order: today's Runner rows (most current), then RunnerHistory, then
+    HorseProfile."""
+    if not horse_name:
+        return None
+    name = horse_name.strip()
+    bare = re.sub(r'\s*\([A-Z]{2,4}\)\s*$', '', name).strip()
+    variants = [name] if name == bare else [name, bare]
+
+    for v in variants:
+        r = (Runner.query.filter(Runner.horse_name.ilike(v))
+             .filter(Runner.horse_id != None).filter(Runner.horse_id != '')
+             .first())
+        if r and r.horse_id:
+            return r.horse_id
+
+    for v in variants:
+        rh = (RunnerHistory.query.filter(RunnerHistory.horse_name.ilike(v))
+              .filter(RunnerHistory.horse_id != None)
+              .order_by(RunnerHistory.race_date.desc()).first())
+        if rh and rh.horse_id:
+            return rh.horse_id
+
+    for v in variants:
+        hp = HorseProfile.query.filter(HorseProfile.name.ilike(v)).first()
+        if hp and getattr(hp, 'horse_id', None):
+            return hp.horse_id
+
+    # Last resort: the name may be stored WITH a suffix we don't have.
+    if bare:
+        rh = (RunnerHistory.query
+              .filter(RunnerHistory.horse_name.ilike(bare + ' (%'))
+              .filter(RunnerHistory.horse_id != None)
+              .order_by(RunnerHistory.race_date.desc()).first())
+        if rh and rh.horse_id:
+            return rh.horse_id
+    return None
 
 
 
@@ -2216,6 +2258,18 @@ def tipster_webhook():
 @app.route('/api/horse-history/<horse_id>')
 def horse_history(horse_id):
     runs = HorseRun.query.filter_by(horse_id=horse_id)        .order_by(HorseRun.date.desc()).all()
+
+    # The caller's id can be missing or not the one HorseRun is keyed on
+    # (racecard vs results feeds, or a horse absent from RunnerHistory).
+    # Retry via the name before reporting no history, otherwise a lookup
+    # failure is indistinguishable from a horse that has genuinely never
+    # run.
+    if not runs:
+        alt = _resolve_horse_id(request.args.get('name', ''))
+        if alt and alt != horse_id:
+            runs = (HorseRun.query.filter_by(horse_id=alt)
+                    .order_by(HorseRun.date.desc()).all())
+
     if not runs:
         return jsonify([])
     result = []
