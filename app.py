@@ -2255,6 +2255,63 @@ def tipster_webhook():
 
 # ── Horse history API ──────────────────────────────────────────────────────────
 
+@app.route('/api/history-diagnose')
+@login_required
+def history_diagnose():
+    """Reports the whole horse-history chain for today's runners: whether
+    ids are present, whether they resolve, and whether HorseRun actually
+    holds rows for them. Admin only."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    today = date.today().strftime('%Y-%m-%d')
+
+    totals = {
+        'horse_run_rows':       HorseRun.query.count(),
+        'horse_profile_rows':   HorseProfile.query.count(),
+        'runner_history_rows':  RunnerHistory.query.count(),
+        'runners_today':        db.session.query(Runner).join(Race).join(Meeting)
+                                  .filter(Meeting.date == today).count(),
+        'runners_today_with_id': db.session.query(Runner).join(Race).join(Meeting)
+                                  .filter(Meeting.date == today)
+                                  .filter(Runner.horse_id != None)
+                                  .filter(Runner.horse_id != '').count(),
+    }
+
+    # Sample runners that have a form string - those have definitely run
+    # before, so they SHOULD have history.
+    sample = (db.session.query(Runner).join(Race).join(Meeting)
+              .filter(Meeting.date == today)
+              .filter(Runner.form != None).filter(Runner.form != '')
+              .limit(8).all())
+
+    checks = []
+    for r in sample:
+        resolved = _resolve_horse_id(r.horse_name)
+        direct_rows = (HorseRun.query.filter_by(horse_id=r.horse_id).count()
+                       if r.horse_id else 0)
+        resolved_rows = (HorseRun.query.filter_by(horse_id=resolved).count()
+                         if resolved else 0)
+        checks.append({
+            'horse': r.horse_name,
+            'form': r.form,
+            'runner_horse_id': r.horse_id or '(empty)',
+            'resolved_horse_id': resolved or '(none)',
+            'ids_match': bool(r.horse_id and resolved and r.horse_id == resolved),
+            'horse_run_rows_for_runner_id': direct_rows,
+            'horse_run_rows_for_resolved_id': resolved_rows,
+            'in_runner_history': RunnerHistory.query.filter(
+                RunnerHistory.horse_name.ilike(r.horse_name)).count(),
+        })
+
+    recent_logs = [{'created_at': l.created_at, 'level': l.level, 'message': l.message}
+                   for l in SyncLog.query.filter(SyncLog.message.ilike('%history%'))
+                   .order_by(SyncLog.id.desc()).limit(15).all()]
+
+    return jsonify({'totals': totals, 'sample_checks': checks,
+                    'recent_history_logs': recent_logs})
+
+
 @app.route('/api/horse-history/<horse_id>')
 def horse_history(horse_id):
     runs = HorseRun.query.filter_by(horse_id=horse_id)        .order_by(HorseRun.date.desc()).all()
