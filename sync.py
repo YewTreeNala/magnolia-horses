@@ -500,7 +500,7 @@ def sync_horse_history(app):
 
                 db.session.commit()
                 fetched += 1
-                time.sleep(0.5)
+                time.sleep(REQUEST_DELAY_SECONDS)
 
             except Exception as e:
                 errors += 1
@@ -517,25 +517,66 @@ def sync_horse_history(app):
 
 
 def backfill_horse_history(app):
-    """One-time backfill: fetch history for all horses ever stored."""
+    """Backfill history for every horse ever seen — today's runners AND
+    the archived RunnerHistory rows, which is where the bulk of them are.
+
+    Resumable: horses that already have HorseRun rows are skipped, so it
+    can be re-run after a restart or a rate-limit stall and will pick up
+    where it left off."""
     with app.app_context():
         _log("INFO", "Backfill started")
 
+        # Today's/current runners
         rows = db.session.query(Runner.horse_id, Runner.horse_name,
                                 Runner.colour, Runner.sex,
                                 Runner.trainer, Runner.owner)\
             .filter(Runner.horse_id != '')\
+            .filter(Runner.horse_id != None)\
             .distinct(Runner.horse_id).all()
 
-        _log("INFO", f"Backfill: {len(rows)} unique horses found")
+        by_id = {}
+        for r in rows:
+            if r.horse_id:
+                by_id[r.horse_id] = r
+
+        # Archived runners — the nightly archive has been storing these
+        # for every race day, so this is the real historical population.
+        hist = db.session.query(RunnerHistory.horse_id, RunnerHistory.horse_name)\
+            .filter(RunnerHistory.horse_id != '')\
+            .filter(RunnerHistory.horse_id != None)\
+            .distinct(RunnerHistory.horse_id).all()
+
+        class _Row:
+            __slots__ = ('horse_id', 'horse_name', 'colour', 'sex', 'trainer', 'owner')
+            def __init__(self, hid, name):
+                self.horse_id = hid
+                self.horse_name = name
+                self.colour = self.sex = self.trainer = self.owner = ''
+
+        for h in hist:
+            if h.horse_id and h.horse_id not in by_id:
+                by_id[h.horse_id] = _Row(h.horse_id, h.horse_name)
+
+        # Skip horses that already have history — makes this resumable and
+        # avoids re-fetching the ~15k that already succeeded.
+        done = {r[0] for r in db.session.query(HorseRun.horse_id).distinct().all()}
+        todo = [r for hid, r in by_id.items() if hid not in done]
+
+        _log("INFO", f"Backfill: {len(by_id)} unique horses known, "
+                     f"{len(done)} already have history, {len(todo)} to fetch "
+                     f"(~{len(todo) * REQUEST_DELAY_SECONDS / 60:.0f} min)")
 
         fetched = 0
         errors  = 0
+        error_codes = {}
 
-        for row in rows:
+        for idx, row in enumerate(todo, 1):
             horse_id = row.horse_id
             if not horse_id:
                 continue
+            if idx % 250 == 0:
+                _log("INFO", f"Backfill progress: {idx}/{len(todo)} "
+                             f"({fetched} fetched, {errors} errors)")
             try:
                 profile = HorseProfile.query.get(horse_id)
                 if not profile:
@@ -549,13 +590,23 @@ def backfill_horse_history(app):
                 profile.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 db.session.flush()
 
-                resp = requests.get(
-                    f"{BASE_URL}/racecards/{horse_id}/results",
-                    auth=get_auth(),
-                    timeout=10
-                )
-                if resp.status_code != 200:
+                resp = None
+                for attempt in range(4):
+                    resp = requests.get(
+                        f"{BASE_URL}/racecards/{horse_id}/results",
+                        auth=get_auth(),
+                        timeout=15
+                    )
+                    if resp.status_code == 429:
+                        wait = float(resp.headers.get('Retry-After') or (2 ** attempt))
+                        time.sleep(min(wait, 30))
+                        continue
+                    break
+
+                if resp is None or resp.status_code != 200:
                     errors += 1
+                    code = resp.status_code if resp is not None else 'no_response'
+                    error_codes[code] = error_codes.get(code, 0) + 1
                     continue
 
                 results = resp.json().get("results", [])
@@ -621,7 +672,7 @@ def backfill_horse_history(app):
 
                 db.session.commit()
                 fetched += 1
-                time.sleep(0.5)
+                time.sleep(REQUEST_DELAY_SECONDS)
 
             except Exception as e:
                 errors += 1
@@ -629,5 +680,7 @@ def backfill_horse_history(app):
                 db.session.rollback()
                 continue
 
+        if error_codes:
+            _log("WARN", f"Backfill errors by HTTP status: {error_codes}")
         _log("INFO", f"Backfill complete — {fetched} horses, {errors} errors")
         db.session.commit()
