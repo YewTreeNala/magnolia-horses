@@ -428,6 +428,9 @@ def sync_horse_history(app):
                     if len(error_samples) < 5:
                         body = (resp.text[:200] if resp is not None else '')
                         error_samples.append(f"{horse_id}: HTTP {code} {body}")
+                    # Throttle on failure too - otherwise a run that's
+                    # erroring hammers the API at full speed with no backoff.
+                    time.sleep(REQUEST_DELAY_SECONDS)
                     continue
 
                 # Stay under the rate limit for the next horse.
@@ -607,6 +610,7 @@ def backfill_horse_history(app):
                     errors += 1
                     code = resp.status_code if resp is not None else 'no_response'
                     error_codes[code] = error_codes.get(code, 0) + 1
+                    time.sleep(REQUEST_DELAY_SECONDS)
                     continue
 
                 results = resp.json().get("results", [])
