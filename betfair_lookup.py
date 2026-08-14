@@ -111,3 +111,29 @@ def proxy_health():
     except ValueError:
         return {'configured': True, 'reachable': True,
                 'error': 'proxy returned non-JSON from /betfair/health'}
+
+
+def get_race_prices(course, time_str, race_date):
+    """Best back price for every runner in a race, via the UK proxy.
+    One call covers the whole field. Returns None if unavailable."""
+    proxy_url, secret = _proxy_config()
+    if not proxy_url:
+        return None
+    try:
+        resp = requests.get(
+            f"{proxy_url}/betfair/market-prices",
+            params={'course': course, 'time': time_str,
+                    'date': race_date.strftime('%Y-%m-%d')},
+            headers={'X-Proxy-Secret': secret},
+            timeout=TIMEOUT_SECONDS,
+        )
+    except requests.RequestException as e:
+        log.error(f"[BetfairLookup] Proxy unreachable for race prices: {e}")
+        return None
+    if resp.status_code != 200:
+        log.error(f"[BetfairLookup] Race prices HTTP {resp.status_code}")
+        return None
+    try:
+        return resp.json()
+    except ValueError:
+        return None

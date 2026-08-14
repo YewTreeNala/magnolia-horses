@@ -2255,6 +2255,63 @@ def tipster_webhook():
 
 # ── Horse history API ──────────────────────────────────────────────────────────
 
+@app.route('/api/betfair-race-prices')
+@login_required
+def betfair_race_prices():
+    """Best back price for every runner in a race — one proxy call for
+    the whole field rather than one per runner."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    from betfair_lookup import get_race_prices
+    course   = request.args.get('course', '').strip()
+    time_str = request.args.get('time', '').strip()
+    date_str = request.args.get('date', '').strip() or date.today().strftime('%Y-%m-%d')
+
+    if not (course and time_str):
+        return jsonify({'error': 'course and time are required'}), 400
+    try:
+        race_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+    except ValueError:
+        return jsonify({'error': 'date must be YYYY-MM-DD'}), 400
+
+    data = get_race_prices(course, time_str, race_date)
+    if not data:
+        return jsonify({'runners': []})
+    return jsonify(data)
+
+
+@app.route('/api/db-size')
+@login_required
+def db_size():
+    """Database and per-table sizes, to keep an eye on storage limits."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    try:
+        total = db.session.execute(db.text(
+            "SELECT pg_database_size(current_database())")).scalar()
+        rows = db.session.execute(db.text("""
+            SELECT relname,
+                   pg_total_relation_size(c.oid) AS bytes,
+                   n_live_tup
+            FROM pg_class c
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
+            WHERE n.nspname = 'public' AND c.relkind = 'r'
+            ORDER BY pg_total_relation_size(c.oid) DESC
+        """)).fetchall()
+        return jsonify({
+            'total_bytes': int(total),
+            'total_mb': round(int(total) / 1024 / 1024, 1),
+            'total_gb': round(int(total) / 1024 / 1024 / 1024, 3),
+            'tables': [{'table': r[0],
+                        'mb': round((r[1] or 0) / 1024 / 1024, 1),
+                        'rows': r[2]} for r in rows],
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/api/history-diagnose')
 @login_required
 def history_diagnose():

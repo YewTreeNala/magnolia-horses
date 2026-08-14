@@ -1822,7 +1822,98 @@ function handleRaceHeaderClick(el) {
     .finally(function() { document.getElementById('spinner').classList.remove('active'); });
 }
 
+// ── Race popup: odds column + sorting ────────────────────────────────────────
+var _racePopupState  = { race:null, meeting:'', isResult:false, highlight:'',
+                         sortKey:null, sortAsc:true, raceKey:'' };
+var _racePrices        = {};     // horse name (lower) -> {best_back_price, best_back_size}
+var _racePricesLoading = false;
+
+function _oddsOf(r) {
+  var p = _racePrices[(r.name || '').toLowerCase()];
+  return (p && p.best_back_price) ? p.best_back_price : null;
+}
+
+function _sortRunners(runners, key, asc, isResult) {
+  var dir = asc ? 1 : -1;
+  runners.sort(function(a, b) {
+    var va, vb;
+    if (key === 'odds') {
+      va = _oddsOf(a); vb = _oddsOf(b);
+      // Runners with no price always sit at the bottom regardless of
+      // direction — they're missing data, not long shots.
+      if (va === null && vb === null) return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);
+      if (va === null) return 1;
+      if (vb === null) return -1;
+      return (va - vb) * dir;
+    }
+    if (key === 'name') {
+      va = (a.name || '').toLowerCase(); vb = (b.name || '').toLowerCase();
+      return va < vb ? -dir : va > vb ? dir : 0;
+    }
+    if (key === 'position') {
+      va = parseInt(a.position, 10) || 999; vb = parseInt(b.position, 10) || 999;
+      return (va - vb) * dir;
+    }
+    va = parseInt(a.number, 10) || 0; vb = parseInt(b.number, 10) || 0;
+    return (va - vb) * dir;
+  });
+  return runners;
+}
+
+function _maybeFetchRacePrices(meeting, race, meetingDate) {
+  // Admin-only, and pointless for a race that's already run.
+  if (!IS_ADMIN || !race || _racePopupState.isResult) return;
+  var key = (meeting || '') + '|' + (race.time || '');
+  if (_racePopupState.pricesFor === key) return;   // already have them
+  _racePopupState.pricesFor = key;
+  _racePrices = {};
+  _racePricesLoading = true;
+  var d = meetingDate || race.date || '';
+  var q = '/api/betfair-race-prices?course=' + encodeURIComponent(meeting)
+        + '&time=' + encodeURIComponent(race.time || '')
+        + (d ? '&date=' + encodeURIComponent(d) : '');
+  fetch(q).then(function(r){ return r.json(); }).then(function(res){
+    _racePricesLoading = false;
+    if (!res || !res.runners) { _rerenderRacePopup(); return; }
+    for (var i = 0; i < res.runners.length; i++) {
+      var rn = res.runners[i];
+      // Betfair runner names carry no country suffix but may differ in
+      // punctuation/case, so normalise both sides.
+      _racePrices[(rn.runner_name || '').toLowerCase()] = rn;
+    }
+    _rerenderRacePopup();
+  }).catch(function(){
+    _racePricesLoading = false;
+    _rerenderRacePopup();
+  });
+}
+
+function _rerenderRacePopup() {
+  if (!_racePopupState.raceKey) return;
+  openRacePopup(_racePopupState.raceKey, _racePopupState.highlight);
+}
+
+// Header clicks: toggle direction when re-clicking the same column.
+document.getElementById('race-popup-body').addEventListener('click', function(e) {
+  var th = e.target.closest ? e.target.closest('th[data-sortkey]') : null;
+  if (!th) return;
+  var key = th.getAttribute('data-sortkey');
+  if (_racePopupState.sortKey === key) {
+    _racePopupState.sortAsc = !_racePopupState.sortAsc;
+  } else {
+    _racePopupState.sortKey = key;
+    _racePopupState.sortAsc = true;
+  }
+  _rerenderRacePopup();
+});
+
 function openRacePopup(raceKey, highlightHorse) {
+  // A different race starts from the default sort again.
+  if (_racePopupState.raceKey && _racePopupState.raceKey !== raceKey) {
+    _racePopupState.sortKey = null;
+    _racePopupState.pricesFor = null;
+    _racePrices = {};
+  }
   // Find the race data from the cached runners
   var target = null;
   var _raceSource = window._allRaceData || window._cachedResults;
@@ -1833,7 +1924,7 @@ function openRacePopup(raceKey, highlightHorse) {
         var race = meeting.races[rc];
         var rKey = (meeting.meeting || '').toLowerCase().replace(/\s+/g, '') + '_' + (race.time || '');
         if (rKey === raceKey) {
-          target = { race: race, meeting: meeting.meeting };
+          target = { race: race, meeting: meeting.meeting, date: meeting.date };
           break;
         }
       }
@@ -1866,15 +1957,21 @@ function openRacePopup(raceKey, highlightHorse) {
 
   var rows = '';
   var runners = (race.runners || []).slice();
-  if (isResult) {
-    runners.sort(function(a, b) {
-      var pa = parseInt(a.position, 10) || 999;
-      var pb = parseInt(b.position, 10) || 999;
-      return pa - pb;
-    });
-  } else {
-    runners.sort(function(a, b) { return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0); });
+
+  // Remember which race is open so the async price fetch and header
+  // clicks can re-render the same field.
+  _racePopupState.raceKey = raceKey;
+  _racePopupState.race = race;
+  _racePopupState.meeting = target.meeting;
+  _racePopupState.isResult = isResult;
+  _racePopupState.highlight = highlightHorse || '';
+  if (!_racePopupState.sortKey) {
+    // Default: shortest odds first. Falls back to finish position for a
+    // finished race, or saddlecloth number when no prices are in yet.
+    _racePopupState.sortKey = isResult ? 'position' : 'odds';
+    _racePopupState.sortAsc = true;
   }
+  _sortRunners(runners, _racePopupState.sortKey, _racePopupState.sortAsc, isResult);
 
   for (var i = 0; i < runners.length; i++) {
     var r        = runners[i];
@@ -1895,6 +1992,13 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
+    var _bfp = _racePrices[(r.name || '').toLowerCase()];
+    if (_bfp && _bfp.best_back_price) {
+      var _fr = decimalToFractional(_bfp.best_back_price);
+      rows += '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:var(--brand);white-space:nowrap" title="' + _bfp.best_back_price + ' decimal, \u00a3' + (_bfp.best_back_size||0) + ' available">' + escHtml(_fr || String(_bfp.best_back_price)) + '</td>';
+    } else {
+      rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + (_racePricesLoading ? '&middot;&middot;&middot;' : '&mdash;') + '</td>';
+    }
     var _reason = _reasonMap[(r.name || '').toLowerCase()] || '';
     if (_reason) {
       rows += '<td style="padding:7px 10px">' + '<span class="search-match-badge">&#128269; ' + escHtml(_reason) + '</span></td>';
@@ -1904,17 +2008,26 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '</tr>';
   }
 
-  var posHeader = isResult ? '<th style="width:60px;padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">Finish</th>'
-                           : '<th style="width:36px;padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em">#</th>';
   var th = 'padding:6px 10px;text-align:left;font-size:10px;color:var(--text2);font-weight:500;text-transform:uppercase;letter-spacing:0.04em';
+  var thSortable = th + ';cursor:pointer;user-select:none';
+  function _arrow(key) {
+    return _racePopupState.sortKey === key ? (_racePopupState.sortAsc ? ' \u25B2' : ' \u25BC') : '';
+  }
+  var posHeader = isResult
+    ? '<th style="width:60px;' + thSortable + '" data-sortkey="position">Finish' + _arrow('position') + '</th>'
+    : '<th style="width:36px;' + thSortable + '" data-sortkey="number">#' + _arrow('number') + '</th>';
 
   document.getElementById('race-popup-body').innerHTML =
     '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">'
     + posHeader
-    + '<th style="' + th + '">Horse</th><th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th><th style="' + th + '">Match</th>'
+    + '<th style="' + thSortable + '" data-sortkey="name">Horse' + _arrow('name') + '</th>'
+    + '<th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th>'
+    + '<th style="' + thSortable + '" data-sortkey="odds">Odds' + _arrow('odds') + '</th>'
+    + '<th style="' + th + '">Match</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
 
   document.getElementById('race-popup-modal').classList.add('open');
+  _maybeFetchRacePrices(target.meeting, race, target.date);
 }
 
 function handleEmailDeepLink(race, horse) {
