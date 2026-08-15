@@ -107,7 +107,11 @@ def admin_db_query():
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
-scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=23, minute=0)
+# 08:00, not 23:00: /racecards/{id}/results only serves horses in today's
+# or tomorrow's cards, so by late evening the cards have rolled over and
+# most horses 422 (466 of 539 failed on the 23:00 run). By 8am today's
+# racecards are live, so the day's runners resolve.
+scheduler.add_job(func=lambda: sync_horse_history(app), trigger='cron', hour=8, minute=0)
 scheduler.add_job(func=lambda: archive_to_runner_history(app), trigger='cron', hour=22, minute=0)
 scheduler.add_job(func=lambda: update_horse_ids_from_runners(app), trigger='cron', hour=18, minute=0)
 scheduler.add_job(func=lambda: sync_and_settle(app), trigger='cron', hour=23, minute=45)
