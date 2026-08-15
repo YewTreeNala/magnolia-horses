@@ -1874,7 +1874,12 @@ function _sortRunners(runners, key, asc, isResult) {
   runners.sort(function(a, b) {
     var va, vb;
     if (key === 'odds') {
-      va = _oddsOf(a); vb = _oddsOf(b);
+      if (isResult) {
+        // Finished race: sort on the decimal SP from the results feed.
+        va = parseFloat(a.odds) || null; vb = parseFloat(b.odds) || null;
+      } else {
+        va = _oddsOf(a); vb = _oddsOf(b);
+      }
       // Runners with no price always sit at the bottom regardless of
       // direction — they're missing data, not long shots.
       if (va === null && vb === null) return (parseInt(a.number,10)||0) - (parseInt(b.number,10)||0);
@@ -2028,12 +2033,21 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
-    var _bfp = _racePrices[(r.name || '').toLowerCase()];
-    if (_bfp && _bfp.best_back_price) {
-      var _fr = decimalToFractional(_bfp.best_back_price);
-      rows += '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:var(--brand);white-space:nowrap" title="' + _bfp.best_back_price + ' decimal, \u00a3' + (_bfp.best_back_size||0) + ' available">' + escHtml(_fr || String(_bfp.best_back_price)) + '</td>';
+    // Finished race: show the Starting Price from the results feed.
+    // Upcoming race: show the live Betfair best back price.
+    if (isResult) {
+      var _sp = r.sp || (r.odds ? decimalToFractional(parseFloat(r.odds)) : '');
+      rows += '<td style="padding:7px 10px;font-size:12px;font-weight:600;white-space:nowrap"'
+            + (r.odds ? ' title="' + escHtml(String(r.odds)) + ' decimal"' : '')
+            + '>' + escHtml(_sp || '\u2014') + '</td>';
     } else {
-      rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + (_racePricesLoading ? '&middot;&middot;&middot;' : '&mdash;') + '</td>';
+      var _bfp = _racePrices[(r.name || '').toLowerCase()];
+      if (_bfp && _bfp.best_back_price) {
+        var _fr = decimalToFractional(_bfp.best_back_price);
+        rows += '<td style="padding:7px 10px;font-size:12px;font-weight:600;color:var(--brand);white-space:nowrap" title="' + _bfp.best_back_price + ' decimal, \u00a3' + (_bfp.best_back_size||0) + ' available">' + escHtml(_fr || String(_bfp.best_back_price)) + '</td>';
+      } else {
+        rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + (_racePricesLoading ? '&middot;&middot;&middot;' : '&mdash;') + '</td>';
+      }
     }
     var _reason = _reasonMap[(r.name || '').toLowerCase()] || '';
     if (_reason) {
@@ -2058,7 +2072,7 @@ function openRacePopup(raceKey, highlightHorse) {
     + posHeader
     + '<th style="' + thSortable + '" data-sortkey="name">Horse' + _arrow('name') + '</th>'
     + '<th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th>'
-    + '<th style="' + thSortable + '" data-sortkey="odds">Odds' + _arrow('odds') + '</th>'
+    + '<th style="' + thSortable + '" data-sortkey="odds">' + (isResult ? 'SP' : 'Odds') + _arrow('odds') + '</th>'
     + '<th style="' + th + '">Match</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
 
