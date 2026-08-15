@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Horse history — Magnolia Horses</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f1eb; --surface: #fff; --surface2: #f1f0ec;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --green: #3b6d11; --green-bg: #eaf3de;
+      --red: #a32d2d; --red-bg: #fcebeb;
+      --amber: #8a6d1f; --amber-bg: #faf3df;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+    .page { max-width: 900px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+
+    .brand-header { display: flex; align-items: center; gap: 14px; padding: 1rem 0; margin-bottom: 0.25rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); }
+    .brand-name { font-size: 20px; font-weight: 600; color: var(--brand); font-family: Georgia, serif; }
+    .brand-sub { font-size: 13px; color: var(--text2); margin-top: 2px; }
+    .back-link { font-size: 13px; color: var(--brand); text-decoration: none; margin-left: auto; }
+
+    .panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem; margin-bottom: 1rem; }
+    .panel-title { font-size: 15px; font-weight: 600; margin-bottom: 0.75rem; color: var(--brand); }
+
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .stat { background: var(--surface2); border-radius: var(--radius); padding: 10px 12px; }
+    .stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text3); }
+    .stat-value { font-size: 20px; font-weight: 600; margin-top: 2px; }
+    .stat-sub { font-size: 11px; color: var(--text3); }
+
+    .bar-wrap { background: var(--surface2); border-radius: 20px; height: 22px; overflow: hidden; margin: 10px 0 6px; }
+    .bar { height: 100%; background: var(--brand); transition: width 0.4s; }
+    .bar-label { font-size: 12px; color: var(--text2); }
+
+    .btn { display: block; width: 100%; padding: 12px 16px; font-size: 15px; font-family: inherit; border-radius: var(--radius); cursor: pointer; border: 0.5px solid var(--brand); background: var(--surface); color: var(--brand); margin-bottom: 8px; font-weight: 500; }
+    .btn:active { background: var(--brand-light); }
+    .btn[disabled] { opacity: 0.5; cursor: default; }
+    .btn-note { font-size: 12px; color: var(--text3); margin: -4px 0 12px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text3); font-weight: 500; padding: 5px 6px; border-bottom: 0.5px solid var(--border); }
+    td { padding: 6px; border-bottom: 0.5px solid var(--border); }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .log { font-size: 12px; line-height: 1.45; max-height: 320px; overflow-y: auto; background: var(--surface2); border-radius: var(--radius); padding: 8px 10px; }
+    .log div { padding: 2px 0; border-bottom: 0.5px solid rgba(0,0,0,0.05); word-break: break-word; }
+    .log .WARN { color: var(--amber); }
+    .log .ERROR { color: var(--red); }
+    .ts { color: var(--text3); }
+
+    .pill { display: inline-block; font-size: 11px; padding: 2px 9px; border-radius: 20px; }
+    .pill.ok { background: var(--green-bg); color: var(--green); }
+    .pill.warn { background: var(--amber-bg); color: var(--amber); }
+    .pill.bad { background: var(--red-bg); color: var(--red); }
+    .muted { color: var(--text3); font-size: 13px; }
+    .refresh-note { font-size: 12px; color: var(--text3); text-align: center; margin-top: 6px; }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-header">
+    <div>
+      <div class="brand-name">Horse history</div>
+      <div class="brand-sub">Coverage, backfill progress and sync jobs</div>
+    </div>
+    <a href="/" class="back-link">&larr; Back</a>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Coverage</div>
+    <div id="coverage">
+      <div class="muted">Loading&hellip;</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Run a job</div>
+    <button class="btn" id="btn-sync">Sync today&rsquo;s runners</button>
+    <div class="btn-note">Fetches history for horses racing today (~540 horses, a few minutes).</div>
+    <button class="btn" id="btn-backfill">Backfill all horses</button>
+    <div class="btn-note">Fetches every horse without history. Resumable &mdash; skips those already done, so it is safe to run again after a restart.</div>
+    <div id="job-msg" class="muted"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Database size</div>
+    <div id="dbsize"><div class="muted">Loading&hellip;</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Recent history log</div>
+    <div class="log" id="log"><div class="muted">Loading&hellip;</div></div>
+    <div class="refresh-note">Auto-refreshes every 20 seconds</div>
+  </div>
+</div>
+
+<script>
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(m) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];
+  });
+}
+function fmt(n) { return (n == null ? '-' : Number(n).toLocaleString()); }
+
+function loadCoverage() {
+  fetch('/api/history-diagnose').then(function(r){ return r.json(); }).then(function(d){
+    if (!d || !d.totals) { document.getElementById('coverage').innerHTML = '<div class="muted">Unavailable</div>'; return; }
+    var t = d.totals;
+    // Horses that actually have history, vs every horse we know about.
+    var withHistory = d.horses_with_history;
+    var known = d.horses_known;
+    var pct = (known && withHistory != null) ? Math.round(withHistory / known * 100) : null;
+
+    var html = '<div class="stat-grid">'
+      + '<div class="stat"><div class="stat-label">Run rows</div><div class="stat-value">' + fmt(t.horse_run_rows) + '</div></div>'
+      + '<div class="stat"><div class="stat-label">Horse profiles</div><div class="stat-value">' + fmt(t.horse_profile_rows) + '</div></div>'
+      + '<div class="stat"><div class="stat-label">Archived runners</div><div class="stat-value">' + fmt(t.runner_history_rows) + '</div></div>'
+      + '<div class="stat"><div class="stat-label">Runners today</div><div class="stat-value">' + fmt(t.runners_today) + '</div>'
+      + '<div class="stat-sub">' + fmt(t.runners_today_with_id) + ' with an id</div></div>'
+      + '</div>';
+
+    if (pct !== null) {
+      html += '<div class="bar-wrap"><div class="bar" style="width:' + pct + '%"></div></div>'
+            + '<div class="bar-label">' + fmt(withHistory) + ' of ' + fmt(known)
+            + ' horses have history (' + pct + '%) &mdash; ' + fmt(known - withHistory) + ' still to fetch</div>';
+    }
+
+    if (d.sample_checks && d.sample_checks.length) {
+      html += '<table style="margin-top:12px"><thead><tr><th>Sample horse</th><th>Form</th><th class="num">Runs stored</th></tr></thead><tbody>';
+      d.sample_checks.forEach(function(c){
+        var n = c.horse_run_rows_for_runner_id;
+        html += '<tr><td>' + esc(c.horse) + '</td><td class="muted">' + esc(c.form || '') + '</td>'
+              + '<td class="num">' + (n ? n : '<span class="pill bad">0</span>') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    document.getElementById('coverage').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('coverage').innerHTML = '<div class="muted">Could not load</div>';
+  });
+}
+
+function loadDbSize() {
+  fetch('/api/db-size').then(function(r){ return r.json(); }).then(function(d){
+    if (!d || d.error) { document.getElementById('dbsize').innerHTML = '<div class="muted">Unavailable</div>'; return; }
+    var html = '<div class="stat-grid"><div class="stat"><div class="stat-label">Total</div>'
+             + '<div class="stat-value">' + d.total_mb + ' MB</div>'
+             + '<div class="stat-sub">' + d.total_gb + ' GB</div></div></div>';
+    if (d.tables && d.tables.length) {
+      html += '<table style="margin-top:12px"><thead><tr><th>Table</th><th class="num">MB</th><th class="num">Rows</th></tr></thead><tbody>';
+      d.tables.slice(0, 12).forEach(function(t){
+        html += '<tr><td>' + esc(t.table) + '</td><td class="num">' + t.mb + '</td><td class="num">' + fmt(t.rows) + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    document.getElementById('dbsize').innerHTML = html;
+  }).catch(function(){
+    document.getElementById('dbsize').innerHTML = '<div class="muted">Could not load</div>';
+  });
+}
+
+function loadLog() {
+  fetch('/api/sync-log').then(function(r){ return r.json(); }).then(function(l){
+    if (!Array.isArray(l)) return;
+    var rows = l.filter(function(x){ return /history|backfill/i.test(x.message); }).slice(0, 40);
+    if (!rows.length) { document.getElementById('log').innerHTML = '<div class="muted">No history entries yet</div>'; return; }
+    document.getElementById('log').innerHTML = rows.map(function(x){
+      return '<div class="' + esc(x.level) + '"><span class="ts">' + esc(x.created_at) + '</span> ' + esc(x.message) + '</div>';
+    }).join('');
+  }).catch(function(){});
+}
+
+function runJob(path, btn) {
+  var msg = document.getElementById('job-msg');
+  btn.disabled = true;
+  msg.textContent = 'Starting\u2026';
+  fetch(path, { method: 'POST' })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      msg.textContent = (d && d.message) ? d.message : 'Started';
+      setTimeout(function(){ btn.disabled = false; }, 3000);
+      setTimeout(refreshAll, 2000);
+    })
+    .catch(function(){
+      msg.textContent = 'Failed to start';
+      btn.disabled = false;
+    });
+}
+
+document.getElementById('btn-sync').addEventListener('click', function(){
+  runJob('/api/admin/sync-history', this);
+});
+document.getElementById('btn-backfill').addEventListener('click', function(){
+  runJob('/api/admin/backfill-history', this);
+});
+
+function refreshAll() { loadCoverage(); loadDbSize(); loadLog(); }
+refreshAll();
+setInterval(refreshAll, 20000);
+</script>
+</body>
+</html>

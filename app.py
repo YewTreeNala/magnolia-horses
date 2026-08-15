@@ -1112,6 +1112,14 @@ def admin_tipster():
         return redirect(url_for('index'))
     return render_template('admin_tipster.html', is_admin=True, page_id='admin')
 
+@app.route('/admin/history')
+@login_required
+def admin_history():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_history.html', is_admin=True, page_id='admin')
+
+
 @app.route('/admin/colours')
 def admin_colours():
     return render_template('admin_colours.html', is_admin=True, page_id='admin')
@@ -2365,7 +2373,21 @@ def history_diagnose():
                    for l in SyncLog.query.filter(SyncLog.message.ilike('%history%'))
                    .order_by(SyncLog.id.desc()).limit(15).all()]
 
+    # Coverage: how many distinct horses we know about vs how many
+    # actually have history stored. This is what drives the progress bar.
+    known_ids = set()
+    for (hid,) in db.session.query(Runner.horse_id).filter(
+            Runner.horse_id != None).filter(Runner.horse_id != '').distinct():
+        known_ids.add(hid)
+    for (hid,) in db.session.query(RunnerHistory.horse_id).filter(
+            RunnerHistory.horse_id != None).filter(
+            RunnerHistory.horse_id != '').distinct():
+        known_ids.add(hid)
+    with_history = {h for (h,) in db.session.query(HorseRun.horse_id).distinct()}
+
     return jsonify({'totals': totals, 'sample_checks': checks,
+                    'horses_known': len(known_ids),
+                    'horses_with_history': len(known_ids & with_history),
                     'recent_history_logs': recent_logs})
 
 
