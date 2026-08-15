@@ -383,8 +383,11 @@ def _fetch_horse_results(horse_id):
     if resp.status_code == 200:
         return resp, 'horses'
 
-    # 404/403 suggests the endpoint isn't on this plan - fall back.
-    if resp.status_code in (403, 404):
+    # 401/403/404 all indicate the endpoint isn't usable on this plan
+    # (401 is what The Racing API returns for an endpoint outside your
+    # subscription, not a credentials problem - the same auth works for
+    # the racecards path). Fall back rather than failing the horse.
+    if resp.status_code in (401, 403, 404):
         for attempt in range(4):
             fb = requests.get(f"{BASE_URL}/racecards/{horse_id}/results",
                               auth=get_auth(), timeout=15)
