@@ -1014,6 +1014,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<td>' + colourChip(r.colour) + '</td>'
       + '<td><span class="form-str form-str-link" data-horseid="' + escHtml(r.horse_id || '') + '" data-horsename="' + escHtml(rName) + '" data-corunners=\'' + coRunnerIdsJson + '\'' + ' title="Click to view race history" style="cursor:pointer">' + formHtmlStr + (r.horse_id ? ' <span style="font-size:9px;color:var(--brand)">&#9654;</span>' : '') + '</span></td>'
       + '<td style="font-size:11px;color:var(--text2)">' + escHtml(r.or || '—') + (r.rpr && r.rpr !== '-' ? ' / ' + escHtml(r.rpr) : '') + '</td>'
+      + (isResult ? '<td style="font-size:12px;font-weight:600;white-space:nowrap"' + (r.odds ? ' title="' + escHtml(String(r.odds)) + ' decimal"' : '') + '>' + escHtml(r.sp || (r.odds ? decimalToFractional(parseFloat(r.odds)) : '') || '—') + '</td>' : '')
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
       + (r.trainer_14_days ? '<br><span style="font-size:10px;color:var(--text3)">' + escHtml(r.trainer || '—') + ' (' + escHtml(r.trainer_14_days) + ')</span>' : '<br>' + escHtml(r.trainer || '—'))
       + '</div></td>'
@@ -1033,6 +1034,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       + '<div class="runner-card-field"><span class="label">Trainer' + (r.trainer_14_days ? ' (' + escHtml(r.trainer_14_days) + ')' : '') + '</span><span class="value muted">' + escHtml(r.trainer || '—') + '</span></div>'
       + '<div class="runner-card-field"><span class="label">Colour</span><span class="value">' + colourChip(r.colour) + '</span></div>'
       + '<div class="runner-card-field"><span class="label">OR / RPR</span><span class="value muted">' + escHtml(r.or || '—') + (r.rpr && r.rpr !== '-' ? ' / ' + escHtml(r.rpr) : '') + '</span></div>'
+      + (isResult && (r.sp || r.odds) ? '<div class="runner-card-field"><span class="label">SP</span><span class="value" style="font-weight:600">' + escHtml(r.sp || decimalToFractional(parseFloat(r.odds)) || '—') + '</span></div>' : '')
       + (notes ? '<div class="runner-card-field" style="grid-column:1/-1"><span class="label">My notes</span><span class="value" style="color:var(--brand)">' + escHtml(notes) + '</span></div>' : '')
       + '</div></div>';
   }
@@ -1053,6 +1055,7 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     + '<div class="table-wrap"><table><thead><tr>'
     + '<th style="width:30px">#</th><th style="width:22%">Horse</th><th style="width:28px">RP</th>'
     + '<th style="width:90px">Colour</th><th style="width:60px">Form</th><th style="width:55px">OR/RPR</th>'
+    + (isResult ? '<th style="width:55px">SP</th>' : '')
     + '<th style="width:20%">Jockey / trainer</th><th></th>' + posHeader
     + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
     + '<div class="runner-cards">' + mobileCards + '</div></div>';
