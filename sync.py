@@ -357,6 +357,47 @@ def sync_todays_races(app):
         db.session.commit()
 
 
+
+def _fetch_horse_results(horse_id):
+    """Fetch a horse's career results.
+
+    /racecards/{id}/results is racecard-scoped and 422s for any horse not
+    in today's or tomorrow's cards ("horse ... not in today or tomorrow's
+    racecards"), which is why the 23:00 job failed ~86% of the time and
+    why historical horses could never be backfilled.
+
+    /horses/{id}/results is the general horse results endpoint. Falls
+    back to the old path if it isn't available on the current plan, so
+    today's runners keep working either way.
+
+    Returns (response, endpoint_used)."""
+    for attempt in range(4):
+        resp = requests.get(f"{BASE_URL}/horses/{horse_id}/results",
+                            auth=get_auth(), timeout=15)
+        if resp.status_code == 429:
+            wait = float(resp.headers.get('Retry-After') or (2 ** attempt))
+            time.sleep(min(wait, 30))
+            continue
+        break
+
+    if resp.status_code == 200:
+        return resp, 'horses'
+
+    # 404/403 suggests the endpoint isn't on this plan - fall back.
+    if resp.status_code in (403, 404):
+        for attempt in range(4):
+            fb = requests.get(f"{BASE_URL}/racecards/{horse_id}/results",
+                              auth=get_auth(), timeout=15)
+            if fb.status_code == 429:
+                wait = float(fb.headers.get('Retry-After') or (2 ** attempt))
+                time.sleep(min(wait, 30))
+                continue
+            break
+        return fb, 'racecards-fallback'
+
+    return resp, 'horses'
+
+
 def sync_horse_history(app):
     """End-of-day job: fetch and store full race history for every horse seen today."""
     with app.app_context():
@@ -385,6 +426,7 @@ def sync_horse_history(app):
         errors  = 0
         error_codes   = {}
         error_samples = []
+        endpoints_used = {}
 
         for _idx, (horse_id, row) in enumerate(seen.items(), 1):
             if _idx % 100 == 0:
@@ -413,18 +455,8 @@ def sync_horse_history(app):
                 # as a generic error and skipped, so a rate limit was
                 # indistinguishable from a real miss and most horses never
                 # got history.
-                resp = None
-                for attempt in range(4):
-                    resp = requests.get(
-                        f"{BASE_URL}/racecards/{horse_id}/results",
-                        auth=get_auth(),
-                        timeout=15
-                    )
-                    if resp.status_code == 429:
-                        wait = float(resp.headers.get('Retry-After') or (2 ** attempt))
-                        time.sleep(min(wait, 30))
-                        continue
-                    break
+                resp, _endpoint = _fetch_horse_results(horse_id)
+                endpoints_used[_endpoint] = endpoints_used.get(_endpoint, 0) + 1
 
                 if resp is None or resp.status_code != 200:
                     errors += 1
@@ -516,6 +548,7 @@ def sync_horse_history(app):
                 db.session.rollback()
                 continue
 
+        _log("INFO", f"Horse history endpoints used: {endpoints_used}")
         if error_codes:
             _log("WARN", f"Horse history errors by HTTP status: {error_codes}")
             for s in error_samples:
@@ -600,18 +633,7 @@ def backfill_horse_history(app):
                 profile.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 db.session.flush()
 
-                resp = None
-                for attempt in range(4):
-                    resp = requests.get(
-                        f"{BASE_URL}/racecards/{horse_id}/results",
-                        auth=get_auth(),
-                        timeout=15
-                    )
-                    if resp.status_code == 429:
-                        wait = float(resp.headers.get('Retry-After') or (2 ** attempt))
-                        time.sleep(min(wait, 30))
-                        continue
-                    break
+                resp, _endpoint = _fetch_horse_results(horse_id)
 
                 if resp is None or resp.status_code != 200:
                     errors += 1
