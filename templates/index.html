@@ -1676,6 +1676,90 @@ function buildTipsterHistoryHtml(tips) {
   return th;
 }
 
+function _todaysRivals(horseName) {
+  // Other runners in the same race as this horse, from the cached
+  // search results. Used for the head-to-head section.
+  var me = (horseName || '').toLowerCase();
+  var rc = allRunnersCache[me];
+  if (!rc || !rc._meeting || !rc._time) return [];
+  var out = [];
+  for (var k in allRunnersCache) {
+    if (!Object.prototype.hasOwnProperty.call(allRunnersCache, k)) continue;
+    var o = allRunnersCache[k];
+    if (k !== me && o._meeting === rc._meeting && o._time === rc._time && o.name) {
+      out.push(o.name);
+    }
+  }
+  return out;
+}
+
+function _buildHeadToHead(runs, rivals, thisHorse) {
+  // rivals: names of the other runners in today's race.
+  // Each historical run carries its full field, so past meetings can be
+  // worked out client-side without another request.
+  if (!rivals || !rivals.length) return '';
+  var norm = function(s) { return (s || '').toLowerCase().replace(/\s*\([a-z]{2,4}\)\s*$/, '').replace(/[^a-z0-9]/g, ''); };
+  var me = norm(thisHorse);
+  var rivalSet = {};
+  for (var i = 0; i < rivals.length; i++) {
+    var rn = norm(rivals[i]);
+    if (rn && rn !== me) rivalSet[rn] = rivals[i];
+  }
+
+  var meetings = [];
+  for (var r = 0; r < runs.length; r++) {
+    var run = runs[r];
+    if (!run.field || !run.field.length) continue;
+    var myPos = null, found = [];
+    for (var f = 0; f < run.field.length; f++) {
+      var fn = norm(run.field[f].horse_name);
+      var p  = parseInt(run.field[f].position, 10);
+      if (fn === me) myPos = isNaN(p) ? null : p;
+      else if (rivalSet[fn]) found.push({ name: run.field[f].horse_name, pos: isNaN(p) ? null : p });
+    }
+    if (myPos !== null && found.length) meetings.push({ run: run, myPos: myPos, rivals: found });
+  }
+  if (!meetings.length) return '';
+
+  var beat = 0, lost = 0;
+  meetings.forEach(function(m) {
+    m.rivals.forEach(function(v) {
+      if (v.pos === null) return;
+      if (m.myPos < v.pos) beat++; else lost++;
+    });
+  });
+
+  var rowsHtml = '';
+  meetings.forEach(function(m) {
+    var vs = m.rivals.map(function(v) {
+      var better = (v.pos !== null && m.myPos < v.pos);
+      return '<span style="white-space:nowrap;margin-right:10px">'
+           + '<span style="color:' + (better ? '#3b6d11' : '#a32d2d') + ';font-weight:600">'
+           + (better ? '&#9650;' : '&#9660;') + '</span> '
+           + escHtml(v.name) + ' <span style="color:var(--text3)">(' + (v.pos === null ? '?' : v.pos) + ')</span></span>';
+    }).join('');
+    rowsHtml += '<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px">'
+      + '<span style="color:var(--text3)">' + escHtml(m.run.date || '') + '</span> &middot; '
+      + escHtml(m.run.course || '') + ' &middot; finished <strong>' + m.myPos + '</strong>'
+      + '<div style="margin-top:3px">' + vs + '</div></div>';
+  });
+
+  return '<div style="border:0.5px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden">'
+    + '<div onclick="var b=document.getElementById(\'h2h-body\');var a=document.getElementById(\'h2h-arrow\');'
+    + 'var open=b.style.display!==\'none\';b.style.display=open?\'none\':\'block\';a.innerHTML=open?\'&#9656;\':\'&#9662;\';" '
+    + 'style="display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;background:var(--surface2)">'
+    + '<span id="h2h-arrow">&#9656;</span>'
+    + '<strong style="font-size:13px">Head to head</strong>'
+    + '<span style="font-size:12px;color:var(--text3)">' + meetings.length + ' previous meeting'
+    + (meetings.length === 1 ? '' : 's') + ' with today&#39;s field</span>'
+    + '<span style="margin-left:auto;font-size:12px">'
+    + '<span style="color:#3b6d11;font-weight:600">' + beat + '</span> ahead / '
+    + '<span style="color:#a32d2d;font-weight:600">' + lost + '</span> behind</span>'
+    + '</div>'
+    + '<div id="h2h-body" style="display:none;padding:4px 14px 10px">' + rowsHtml + '</div>'
+    + '</div>';
+}
+
 function renderHistoryRuns(runs, coRunners, horseInfo) {
   coRunners = coRunners || [];
   var body = document.getElementById('history-body');
@@ -1686,6 +1770,11 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
   }
 
   var html = '';
+  var _thisHorse = document.getElementById('history-horse-name');
+  var _name = _thisHorse ? _thisHorse.textContent : '';
+  var _rivals = (coRunners && coRunners.length) ? coRunners : _todaysRivals(_name);
+  html += _buildHeadToHead(runs, _rivals, _name);
+
   for (var i = 0; i < runs.length; i++) {
     var run = runs[i];
     var posNum  = parseInt(run.position, 10);
@@ -1890,6 +1979,13 @@ function _sortRunners(runners, key, asc, isResult) {
       if (vb === null) return -1;
       return (va - vb) * dir;
     }
+    if (key === 'or') {
+      va = parseInt(a.or, 10); vb = parseInt(b.or, 10);
+      if (isNaN(va) && isNaN(vb)) return 0;
+      if (isNaN(va)) return 1;   // unrated runners sort last either way
+      if (isNaN(vb)) return -1;
+      return (vb - va) * dir;    // higher mark first when ascending
+    }
     if (key === 'name') {
       va = (a.name || '').toLowerCase(); vb = (b.name || '').toLowerCase();
       return va < vb ? -dir : va > vb ? dir : 0;
@@ -2035,6 +2131,7 @@ function openRacePopup(raceKey, highlightHorse) {
     rows += '<td style="padding:7px 10px;font-weight:' + (isMatch ? '600' : '400') + '">' + silkHtml + '<span class="popup-horse-link" data-horse="' + escHtml(r.name || '') + '" style="cursor:pointer;text-decoration:underline;text-decoration-color:rgba(0,0,0,0.2)">' + escHtml(r.name || '') + '</span>' + (isMatch ? ' <span style="font-size:10px;background:var(--brand-light);color:var(--brand);border:0.5px solid rgba(139,58,58,0.3);border-radius:4px;padding:1px 5px;margin-left:4px">&#9733;</span>' : '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.jockey || '') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.trainer || '') + '</td>';
+    rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text2)">' + escHtml(r.or || '\u2014') + '</td>';
     rows += '<td style="padding:7px 10px;font-size:12px;color:var(--text3)">' + escHtml(r.form || '') + '</td>';
     // Finished race: show the Starting Price from the results feed.
     // Upcoming race: show the live Betfair best back price.
@@ -2074,7 +2171,9 @@ function openRacePopup(raceKey, highlightHorse) {
     '<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)">'
     + posHeader
     + '<th style="' + thSortable + '" data-sortkey="name">Horse' + _arrow('name') + '</th>'
-    + '<th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th><th style="' + th + '">Form</th>'
+    + '<th style="' + th + '">Jockey</th><th style="' + th + '">Trainer</th>'
+    + '<th style="' + thSortable + '" data-sortkey="or">OR' + _arrow('or') + '</th>'
+    + '<th style="' + th + '">Form</th>'
     + '<th style="' + thSortable + '" data-sortkey="odds">' + (isResult ? 'SP' : 'Odds') + _arrow('odds') + '</th>'
     + '<th style="' + th + '">Match</th>'
     + '</tr></thead><tbody>' + rows + '</tbody></table>';
