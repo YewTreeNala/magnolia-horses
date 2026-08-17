@@ -537,19 +537,39 @@ def check_today():
     return jsonify({'count': count, 'date': today})
 
 
+# Dropdown options change only when the racecards do, so they're cached
+# for the day rather than re-running three DISTINCT scans on every page
+# load. Keyed by date so it refreshes naturally after each sync.
+_options_cache = {'date': None, 'data': None}
+
+
 @app.route('/api/options')
 def options():
-    jockeys  = db.session.query(Runner.jockey).filter(Runner.jockey != '', Runner.jockey != None)\
-        .distinct().order_by(Runner.jockey).all()
-    trainers = db.session.query(Runner.trainer).filter(Runner.trainer != '', Runner.trainer != None)\
-        .distinct().order_by(Runner.trainer).all()
-    owners   = db.session.query(Runner.owner).filter(Runner.owner != '', Runner.owner != None)\
-        .distinct().order_by(Runner.owner).all()
-    return jsonify({
-        'jockeys':  [r[0] for r in jockeys],
-        'trainers': [r[0] for r in trainers],
-        'owners':   [r[0] for r in owners],
-    })
+    today = date.today().strftime('%Y-%m-%d')
+    if _options_cache['date'] == today and _options_cache['data'] is not None:
+        return jsonify(_options_cache['data'])
+
+    # One pass over today's runners instead of three full-table DISTINCT
+    # scans - the old version scanned every Runner row ever stored, not
+    # just today's, which got slower as the table grew.
+    rows = (db.session.query(Runner.jockey, Runner.trainer, Runner.owner)
+            .join(Race).join(Meeting)
+            .filter(Meeting.date == today).all())
+
+    jockeys, trainers, owners = set(), set(), set()
+    for j, t, o in rows:
+        if j: jockeys.add(j)
+        if t: trainers.add(t)
+        if o: owners.add(o)
+
+    data = {
+        'jockeys':  sorted(jockeys),
+        'trainers': sorted(trainers),
+        'owners':   sorted(owners),
+    }
+    _options_cache['date'] = today
+    _options_cache['data'] = data
+    return jsonify(data)
 
 
 @app.route('/api/search')

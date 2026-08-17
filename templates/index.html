@@ -1389,14 +1389,53 @@ function checkEditSearchParam() {
   setTimeout(function() { openSaveSearchModal(match.name, match.alert, match.id); }, 200);
 }
 
-autoSyncIfNeeded()
-  .then(function() { return loadOptions(); })
-  .then(function() { return loadTags(); })
-  .then(function() { return loadSavedSearches(); })
-  .then(function() {
+// Startup: run the independent fetches in parallel rather than chaining
+// them - previously each waited on the one before, so their latencies
+// stacked. Nothing here depends on another's result.
+//
+// The runner search is NOT run automatically. Loading every runner on
+// today's card is a large query and a large payload, and most visits
+// start with a specific search anyway. The user chooses what to load.
+(function startup() {
+  var params = new URLSearchParams(window.location.search);
+  var deepLinked = params.get('race') || params.get('edit');
+
+  Promise.all([
+    loadOptions().catch(function(){}),
+    loadTags().catch(function(){}),
+    loadSavedSearches().catch(function(){})
+  ]).then(function() {
     checkEditSearchParam();
-    if (!new URLSearchParams(window.location.search).get('race')) autoRun();
+    if (deepLinked) {
+      // Arriving from an email/race link - load straight away so the
+      // linked race can be shown.
+      autoSyncIfNeeded().then(function() {
+        if (!params.get('race')) autoRun();
+      });
+    } else {
+      showStartPrompt();
+    }
   });
+})();
+
+function showStartPrompt() {
+  var area = document.getElementById('results-area');
+  if (!area) return;
+  area.innerHTML =
+    '<div class="empty-state" style="padding:2.5rem 1rem">'
+    + '<div class="empty-icon">&#128269;</div>'
+    + '<div style="margin-bottom:4px">Choose a search to begin</div>'
+    + '<div style="font-size:13px;color:var(--text3);margin-bottom:1.25rem">'
+    + 'Set your filters above, pick a saved search, or load everything running today.</div>'
+    + '<button id="btn-load-today" class="btn-primary" style="padding:10px 20px;font-size:14px;cursor:pointer">'
+    + 'Search today&#39;s runners</button>'
+    + '</div>';
+  var b = document.getElementById('btn-load-today');
+  if (b) b.addEventListener('click', function() {
+    area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#8635;</div><div>Loading today\'s runners&hellip;</div></div>';
+    autoSyncIfNeeded().then(function() { autoRun(); });
+  });
+}
 </script>
 
 <!-- Horse History Modal -->
