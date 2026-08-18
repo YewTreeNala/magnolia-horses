@@ -50,7 +50,9 @@ UK_COURSES = {
 
 
 def is_uk_course(name):
-    return (name or '').strip().lower() in UK_COURSES
+    import re as _re
+    clean = _re.sub(r'\s*\([^)]+\)\s*$', '', (name or '').strip()).lower()
+    return clean in UK_COURSES
 
 
 @login_manager.user_loader
