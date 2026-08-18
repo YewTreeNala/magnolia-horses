@@ -507,17 +507,10 @@ var COLOUR_META = {
 };
 
 var UK_COURSES_SET = new Set([
-  'ascot','ayr','bath','beverley','brighton','carlisle','catterick','chelmsford',
-  'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las',
-  'goodwood','hamilton','haydock','hereford','huntingdon','kempton','leicester',
-  'lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
-  'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon',
-  'salisbury','sandown','sedgefield','southwell','stratford','taunton','thirsk',
-  'uttoxeter','warwick','wetherby','windsor','wolverhampton','worcester',
-  'wincanton','yarmouth','york'
-]);
+  'ascot','ayr','bangor','bath','beverley','brighton','carlisle','catterick','chelmsford','cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las','fontwell','goodwood','hamilton','haydock','hereford','hexham','huntingdon','kelso','kempton','leicester','lingfield','ludlow','market rasen','musselburgh','newbury','newcastle','newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon','salisbury','sandown','sedgefield','southwell','stratford','taunton','thirsk','uttoxeter','warwick','wetherby','wincanton','windsor','wolverhampton','worcester','yarmouth','york'
+]);;
 
-function isUKCourse(name) { return UK_COURSES_SET.has((name || '').toLowerCase().trim()); }
+function isUKCourse(name) { var clean=(name||'').toLowerCase().trim().replace(/\s*\([^)]+\)\s*$/,''); return UK_COURSES_SET.has(clean); }
 
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

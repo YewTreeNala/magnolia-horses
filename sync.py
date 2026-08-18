@@ -1,3 +1,4 @@
+from utils import strip_country, is_uk_course
 # deployed: 20260723_1456
 import re
 import time
@@ -31,10 +32,6 @@ def _log(level, message):
         print(f"Log write failed: {e}")
 
 
-def _strip_country(name):
-    """Remove trailing country/surface code e.g. 'Cork (IRE)' -> 'Cork'"""
-    return re.sub(r'\s*\([^)]{2,4}\)\s*$', '', name).strip()
-
 
 def expand_colour(code):
     if not code:
@@ -58,13 +55,13 @@ def expand_colour(code):
 def _parse_results(res_json):
     results_by_key = {}
     for race in res_json.get("results", []):
-        course = _strip_country((race.get("course") or "").strip()).lower()
+        course = strip_country((race.get("course") or "").strip()).lower()
         off    = (race.get("off") or "").strip()
         key    = f"{course}_{off}"
         runners = {}
         for r in race.get("runners", []):
             raw_horse = (r.get("horse") or "").strip()
-            horse     = _strip_country(raw_horse).lower()
+            horse     = strip_country(raw_horse).lower()
             runners[horse] = {
                 "position": str(r.get("position") or ""),
                 "sp":       r.get("sp") or "",
@@ -265,7 +262,7 @@ def sync_todays_races(app):
             for r in racecard.get("runners", []):
                 horse_name         = r.get("horse") or ""
                 horse_key          = horse_name.strip().lower()
-                horse_key_stripped = _strip_country(horse_name).strip().lower()
+                horse_key_stripped = strip_country(horse_name).strip().lower()
                 horse_id           = r.get("horse_id") or ""
 
                 colour = overrides.get(horse_key) or expand_colour(r.get("colour") or "")

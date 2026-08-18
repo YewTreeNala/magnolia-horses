@@ -36,23 +36,7 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-UK_COURSES = {
-    'ascot', 'ayr', 'bath', 'beverley', 'brighton', 'carlisle', 'catterick',
-    'chelmsford', 'cheltenham', 'chepstow', 'chester', 'doncaster', 'epsom',
-    'exeter', 'ffos las', 'goodwood', 'hamilton', 'haydock', 'hereford',
-    'huntingdon', 'kempton', 'leicester', 'lingfield', 'ludlow', 'market rasen',
-    'musselburgh', 'newbury', 'newcastle', 'newmarket', 'nottingham', 'perth',
-    'plumpton', 'pontefract', 'redcar', 'ripon', 'salisbury', 'sandown',
-    'sedgefield', 'southwell', 'stratford', 'taunton', 'thirsk', 'uttoxeter',
-    'warwick', 'wetherby', 'windsor', 'wolverhampton', 'worcester', 'wincanton',
-    'yarmouth', 'york'
-}
-
-
-def is_uk_course(name):
-    import re as _re
-    clean = _re.sub(r'\s*\([^)]+\)\s*$', '', (name or '').strip()).lower()
-    return clean in UK_COURSES
+from utils import UK_COURSES, is_uk_course, strip_country
 
 
 @login_manager.user_loader

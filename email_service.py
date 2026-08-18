@@ -1,3 +1,4 @@
+from utils import UK_COURSES, is_uk_course
 import os
 import requests
 from datetime import datetime
@@ -19,8 +20,7 @@ UK_COURSES = {
 }
 
 
-def is_uk_course(name):
-    return (name or '').strip().lower() in UK_COURSES
+
 
 
 def send_email(to_email, to_name, subject, html_body, user_id=None):
