@@ -2053,19 +2053,13 @@ def api_previous_runners():
     if date_from: q = q.filter(RunnerHistory.race_date >= date_from)
     if date_to:   q = q.filter(RunnerHistory.race_date <= date_to)
     if uk_only:
-        UK_COURSES = ['ascot','bath','beverley','brighton','carlisle','catterick','chelmsford',
-            'cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las','fontwell',
-            'goodwood','hamilton','haydock','hereford','hexham','huntingdon','kempton',
-            'leicester','lingfield','ludlow','market rasen','musselburgh','newbury','newcastle',
-            'newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon','salisbury',
-            'sandown','sedgefield','southwell','stratford','taunton','thirsk','uttoxeter',
-            'warwick','wetherby','wincanton','windsor','wolverhampton','worcester','yarmouth','york',
-            'ayr','bangor','kelso','chester']
-        q = q.filter(db.func.lower(RunnerHistory.course).in_(UK_COURSES))
+        pass  # filtered after fetch using is_uk_course()
 
     # Use higher limit when tipster filter will be applied client-side
     lim = 5000 if not any([horse, jockey, trainer, colour, course]) else 500
     runners = q.order_by(RunnerHistory.horse_name, RunnerHistory.race_date.desc()).limit(lim).all()
+    if uk_only:
+        runners = [r for r in runners if is_uk_course(r.course)]
 
     # Group by horse name
     grouped = {}
