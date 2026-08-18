@@ -254,7 +254,7 @@ def sync_todays_races(app):
                 race.going_detailed = going_detailed
                 race.weather        = weather
 
-            result_key     = f"{course.strip().lower()}_{off_time.strip()}"
+            result_key     = f"{strip_country(course).strip().lower()}_{off_time.strip()}"
             result_runners = results_by_key.get(result_key, {})
 
             existing_runners = {r.horse_name.lower(): r for r in race.runners}
