@@ -1299,8 +1299,9 @@ document.getElementById('results-area').addEventListener('click', function(e) {
     var hName=link.dataset.horse, row=link.closest('tr');
     var fLink=row?row.querySelector('.form-str-link'):null;
     var hId=fLink?fLink.getAttribute('data-horseid'):null;
-    if(hId){openHistoryModal(hId,hName,[]);}
-    else{fetch('/api/horse-id-by-name/'+encodeURIComponent(hName)).then(function(r){return r.json();}).then(function(d){if(d.horse_id)openHistoryModal(d.horse_id,hName,[]);});}
+    var coR=[];try{coR=JSON.parse((fLink&&fLink.getAttribute('data-corunners'))||'[]');}catch(e){}
+    if(hId){openHistoryModal(hId,hName,coR);}
+    else{fetch('/api/horse-id-by-name/'+encodeURIComponent(hName)).then(function(r){return r.json();}).then(function(d){if(d.horse_id)openHistoryModal(d.horse_id,hName,coR);}); }
     return;
   }
 });
@@ -1851,6 +1852,54 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
   }
 
   body.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">Previous Runs</div>' + html;
+
+
+function buildH2HHtml(runs, coRunners) {
+  if(!runs||!runs.length||!coRunners||!coRunners.length) return '';
+  var meetings=[];
+  for(var i=0;i<runs.length;i++){
+    var run=runs[i];
+    if(!run.field||!run.field.length) continue;
+    var rivals=[];
+    for(var j=0;j<run.field.length;j++){
+      var f=run.field[j];
+      if(coRunners.indexOf(f.horse_id)!==-1) rivals.push(f);
+    }
+    if(rivals.length>0) meetings.push({run:run,rivals:rivals});
+  }
+  var html='<div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px">';
+  html+='<div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">&#9876; Head to Head with Today&#39;s Rivals</div>';
+  if(meetings.length===0){
+    html+='<div style="font-size:12px;color:var(--text3);padding:4px 0">No previous meetings with today&#39;s rivals.</div></div>';
+    return html;
+  }
+  html+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html+='<tr style="background:#f5f1eb"><th style="padding:4px 8px;text-align:left">Date</th><th style="padding:4px 8px;text-align:left">Course</th><th style="padding:4px 8px;text-align:right">This horse</th><th style="padding:4px 8px;text-align:left">Rival</th><th style="padding:4px 8px;text-align:right">Rival pos</th></tr>';
+  for(var m=0;m<meetings.length;m++){
+    var run=meetings[m].run,rivals=meetings[m].rivals;
+    var pn=parseInt(run.position,10);
+    var pc=pn===1?'color:#3b6d11;font-weight:600':pn<=3?'color:#185fa5;font-weight:600':'';
+    var pl=run.position?(isNaN(pn)?run.position:pn+(['th','st','nd','rd'][(pn%100-20)%10]||['th','st','nd','rd'][pn%100]||'th')):'--';
+    for(var r=0;r<rivals.length;r++){
+      var riv=rivals[r],rp=parseInt(riv.position,10);
+      var rc2=rp===1?'color:#3b6d11;font-weight:600':rp<=3?'color:#185fa5;font-weight:600':'';
+      var rl2=riv.position?(isNaN(rp)?riv.position:rp+(['th','st','nd','rd'][(rp%100-20)%10]||['th','st','nd','rd'][rp%100]||'th')):'--';
+      html+='<tr style="border-bottom:0.5px solid #e8e0d5">';
+      html+='<td style="padding:4px 8px;color:var(--text2)">'+escHtml(run.date||'')+'</td>';
+      html+='<td style="padding:4px 8px">'+escHtml(run.course||'')+'</td>';
+      html+='<td style="padding:4px 8px;text-align:right;'+pc+'">'+pl+'</td>';
+      html+='<td style="padding:4px 8px">'+escHtml(riv.horse_name||'')+'</td>';
+      html+='<td style="padding:4px 8px;text-align:right;'+rc2+'">'+rl2+'</td>';
+      html+='</tr>';
+    }
+  }
+  html+='</table></div>';
+  return html;
+}
+  // Append H2H section
+  if(coRunners && coRunners.length > 0) {
+    body.innerHTML += buildH2HHtml(runs, coRunners);
+  }
 
   // Append tipster history
   var hname = document.getElementById('history-horse-name').textContent;
