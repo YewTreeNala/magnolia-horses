@@ -37,6 +37,8 @@ def _proxy_config():
 
 
 def get_betfair_market_info(course, time_str, horse_name, race_date, user=None):
+    from utils import strip_country
+    course = strip_country(course)  # strip (AW)/(IRE) etc before Betfair lookup
     """
     Look up the Betfair Exchange WIN market for a race via the UK proxy.
 
