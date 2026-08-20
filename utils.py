@@ -25,5 +25,5 @@ def is_uk_course(name):
 
 
 def strip_country(name):
-    """Strip country suffix e.g. 'Desert Crown (IRE)' -> 'Desert Crown'."""
-    return _re.sub(r'\s*\([A-Z]{2,3}\)\s*$', '', (name or '').strip())
+    """Strip parenthetical suffix e.g. 'Desert Crown (IRE)', 'Newmarket (July)' -> base name."""
+    return _re.sub(r'\s*\([^)]+\)\s*$', '', (name or '').strip())
