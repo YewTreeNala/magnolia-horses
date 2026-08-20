@@ -2390,15 +2390,9 @@ function loadBetfairOdds() {
   var now = new Date();
   var cells = Array.from(document.querySelectorAll('td[data-bf-horse]'));
   cells = cells.filter(function(cell) {
-    var t = cell.getAttribute('data-bf-time');
     var d = cell.getAttribute('data-bf-date');
-    if(!t || !d) return false;
-    try {
-      var parts = t.split(':');
-      var h = parts[0].length === 1 ? '0'+parts[0] : parts[0];
-      var raceDate = new Date(d + 'T' + h + ':' + (parts[1]||'00') + ':00');
-      return raceDate > now;
-    } catch(e) { return false; }
+    var todayStr = now.toISOString().slice(0,10);
+    return d === todayStr;
   });
   if(!cells.length) return;
   var delay = 0;
