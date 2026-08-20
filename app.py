@@ -1824,12 +1824,6 @@ def get_tipped_horses():
             if t.race_time:
                 q = q.filter(RunnerHistory.race_time == t.race_time)
             field_size = q.count() or None
-            # Fallback: date+course only if no time match
-            if not field_size and t.race_date and t.course:
-                field_size = RunnerHistory.query.filter(
-                    RunnerHistory.race_date == t.race_date,
-                    db.func.lower(RunnerHistory.course) == (t.course or '').lower().strip()
-                ).count() or None
 
         result[key]['tips'].append({
             'tip_id':     t.id,
