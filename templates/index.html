@@ -995,17 +995,17 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
       var spStr = r.sp ? ' <span style="font-size:10px;font-weight:400;opacity:0.85">@ ' + escHtml(r.sp) + '</span>' : '';
       posCell = '<td class="pos-cell ' + pCls + '">' + escHtml(ordinal(pos)) + spStr + '</td>';
     } else {
-      posCell = '<td class="pos-cell"></td>';
+      posCell = '<td class="pos-cell" data-bf-horse="' + escHtml(r.name||'') + '" data-bf-course="' + escHtml(r._meeting||'') + '" data-bf-time="' + escHtml(r._time||'') + '" data-bf-date="' + escHtml(r._date||'') + '"><span class="bf-odds" style="font-size:13px"></span></td>';
     }
 
-    tableRows += '<tr>'
+    tableRows += '<tr class="runner-row" data-horseid="' + escHtml(r.horse_id||'') + '" data-horsename="' + escHtml(rName) + '" data-corunners=\'' + coRunnerIdsJson + '\'  style="cursor:pointer;border-bottom:0.5px solid var(--border)">'
       + '<td class="num-cell">' + escHtml(r.number || '—') + '</td>'
       + '<td><div class="horse-name-cell">' + silkHtml
-      + '<div style="min-width:0"><span class="horse-name-link" data-horse="' + escHtml(rName) + '" data-horseinfo=\''+JSON.stringify({age:r.age,colour:r.colour,sex:r.sex,trainer:r.trainer,jockey:r.jockey,weight:r.weight,or:r.or,rpr:r.rpr,odds:r.odds}).replace(/\'/g,"&#39;")+'\'  style="font-weight:500;cursor:pointer" onclick="openHistoryByName(this.dataset.horse,this.dataset.horseinfo);event.stopPropagation()">' + escHtml(rName) + '</span>' + windBadge
+      + '<div style="min-width:0"><span class="horse-name-link" data-horse="' + escHtml(rName) + '" data-horseinfo=\''+JSON.stringify({age:r.age,colour:r.colour,sex:r.sex,trainer:r.trainer,jockey:r.jockey,weight:r.weight,or:r.or,rpr:r.rpr,odds:r.odds}).replace(/\'/g,"&#39;")+'\'  style="font-weight:500">' + escHtml(rName) + '</span>' + windBadge
       + '<div class="horse-owner">' + escHtml(r.owner || '') + '</div></div></div></td>'
       + '<td>' + spBtn + '</td>'
       + '<td>' + colourChip(r.colour) + '</td>'
-      + '<td><span class="form-str form-str-link" data-horseid="' + escHtml(r.horse_id || '') + '" data-horsename="' + escHtml(rName) + '" data-corunners=\'' + coRunnerIdsJson + '\'' + ' title="Click to view race history" style="cursor:pointer">' + formHtmlStr + (r.horse_id ? ' <span style="font-size:9px;color:var(--brand)">&#9654;</span>' : '') + '</span></td>'
+      + '<td><span class="form-str form-str-link" data-horseid="' + escHtml(r.horse_id || '') + '" data-horsename="' + escHtml(rName) + '" data-corunners=\'' + coRunnerIdsJson + '\'' + ' title="Click to view race history" style="cursor:pointer">' + formHtmlStr + '</span></td>'
       + '<td style="font-size:11px;color:var(--text2)">' + escHtml(r.or || '—') + (r.rpr && r.rpr !== '-' ? ' / ' + escHtml(r.rpr) : '') + '</td>'
       + (isResult ? '<td style="font-size:12px;font-weight:600;white-space:nowrap"' + (r.odds ? ' title="' + escHtml(String(r.odds)) + ' decimal"' : '') + '>' + escHtml(r.sp || (r.odds ? decimalToFractional(parseFloat(r.odds)) : '') || '—') + '</td>' : '')
       + '<td><div class="jt-cell"><strong>' + escHtml(r.jockey || '—') + '</strong>'
@@ -1095,6 +1095,7 @@ function renderResults(data) {
     }
   }
   area.innerHTML = html;
+  if(currentView !== 'history') scheduleBetfairOdds();
 }
 
 function populateMeetingDropdown(data) {
@@ -1293,6 +1294,19 @@ document.getElementById('save-search-name').addEventListener('keydown', function
 
 document.getElementById('results-area').addEventListener('click', function(e) {
   var tagBtn = e.target.closest('.tag-btn'); if (tagBtn) { openTagModal(tagBtn.dataset.horse); return; }
+  // Row click - open history popup (ignore clicks on actions-cell, pos-cell, links)
+  if(!e.target.closest('.tag-btn,.actions-cell,.pos-cell,a,.bf-odds')) {
+    var row = e.target.closest('tr.runner-row');
+    if(row) {
+      var hId = row.getAttribute('data-horseid');
+      var hName = row.getAttribute('data-horsename');
+      var coR = [];
+      try { coR = JSON.parse(row.getAttribute('data-corunners')||'[]'); } catch(ex) {}
+      if(hId) { openHistoryModal(hId, hName, coR); return; }
+      fetch('/api/horse-id-by-name/'+encodeURIComponent(hName)).then(function(r){return r.json();}).then(function(d){if(d.horse_id)openHistoryModal(d.horse_id,hName,coR);});
+      return;
+    }
+  }
   var spBtn  = e.target.closest('.spotlight-btn'); if (spBtn)  { openTagModal(spBtn.dataset.horse);  return; }
   var link = e.target.closest('.horse-name-link');
   if (link && !e.target.closest('.tag-btn')) {
@@ -1956,13 +1970,6 @@ function renderHistoryField(field, run, coRunners) {
 
 // Delegate click on form strings
 document.getElementById('results-area').addEventListener('click', function(e) {
-  var el = e.target.closest('.form-str-link');
-  if (!el) return;
-  var horseId    = el.getAttribute('data-horseid');
-  var horseName  = el.getAttribute('data-horsename');
-  var coRunners  = [];
-  try { coRunners = JSON.parse(el.getAttribute('data-corunners') || '[]'); } catch(e) {}
-  if (horseId) openHistoryModal(horseId, horseName, coRunners);
 });
 
 </script>
@@ -2371,6 +2378,85 @@ function renderHistoryResults(data){ try {
   });
   area.innerHTML=html;
 } catch(err){ showSearchError(err); } }
+// ── Lazy Betfair odds loader ──────────────────────────────────────────────
+var _bfOddsTimer = null;
+
+function scheduleBetfairOdds() {
+  if(_bfOddsTimer) clearTimeout(_bfOddsTimer);
+  _bfOddsTimer = setTimeout(loadBetfairOdds, 800);
+}
+
+function loadBetfairOdds() {
+  var now = new Date();
+  var cells = Array.from(document.querySelectorAll('td[data-bf-horse]'));
+  cells = cells.filter(function(cell) {
+    var t = cell.getAttribute('data-bf-time');
+    var d = cell.getAttribute('data-bf-date');
+    if(!t || !d) return false;
+    try {
+      var parts = t.split(':');
+      var h = parts[0].length === 1 ? '0'+parts[0] : parts[0];
+      var raceDate = new Date(d + 'T' + h + ':' + (parts[1]||'00') + ':00');
+      return raceDate > now;
+    } catch(e) { return false; }
+  });
+  if(!cells.length) return;
+  var delay = 0;
+  cells.forEach(function(cell) {
+    setTimeout(function() {
+      if(cell.getAttribute('data-bf-loaded')) return;
+      cell.setAttribute('data-bf-loaded', '1');
+      var horse  = cell.getAttribute('data-bf-horse');
+      var course = cell.getAttribute('data-bf-course');
+      var time   = cell.getAttribute('data-bf-time');
+      var date   = cell.getAttribute('data-bf-date');
+      fetch('/api/betfair-link?horse=' + encodeURIComponent(horse) +
+            '&course=' + encodeURIComponent(course) +
+            '&time=' + encodeURIComponent(time) +
+            '&date=' + encodeURIComponent(date))
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var span = cell.querySelector('.bf-odds');
+          if(!span) return;
+          if(d.best_back_price) {
+            var frac = decToFrac(d.best_back_price);
+            span.style.color = 'var(--brand)';
+            span.style.fontWeight = '600';
+            span.style.fontSize = '13px';
+            if(d.url) {
+              span.innerHTML = '<a href="' + escHtml(d.url) + '" target="_blank" rel="noopener" style="color:var(--brand);text-decoration:none;font-weight:600;font-size:13px">' + escHtml(frac) + '</a>';
+            } else {
+              span.textContent = frac;
+            }
+          }
+        })
+        .catch(function(){});
+    }, delay);
+    delay += 500;
+  });
+}
+
+function decToFrac(dec) {
+  if(!dec || dec <= 1) return '--';
+  var n = dec - 1;
+  var fracs = [[1,6],[1,5],[1,4],[1,3],[2,5],[1,2],[3,5],[2,3],[4,5],
+               [1,1],[5,4],[6,4],[7,4],[2,1],[9,4],[5,2],[11,4],[3,1],
+               [7,2],[4,1],[9,2],[5,1],[6,1],[7,1],[8,1],[9,1],[10,1],
+               [11,1],[12,1],[14,1],[16,1],[20,1],[25,1],[33,1],[50,1],[66,1],[100,1]];
+  var best = null, bestDiff = Infinity;
+  for(var i = 0; i < fracs.length; i++) {
+    var f = fracs[i][0] / fracs[i][1];
+    var diff = Math.abs(n - f);
+    if(diff < bestDiff) { bestDiff = diff; best = fracs[i]; }
+  }
+  if(best && bestDiff < 0.12) return best[0] + '/' + best[1];
+  var num = Math.round(n * 4), den = 4;
+  var g = gcdCalc(num, den);
+  return (num/g) + '/' + (den/g);
+}
+
+function gcdCalc(a, b) { return b === 0 ? a : gcdCalc(b, a % b); }
+
 </script>
 </body>
 </html>
