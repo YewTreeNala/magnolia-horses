@@ -390,6 +390,7 @@ function applyFilters(){
     if(fBet && t.bet_type !== fBet) return false;
     if(fResult==='winplace' && (!t.result||!(t.result.result_type==='win'||t.result.result_type==='place'))) return false;
     if(fResult==='loss' && (!t.result||t.result.result_type!=='loss')) return false;
+    if(fResult==='pending' && (t.result&&t.result.result_type)) return false;
     if(fTagged === 'true'  && !t.tagged)  return false;
     if(fCourse && !(t.course||'').toLowerCase().includes(fCourse)) return false;
     if(fJockey && !(t.jockey||'').toLowerCase().includes(fJockey)) return false;

@@ -1408,22 +1408,39 @@ function checkEditSearchParam() {
   var params = new URLSearchParams(window.location.search);
   var deepLinked = params.get('race') || params.get('edit');
 
+  // Load saved searches and tags immediately - don't wait for slow loadOptions
   Promise.all([
-    loadOptions().catch(function(){}),
     loadTags().catch(function(){}),
     loadSavedSearches().catch(function(){})
   ]).then(function() {
     checkEditSearchParam();
     if (deepLinked) {
-      // Arriving from an email/race link - load straight away so the
-      // linked race can be shown.
       autoSyncIfNeeded().then(function() {
         if (!params.get('race')) autoRun();
       });
+    } else if (savedSearches.length > 0) {
+      // Auto-run all saved searches on load
+      document.getElementById('spinner').classList.add('active');
+      var area = document.getElementById('results-area');
+      if(area) area.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128269;</div><div>Running saved searches…</div></div>';
+      fetch('/api/run-all-searches').then(function(r) { return r.json(); })
+        .then(function(data) {
+          document.getElementById('spinner').classList.remove('active');
+          cacheRunners(data);
+          renderResults(data);
+          populateMeetingDropdown(data);
+        })
+        .catch(function() {
+          document.getElementById('spinner').classList.remove('active');
+          showStartPrompt();
+        });
     } else {
       showStartPrompt();
     }
   });
+
+  // Load dropdown options in background - doesn't block page
+  loadOptions().catch(function(){});
 })();
 
 function showStartPrompt() {

@@ -818,6 +818,16 @@ def run_all_searches():
             matched_ids[r.id] = r
             match_reasons.setdefault(r.id, []).append('Favourite')
 
+    # Pre-load tipped horse names once if any search uses tipster filter
+    needs_tipster = any(
+        json.loads(s.filters).get('tipster') == 'tof'
+        for s in searches
+        if s.filters
+    )
+    tipped_names = set()
+    if needs_tipster:
+        tipped_names = {t[0].lower().strip() for t in db.session.query(Tip.horse_name).all()}
+
     for saved in searches:
         try:
             f = json.loads(saved.filters)
@@ -845,8 +855,6 @@ def run_all_searches():
             if f.get('trainer') and f['trainer'].lower() != (r.trainer or '').lower():       continue
             if f.get('owner')   and f['owner'].lower()   != (r.owner or '').lower():         continue
             if f.get('tipster') == 'tof':
-                tipped = db.session.query(Tip.horse_name).all()
-                tipped_names = {t[0].lower().strip() for t in tipped}
                 if r.horse_name.lower().strip() not in tipped_names:
                     continue
             if hf:
@@ -1482,15 +1490,17 @@ def settle_from_results_json():
         ran     = int(row.get('ran', 0) or 0)
         sp_dec  = _frac_to_dec(sp_str)
 
-        # Apply place rule if places not specified
-        if tip.each_way_places == 0 and tip.bet_type == 'ew':
-            if ran <= 4:   places = 0
-            elif ran <= 7: places = 2
+        # Always calculate places from field size (don't trust stored each_way_places default)
+        if tip.bet_type == 'ew' and ran > 0:
+            if ran <= 4:    places = 0
+            elif ran <= 7:  places = 2
             elif ran <= 11: places = 3
-            elif ran <= 15: places = 4
-            elif ran <= 19: places = 4
-            else:           places = 5
+            else:           places = 4
             tip.each_way_places = places
+        elif tip.each_way_places > 0:
+            places = tip.each_way_places
+        else:
+            places = 4
 
         # Handle NR
         if pos.upper() in ('NR', 'W/O', 'SCR'):
@@ -2203,19 +2213,38 @@ def tipster_webhook():
             except Exception:
                 pass
 
+        # Calculate each_way_places from field size
+        _race_time = t.get('race_time', '')
+        # Convert race_time to Racing API format (H:MM) for matching
+        try:
+            from datetime import datetime as _dtt2
+            _t2 = _dtt2.strptime(_race_time, '%H:%M')
+            _api_race_time = str(_t2.hour % 12 or 12) + ':' + _t2.strftime('%M')
+        except Exception:
+            _api_race_time = _race_time
+        _field_size = db.session.query(Runner).join(Race).join(Meeting).filter(
+            Meeting.date == tip_race_date,
+            db.func.lower(db.func.regexp_replace(Meeting.name, r'\s*\([^)]+\)\s*$', '', 'g')) == strip_country(course_clean).lower(),
+            Race.time == _api_race_time
+        ).count() if tip_race_date and course_clean and _race_time else 0
+        if _field_size <= 4:    _ew_places = 0
+        elif _field_size <= 7:  _ew_places = 2
+        elif _field_size <= 11: _ew_places = 3
+        else:                   _ew_places = 4
+
         tip = Tip(
             tipster_id       = tipster.id,
             horse_name       = t['horse_name'],
             tip_date         = msg_datetime[:10],
             tip_datetime     = msg_datetime,
             course           = course_clean,
-            race_time        = t.get('race_time', ''),
+            race_time        = _race_time,
             race_date        = tip_race_date,
             bet_type         = t.get('bet_type', 'ew'),
             stake_pts        = t.get('stake_pts', 0.5),
             odds             = t.get('odds', ''),
             odds_dec         = t.get('odds_dec', 0.0),
-            each_way_places  = t.get('each_way_places', 4),
+            each_way_places  = _ew_places if _field_size > 0 else t.get('each_way_places', 4),
             each_way_fraction= t.get('each_way_fraction', 5),
             reasoning        = t.get('reasoning', ''),
             raw_message      = raw_text,
@@ -2659,19 +2688,38 @@ def tipster_webhook():
             except Exception:
                 pass
 
+        # Calculate each_way_places from field size
+        _race_time = t.get('race_time', '')
+        # Convert race_time to Racing API format (H:MM) for matching
+        try:
+            from datetime import datetime as _dtt2
+            _t2 = _dtt2.strptime(_race_time, '%H:%M')
+            _api_race_time = str(_t2.hour % 12 or 12) + ':' + _t2.strftime('%M')
+        except Exception:
+            _api_race_time = _race_time
+        _field_size = db.session.query(Runner).join(Race).join(Meeting).filter(
+            Meeting.date == tip_race_date,
+            db.func.lower(db.func.regexp_replace(Meeting.name, r'\s*\([^)]+\)\s*$', '', 'g')) == strip_country(course_clean).lower(),
+            Race.time == _api_race_time
+        ).count() if tip_race_date and course_clean and _race_time else 0
+        if _field_size <= 4:    _ew_places = 0
+        elif _field_size <= 7:  _ew_places = 2
+        elif _field_size <= 11: _ew_places = 3
+        else:                   _ew_places = 4
+
         tip = Tip(
             tipster_id       = tipster.id,
             horse_name       = t['horse_name'],
             tip_date         = msg_datetime[:10],
             tip_datetime     = msg_datetime,
             course           = course_clean,
-            race_time        = t.get('race_time', ''),
+            race_time        = _race_time,
             race_date        = tip_race_date,
             bet_type         = t.get('bet_type', 'ew'),
             stake_pts        = t.get('stake_pts', 0.5),
             odds             = t.get('odds', ''),
             odds_dec         = t.get('odds_dec', 0.0),
-            each_way_places  = t.get('each_way_places', 4),
+            each_way_places  = _ew_places if _field_size > 0 else t.get('each_way_places', 4),
             each_way_fraction= t.get('each_way_fraction', 5),
             reasoning        = t.get('reasoning', ''),
             raw_message      = raw_text,
@@ -2866,13 +2914,86 @@ def get_tipster_stats():
     })
 
 
+def _recalculate_ew_places():
+    """Recalculate each_way_places from RunnerHistory field size for all settled E/W tips."""
+    from tip_parser import settle_tip as _settle_tip
+    import re as _re
+
+    def _strip(name):
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', (name or '').strip()).lower()
+
+    tips = Tip.query.filter(Tip.bet_type == 'ew', Tip.settled == True).all()
+    recalculated = 0
+    for tip in tips:
+        if not tip.result or not tip.race_date or not tip.course or not tip.race_time:
+            continue
+        # Count field from RunnerHistory
+        # Convert tip race_time to Racing API format (H:MM, no leading zero, 12-hour)
+        _tip_time = tip.race_time or ''
+        try:
+            from datetime import datetime as _dtt
+            _t = _dtt.strptime(_tip_time, '%H:%M')
+            _api_time = str(_t.hour % 12 or 12) + ':' + _t.strftime('%M') if _t.hour != 0 else '12:' + _t.strftime('%M')
+        except Exception:
+            _api_time = _tip_time
+
+        field_size = RunnerHistory.query.filter(
+            RunnerHistory.race_date == tip.race_date,
+            db.func.lower(db.func.regexp_replace(RunnerHistory.course, r'\s*\([^)]+\)\s*$', '', 'g')) == _strip(tip.course),
+            RunnerHistory.race_time == _api_time
+        ).count()
+        if not field_size:
+            continue
+        # Calculate correct places
+        if field_size <= 4:    correct_places = 0
+        elif field_size <= 7:  correct_places = 2
+        elif field_size <= 11: correct_places = 3
+        else:                  correct_places = 4
+
+        if tip.each_way_places == correct_places:
+            continue
+
+        # Update and re-settle
+        tip.each_way_places = correct_places
+        pos = tip.result.position
+        try:
+            pos_int = int(pos)
+        except (ValueError, TypeError):
+            continue
+
+        tr = tip.result
+        sp_dec = tr.sp_dec or tip.odds_dec or 0
+        sk = tip.stake_pts or 0.5
+        ew_frac = tip.each_way_fraction or 5
+
+        if correct_places == 0 or pos_int > correct_places:
+            # Loss on place part
+            win_pts = sk * (sp_dec - 1) if pos_int == 1 else -sk
+            place_pts = -sk
+            result_type = 'win' if pos_int == 1 else 'loss'
+        else:
+            win_pts = sk * (sp_dec - 1) if pos_int == 1 else -sk
+            place_pts = sk * ((sp_dec - 1) / ew_frac)
+            result_type = 'win' if pos_int == 1 else 'place'
+
+        tr.result_type = result_type
+        tr.win_pts     = round(win_pts, 4)
+        tr.place_pts   = round(place_pts, 4)
+        tr.total_pts   = round(win_pts + place_pts, 4)
+        recalculated += 1
+
+    db.session.commit()
+    return recalculated
+
+
 @app.route('/api/admin/settle-tips', methods=['POST'])
 @login_required
 def admin_settle_tips():
     if not is_admin():
         return jsonify({'error': 'Forbidden'}), 403
     count = _settle_pending_tips()
-    return jsonify({'status': 'ok', 'settled': count})
+    recalc = _recalculate_ew_places()
+    return jsonify({'status': 'ok', 'settled': count, 'recalculated': recalc})
 
 
 @app.route('/api/admin/backfill-tips', methods=['POST'])
