@@ -2169,9 +2169,14 @@ def tipster_webhook():
 
     tipster = _get_or_create_tipster(tipster_name)
 
-    # Check for duplicate (same message_id already stored)
-    if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
-        return jsonify({'status': 'duplicate'})
+    # Check for duplicate (same message_id AND same horse already stored)
+    if msg_id:
+        existing = Tip.query.filter_by(telegram_msg_id=msg_id).all()
+        if existing:
+            existing_horses = {t.horse_name.lower().strip() for t in existing}
+            all_new_horses = {t['horse_name'].lower().strip() for t in tips}
+            if all_new_horses.issubset(existing_horses):
+                return jsonify({'status': 'duplicate'})
 
     created_tips = []
     uncertain_tips = []
@@ -2644,9 +2649,14 @@ def tipster_webhook():
 
     tipster = _get_or_create_tipster(tipster_name)
 
-    # Check for duplicate (same message_id already stored)
-    if msg_id and Tip.query.filter_by(telegram_msg_id=msg_id).first():
-        return jsonify({'status': 'duplicate'})
+    # Check for duplicate (same message_id AND same horse already stored)
+    if msg_id:
+        existing = Tip.query.filter_by(telegram_msg_id=msg_id).all()
+        if existing:
+            existing_horses = {t.horse_name.lower().strip() for t in existing}
+            all_new_horses = {t['horse_name'].lower().strip() for t in tips}
+            if all_new_horses.issubset(existing_horses):
+                return jsonify({'status': 'duplicate'})
 
     created_tips = []
     uncertain_tips = []

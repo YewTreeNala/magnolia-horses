@@ -1885,7 +1885,7 @@ function renderHistoryRuns(runs, coRunners, horseInfo) {
   body.innerHTML = '<div style="font-size:13px;font-weight:600;color:var(--brand);margin-bottom:8px">Previous Runs</div>' + html;
 
 
-function buildH2HHtml(runs, coRunners) {
+function buildH2HHtml(runs, coRunners, thisHorseName) {
   if(!runs||!runs.length||!coRunners||!coRunners.length) return '';
   var meetings=[];
   for(var i=0;i<runs.length;i++){
@@ -1894,7 +1894,9 @@ function buildH2HHtml(runs, coRunners) {
     var rivals=[];
     for(var j=0;j<run.field.length;j++){
       var f=run.field[j];
-      if(coRunners.indexOf(f.horse_id)!==-1) rivals.push(f);
+      var _fName=(f.horse_name||'').toLowerCase().trim();
+      var _hLow=(thisHorseName||'').toLowerCase().trim();
+      if(coRunners.indexOf(f.horse_id)!==-1 && _fName !== _hLow) rivals.push(f);
     }
     if(rivals.length>0) meetings.push({run:run,rivals:rivals});
   }
@@ -1929,7 +1931,8 @@ function buildH2HHtml(runs, coRunners) {
 }
   // Append H2H section
   if(coRunners && coRunners.length > 0) {
-    body.innerHTML += buildH2HHtml(runs, coRunners);
+    var _hname = document.getElementById('history-horse-name').textContent;
+    body.innerHTML += buildH2HHtml(runs, coRunners, _hname);
   }
 
   // Append tipster history
