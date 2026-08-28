@@ -1504,7 +1504,7 @@ def settle_from_results_json():
     from tip_parser import settle_tip as _settle
 
     def _strip(name):
-        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
     def _frac_to_dec(sp):
         try:
@@ -1973,7 +1973,7 @@ def admin_settle_from_api():
     import re as _re
 
     def _strip(name):
-        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
     auth = (os.getenv('RACING_API_USER'), os.getenv('RACING_API_KEY'))
     BASE = 'https://api.theracingapi.com/v1'
@@ -2058,7 +2058,7 @@ def admin_fix_tip_dates():
     from datetime import datetime as _dt, timedelta as _td
 
     def _strip(name):
-        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
     all_tips = Tip.query.all()
     fixed = 0
@@ -2634,7 +2634,7 @@ def _settle_pending_tips():
     from datetime import datetime as _dt, timedelta as _td
 
     def _strip(name):
-        return _re.sub(r'\s*\([A-Z]+\)\s*$', '', name or '').strip().lower()
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
     unsettled = Tip.query.filter_by(settled=False).all()
     settled_count = 0
