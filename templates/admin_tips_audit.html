@@ -250,6 +250,7 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
     <button class="btn-primary" onclick="runAudit('report')">&#128269; Run Audit</button>
     <button class="btn-secondary" id="btn-fix-dups" style="display:none" onclick="runAudit('fix_duplicates')">&#128465; Fix Duplicates</button>
     <button class="btn-secondary" id="btn-fix-ew" style="display:none" onclick="runAudit('fix_ew_places')">&#9878; Fix E/W Places</button>
+    <button class="btn-secondary" onclick="settleFromRH()">&#9654; Settle from RunnerHistory</button>
   </div>
 
   <div id="audit-status" style="margin-bottom:1rem;font-size:13px;color:var(--text2)"></div>
@@ -257,6 +258,18 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
 </div>
 
 <script>
+function settleFromRH() {
+  document.getElementById('audit-status').textContent = 'Settling from RunnerHistory...';
+  fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.error){document.getElementById('audit-status').textContent='Error: '+d.error;return;}
+      var msg = 'Settled: '+d.settled;
+      if(d.skipped&&d.skipped.length) msg += ' | Skipped: '+d.skipped.length+' ('+d.skipped.map(function(s){return s.horse+' - '+s.reason;}).join('; ')+')';
+      if(d.errors&&d.errors.length) msg += ' | Errors: '+d.errors.length;
+      document.getElementById('audit-status').textContent = msg;
+    }).catch(function(e){document.getElementById('audit-status').textContent='Failed: '+e.message;});
+}
+
 function runAudit(action) {
   document.getElementById('audit-status').textContent = 'Running audit...';
   document.getElementById('audit-results').innerHTML = '';

@@ -90,6 +90,144 @@ def admin_db_query():
         return jsonify({'error': str(e)}), 400
 
 
+
+@app.route('/api/admin/tips-settle-rh', methods=['POST'])
+@login_required
+def tips_settle_from_rh():
+    """Settle all unsettled tips using RunnerHistory - handles time format mismatches."""
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    import re as _re
+    from tip_parser import settle_tip as _settle_tip
+
+    def _strip(name):
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
+
+    def _to_12hr(t):
+        try:
+            from datetime import datetime as _dtt
+            p = _dtt.strptime((t or '').strip(), '%H:%M')
+            return str(p.hour % 12 or 12) + ':' + p.strftime('%M')
+        except Exception:
+            return (t or '').strip()
+
+    unsettled = Tip.query.filter_by(settled=False).all()
+    settled_count = 0
+    skipped = []
+    errors = []
+
+    for tip in unsettled:
+        if not tip.race_date or not tip.horse_name:
+            continue
+
+        tip_name = _strip(tip.horse_name)
+        tip_course = _strip(tip.course or '')
+        tip_time_12 = _to_12hr(tip.race_time or '')
+
+        # Search RunnerHistory with ±4 day window
+        from datetime import datetime as _dtt2, timedelta as _td
+        try:
+            base_dt = _dtt2.strptime(tip.race_date, '%Y-%m-%d')
+        except Exception:
+            continue
+
+        rh_match = None
+        for offset in [0, 1, -1, 2, -2, 3, -3, 4, -4]:
+            check_date = (base_dt + _td(days=offset)).strftime('%Y-%m-%d')
+            candidates = RunnerHistory.query.filter_by(race_date=check_date).all()
+            for rh in candidates:
+                if _strip(rh.horse_name) != tip_name:
+                    continue
+                if tip_course and rh.course:
+                    rc = _strip(rh.course)
+                    if rc != tip_course and not rc.startswith(tip_course) and not tip_course.startswith(rc):
+                        continue
+                if tip_time_12 and rh.race_time:
+                    if rh.race_time.strip() != tip_time_12:
+                        continue
+                if rh.position:
+                    rh_match = rh
+                    break
+            if rh_match:
+                break
+
+        if not rh_match:
+            skipped.append({'horse': tip.horse_name, 'date': tip.race_date, 'reason': 'not in RunnerHistory or no position'})
+            continue
+
+        # Calculate result
+        try:
+            pos = int(rh_match.position)
+        except (ValueError, TypeError):
+            skipped.append({'horse': tip.horse_name, 'date': tip.race_date, 'reason': f'non-numeric position: {rh_match.position}'})
+            continue
+
+        sp_str = rh_match.sp or ''
+        try:
+            sp_dec = float(rh_match.odds or 0) or tip.odds_dec or 0
+        except Exception:
+            sp_dec = tip.odds_dec or 0
+
+        # Field size for EW places
+        field_size = RunnerHistory.query.filter_by(
+            race_date=rh_match.race_date,
+            course=rh_match.course,
+            race_time=rh_match.race_time
+        ).count()
+        places = 0 if field_size <= 4 else 2 if field_size <= 7 else 3 if field_size <= 11 else 4
+
+        stake = tip.stake_pts or 0.5
+        ew_frac = tip.each_way_fraction or 5
+
+        if tip.bet_type == 'win':
+            if pos == 1:
+                win_pts = round(stake * (sp_dec - 1), 4)
+                result_type = 'win'
+            else:
+                win_pts = -stake
+                result_type = 'loss'
+            place_pts = 0
+        else:  # ew
+            win_pts = round(stake * (sp_dec - 1), 4) if pos == 1 else -stake
+            if places > 0 and pos <= places:
+                place_pts = round(stake * ((sp_dec - 1) / ew_frac), 4)
+                result_type = 'win' if pos == 1 else 'place'
+            else:
+                place_pts = -stake
+                result_type = 'win' if pos == 1 else 'loss'
+
+        total_pts = round(win_pts + place_pts, 4)
+
+        try:
+            # Remove existing result if any
+            if tip.result:
+                db.session.delete(tip.result)
+                db.session.flush()
+
+            tr = TipResult(
+                tip_id=tip.id,
+                position=str(pos),
+                sp=sp_str,
+                sp_dec=sp_dec,
+                result_type=result_type,
+                win_pts=win_pts,
+                place_pts=place_pts,
+                total_pts=total_pts
+            )
+            db.session.add(tr)
+            tip.settled = True
+            tip.race_date = rh_match.race_date  # correct date if offset found it
+            tip.each_way_places = places
+            db.session.commit()
+            settled_count += 1
+        except Exception as e:
+            db.session.rollback()
+            errors.append({'horse': tip.horse_name, 'error': str(e)})
+
+    return jsonify({'settled': settled_count, 'skipped': skipped, 'errors': errors})
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
