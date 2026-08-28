@@ -228,7 +228,7 @@ function runDbQuery(){
     t+='</tr></thead><tbody>';
     d.rows.forEach(function(row,i){
       t+='<tr style="background:'+(i%2?'var(--surface2)':'#fff')+'">';
-      row.forEach(function(v){t+='<td style="padding:5px 10px;border:0.5px solid var(--border);max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v+'</td>';});
+      row.forEach(function(v){t+='<td style="padding:5px 10px;border:0.5px solid var(--border);max-width:600px;word-break:break-word">'+v+'</td>';});
       t+='</tr>';
     });
     t+='</tbody></table>';

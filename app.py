@@ -90,6 +90,163 @@ def admin_db_query():
         return jsonify({'error': str(e)}), 400
 
 
+
+@app.route('/admin/tips-audit')
+@login_required
+def tips_audit_page():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_tips_audit.html', is_admin=True, page_id='admin', can_tipster=True)
+
+
+@app.route('/api/admin/tips-audit', methods=['POST'])
+@login_required
+def run_tips_audit():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    action = request.json.get('action', 'report')
+    results = {}
+
+    # ── 1. Find duplicates ────────────────────────────────────────────────
+    dup_sql = db.text("""
+        SELECT MIN(id) as keep_id, MAX(id) as delete_id,
+               horse_name, race_date, race_time, course, COUNT(*) as cnt
+        FROM tip
+        GROUP BY LOWER(horse_name), race_date, race_time, LOWER(course)
+        HAVING COUNT(*) > 1
+        ORDER BY race_date DESC
+    """)
+    dups = []
+    for row in db.session.execute(dup_sql):
+        dups.append({
+            'keep_id': row.keep_id,
+            'delete_id': row.delete_id,
+            'horse_name': row.horse_name,
+            'race_date': row.race_date,
+            'race_time': row.race_time,
+            'course': row.course,
+            'count': row.cnt,
+        })
+    results['duplicates'] = dups
+
+    if action == 'fix_duplicates' and dups:
+        delete_ids = [d['delete_id'] for d in dups]
+        for did in delete_ids:
+            db.session.execute(db.text(f"DELETE FROM tip WHERE id = {did}"))
+        db.session.commit()
+        results['duplicates_deleted'] = len(delete_ids)
+
+    # ── 2. Settlement check ───────────────────────────────────────────────
+    # Find settled tips where RunnerHistory has a different position
+    import re as _re
+    def _strip(name):
+        return _re.sub(r'\s*\([^)]+\)\s*$', '', (name or '').strip()).lower()
+
+    def _to_api_time(t):
+        try:
+            from datetime import datetime as _dt
+            _p = _dt.strptime(t, '%H:%M')
+            return str(_p.hour % 12 or 12) + ':' + _p.strftime('%M')
+        except Exception:
+            return t
+
+    settled_tips = Tip.query.filter(
+        Tip.settled == True,
+        Tip.race_date >= '2026-06-01'
+    ).all()
+
+    mismatches = []
+    for tip in settled_tips:
+        if not tip.result or not tip.race_date or not tip.course:
+            continue
+        api_time = _to_api_time(tip.race_time or '')
+        rh = RunnerHistory.query.filter(
+            RunnerHistory.race_date == tip.race_date,
+            db.func.lower(db.func.regexp_replace(
+                RunnerHistory.course, r'\s*\([^)]+\)\s*$', '', 'g'
+            )) == _strip(tip.course),
+            RunnerHistory.race_time == api_time,
+            db.func.lower(RunnerHistory.horse_name) == tip.horse_name.lower().strip()
+        ).first()
+        if not rh:
+            continue
+        rh_pos = str(rh.position or '').strip()
+        tip_pos = str(tip.result.position or '').strip()
+        if rh_pos and tip_pos and rh_pos != tip_pos:
+            mismatches.append({
+                'tip_id': tip.id,
+                'horse_name': tip.horse_name,
+                'race_date': tip.race_date,
+                'course': tip.course,
+                'tip_position': tip_pos,
+                'rh_position': rh_pos,
+                'result_type': tip.result.result_type,
+            })
+    results['settlement_mismatches'] = mismatches
+
+    # ── 3. E/W places check ───────────────────────────────────────────────
+    ew_tips = Tip.query.filter(
+        Tip.bet_type == 'ew',
+        Tip.settled == True,
+        Tip.race_date >= '2026-06-01'
+    ).all()
+
+    ew_issues = []
+    for tip in ew_tips:
+        if not tip.race_date or not tip.course or not tip.race_time:
+            continue
+        api_time = _to_api_time(tip.race_time)
+        field_size = RunnerHistory.query.filter(
+            RunnerHistory.race_date == tip.race_date,
+            db.func.lower(db.func.regexp_replace(
+                RunnerHistory.course, r'\s*\([^)]+\)\s*$', '', 'g'
+            )) == _strip(tip.course),
+            RunnerHistory.race_time == api_time
+        ).count()
+        if not field_size:
+            continue
+        if field_size <= 4:    correct = 0
+        elif field_size <= 7:  correct = 2
+        elif field_size <= 11: correct = 3
+        else:                  correct = 4
+        if tip.each_way_places != correct:
+            ew_issues.append({
+                'tip_id': tip.id,
+                'horse_name': tip.horse_name,
+                'race_date': tip.race_date,
+                'course': tip.course,
+                'field_size': field_size,
+                'stored_places': tip.each_way_places,
+                'correct_places': correct,
+                'result_type': tip.result.result_type if tip.result else None,
+                'position': tip.result.position if tip.result else None,
+            })
+    results['ew_place_issues'] = ew_issues
+
+    if action == 'fix_ew_places' and ew_issues:
+        fixed = _recalculate_ew_places()
+        results['ew_places_fixed'] = fixed
+
+    # ── 4. Unsettled tips older than 2 days ──────────────────────────────
+    from datetime import date, timedelta
+    cutoff = (date.today() - timedelta(days=2)).strftime('%Y-%m-%d')
+    old_unsettled = Tip.query.filter(
+        Tip.settled == False,
+        Tip.race_date <= cutoff,
+        Tip.race_date >= '2026-06-01'
+    ).all()
+    results['old_unsettled'] = [{
+        'tip_id': t.id,
+        'horse_name': t.horse_name,
+        'race_date': t.race_date,
+        'course': t.course,
+        'odds': t.odds,
+    } for t in old_unsettled]
+
+    return jsonify(results)
+
+
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)

@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Tips Audit{% endblock %}
+{% block content %}
+<div style="max-width:1100px;margin:0 auto;padding:1.5rem">
+  <h1 style="font-family:Georgia,serif;color:var(--brand);margin-bottom:0.25rem">Tips Audit</h1>
+  <p style="color:var(--text2);margin-bottom:1.5rem">Checks duplicates, settlement accuracy, E/W places and unsettled old tips.</p>
+
+  <div style="display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap">
+    <button class="btn-primary" onclick="runAudit('report')">&#128269; Run Audit</button>
+    <button class="btn-secondary" id="btn-fix-dups" style="display:none" onclick="runAudit('fix_duplicates')">&#128465; Fix Duplicates</button>
+    <button class="btn-secondary" id="btn-fix-ew" style="display:none" onclick="runAudit('fix_ew_places')">&#9878; Fix E/W Places</button>
+  </div>
+
+  <div id="audit-status" style="margin-bottom:1rem;font-size:13px;color:var(--text2)"></div>
+  <div id="audit-results"></div>
+</div>
+
+<script>
+function runAudit(action) {
+  document.getElementById('audit-status').textContent = 'Running audit...';
+  document.getElementById('audit-results').innerHTML = '';
+  document.getElementById('btn-fix-dups').style.display = 'none';
+  document.getElementById('btn-fix-ew').style.display = 'none';
+
+  fetch('/api/admin/tips-audit', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({action: action})
+  }).then(function(r) { return r.json(); }).then(function(d) {
+    if(d.error) { document.getElementById('audit-status').textContent = 'Error: ' + d.error; return; }
+
+    var html = '';
+    var status = [];
+
+    // Duplicates
+    var dups = d.duplicates || [];
+    status.push(dups.length + ' duplicate' + (dups.length !== 1 ? 's' : ''));
+    if(d.duplicates_deleted) status.push(d.duplicates_deleted + ' duplicates deleted');
+    html += '<div class="panel" style="margin-bottom:1rem">';
+    html += '<div class="panel-title">&#128260; Duplicates (' + dups.length + ')</div>';
+    if(dups.length === 0) {
+      html += '<div style="color:var(--green);padding:0.5rem">&#10003; No duplicates found</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
+      html += '<th style="padding:5px 8px;text-align:left">Keep ID</th><th style="padding:5px 8px;text-align:left">Delete ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Course</th></tr></thead><tbody>';
+      dups.forEach(function(d) {
+        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + d.keep_id + '</td><td style="padding:5px 8px;color:#a32d2d">' + d.delete_id + '</td><td style="padding:5px 8px">' + d.horse_name + '</td><td style="padding:5px 8px">' + d.race_date + '</td><td style="padding:5px 8px">' + d.race_time + '</td><td style="padding:5px 8px">' + d.course + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('btn-fix-dups').style.display = 'inline-block';
+    }
+    html += '</div>';
+
+    // Settlement mismatches
+    var mm = d.settlement_mismatches || [];
+    status.push(mm.length + ' settlement mismatch' + (mm.length !== 1 ? 'es' : ''));
+    html += '<div class="panel" style="margin-bottom:1rem">';
+    html += '<div class="panel-title">&#9878; Settlement Mismatches (' + mm.length + ')</div>';
+    if(mm.length === 0) {
+      html += '<div style="color:var(--green);padding:0.5rem">&#10003; All settlements match RunnerHistory</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
+      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Stored Pos</th><th style="padding:5px 8px;text-align:left">RH Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
+      mm.forEach(function(m) {
+        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + m.tip_id + '</td><td style="padding:5px 8px">' + m.horse_name + '</td><td style="padding:5px 8px">' + m.race_date + '</td><td style="padding:5px 8px">' + m.course + '</td><td style="padding:5px 8px;color:#a32d2d">' + m.tip_position + '</td><td style="padding:5px 8px;color:#3b6d11">' + m.rh_position + '</td><td style="padding:5px 8px">' + m.result_type + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    // E/W place issues
+    var ew = d.ew_place_issues || [];
+    status.push(ew.length + ' E/W place issue' + (ew.length !== 1 ? 's' : ''));
+    if(d.ew_places_fixed) status.push(d.ew_places_fixed + ' E/W places fixed');
+    html += '<div class="panel" style="margin-bottom:1rem">';
+    html += '<div class="panel-title">&#9812; E/W Place Issues (' + ew.length + ')</div>';
+    if(ew.length === 0) {
+      html += '<div style="color:var(--green);padding:0.5rem">&#10003; All E/W places correct</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
+      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Field</th><th style="padding:5px 8px;text-align:left">Stored Places</th><th style="padding:5px 8px;text-align:left">Correct Places</th><th style="padding:5px 8px;text-align:left">Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
+      ew.forEach(function(e) {
+        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + e.tip_id + '</td><td style="padding:5px 8px">' + e.horse_name + '</td><td style="padding:5px 8px">' + e.race_date + '</td><td style="padding:5px 8px">' + e.field_size + '</td><td style="padding:5px 8px;color:#a32d2d">' + e.stored_places + '</td><td style="padding:5px 8px;color:#3b6d11">' + e.correct_places + '</td><td style="padding:5px 8px">' + (e.position||'—') + '</td><td style="padding:5px 8px">' + (e.result_type||'—') + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      document.getElementById('btn-fix-ew').style.display = 'inline-block';
+    }
+    html += '</div>';
+
+    // Old unsettled
+    var ou = d.old_unsettled || [];
+    status.push(ou.length + ' old unsettled tip' + (ou.length !== 1 ? 's' : ''));
+    html += '<div class="panel" style="margin-bottom:1rem">';
+    html += '<div class="panel-title">&#9203; Unsettled Tips Older Than 2 Days (' + ou.length + ')</div>';
+    if(ou.length === 0) {
+      html += '<div style="color:var(--green);padding:0.5rem">&#10003; No old unsettled tips</div>';
+    } else {
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
+      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Odds</th></tr></thead><tbody>';
+      ou.forEach(function(t) {
+        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + t.tip_id + '</td><td style="padding:5px 8px">' + t.horse_name + '</td><td style="padding:5px 8px">' + t.race_date + '</td><td style="padding:5px 8px">' + t.course + '</td><td style="padding:5px 8px">' + t.odds + '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+    html += '</div>';
+
+    document.getElementById('audit-status').textContent = 'Audit complete: ' + status.join(' | ');
+    document.getElementById('audit-results').innerHTML = html;
+
+  }).catch(function(e) {
+    document.getElementById('audit-status').textContent = 'Failed: ' + e.message;
+  });
+}
+</script>
+{% endblock %}
