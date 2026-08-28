@@ -38,59 +38,6 @@ login_manager.login_view = 'login'
 
 from utils import UK_COURSES, is_uk_course, strip_country
 
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-
-with app.app_context():
-    db.create_all()
-
-
-def sync_and_alert(app):
-    sync_todays_races(app)
-    send_morning_alerts(app)
-
-def sync_and_settle(app):
-    sync_todays_races(app)
-    with app.app_context():
-        _settle_pending_tips()
-
-
-
-@app.route('/admin/db-query', methods=['POST'])
-@login_required
-def admin_db_query():
-    if not is_admin():
-        return jsonify({'error': 'Forbidden'}), 403
-    
-    sql = (request.json or {}).get('sql', '').strip()
-    if not sql:
-        return jsonify({'error': 'No SQL provided'}), 400
-    
-    # Block DELETE and DROP
-    sql_upper = sql.upper().lstrip()
-    for blocked in ['DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE']:
-        if sql_upper.startswith(blocked):
-            return jsonify({'error': f'{blocked} statements are not allowed'}), 400
-    
-    try:
-        result = db.session.execute(db.text(sql))
-        db.session.commit()
-        
-        if result.returns_rows:
-            keys = list(result.keys())
-            rows = [list(str(v) if v is not None else '' for v in row) for row in result.fetchall()]
-            return jsonify({'columns': keys, 'rows': rows, 'rowcount': len(rows)})
-        else:
-            return jsonify({'columns': [], 'rows': [], 'rowcount': result.rowcount, 'message': f'{result.rowcount} rows affected'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 400
-
-
-
 @app.route('/admin/tips-audit')
 @login_required
 def tips_audit_page():
@@ -226,6 +173,60 @@ def run_tips_audit():
     except Exception as e:
         import traceback
         return jsonify({'error': str(e), 'trace': traceback.format_exc()[-500:]}), 500
+
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+with app.app_context():
+    db.create_all()
+
+
+def sync_and_alert(app):
+    sync_todays_races(app)
+    send_morning_alerts(app)
+
+def sync_and_settle(app):
+    sync_todays_races(app)
+    with app.app_context():
+        _settle_pending_tips()
+
+
+
+@app.route('/admin/db-query', methods=['POST'])
+@login_required
+def admin_db_query():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+    
+    sql = (request.json or {}).get('sql', '').strip()
+    if not sql:
+        return jsonify({'error': 'No SQL provided'}), 400
+    
+    # Block DELETE and DROP
+    sql_upper = sql.upper().lstrip()
+    for blocked in ['DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE']:
+        if sql_upper.startswith(blocked):
+            return jsonify({'error': f'{blocked} statements are not allowed'}), 400
+    
+    try:
+        result = db.session.execute(db.text(sql))
+        db.session.commit()
+        
+        if result.returns_rows:
+            keys = list(result.keys())
+            rows = [list(str(v) if v is not None else '' for v in row) for row in result.fetchall()]
+            return jsonify({'columns': keys, 'rows': rows, 'rowcount': len(rows)})
+        else:
+            return jsonify({'columns': [], 'rows': [], 'rowcount': result.rowcount, 'message': f'{result.rowcount} rows affected'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
+
+
 
 
 @app.route('/')
