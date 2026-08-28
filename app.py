@@ -2660,12 +2660,29 @@ def _settle_pending_tips():
         for offset in [0, 1, -1, 2, -2, 3, -3, 4, -4]:
             check_date = (base_dt + _td(days=offset)).strftime('%Y-%m-%d')
 
-            # Check RunnerHistory
-            for rh in RunnerHistory.query.filter_by(race_date=check_date).all():
+            # Check RunnerHistory - match on horse name and optionally course
+            rh_candidates = RunnerHistory.query.filter_by(race_date=check_date).all()
+            for rh in rh_candidates:
                 if _strip(rh.horse_name) != tip_name:
                     continue
-                if rh.course and course and _strip(rh.course) != course:
-                    continue
+                # Course match - allow partial
+                if rh.course and course:
+                    rh_course = _strip(rh.course)
+                    if rh_course != course and not rh_course.startswith(course) and not course.startswith(rh_course):
+                        continue
+                # Time match - try both 24hr and 12hr formats
+                if tip.race_time and rh.race_time:
+                    tip_time = tip.race_time.strip()
+                    rh_time = rh.race_time.strip()
+                    # Convert tip 24hr to 12hr for comparison
+                    try:
+                        from datetime import datetime as _dtt
+                        p = _dtt.strptime(tip_time, '%H:%M')
+                        tip_time_12 = str(p.hour % 12 or 12) + ':' + p.strftime('%M')
+                    except Exception:
+                        tip_time_12 = tip_time
+                    if rh_time != tip_time and rh_time != tip_time_12:
+                        continue
                 if rh.position:
                     position     = rh.position
                     sp_str       = rh.sp or rh.odds or ''
