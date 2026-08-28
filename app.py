@@ -309,7 +309,7 @@ def tips_settle_from_rh():
 
 
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=lambda: sync_todays_races(app), trigger='interval', minutes=15)
+scheduler.add_job(func=lambda: [sync_todays_races(app), _settle_pending_tips()], trigger='interval', minutes=15)
 scheduler.add_job(func=lambda: sync_and_alert(app), trigger='cron', hour=5, minute=0)
 # 08:00, not 23:00: /racecards/{id}/results only serves horses in today's
 # or tomorrow's cards, so by late evening the cards have rolled over and
