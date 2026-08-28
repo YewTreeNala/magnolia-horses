@@ -258,6 +258,20 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
 </div>
 
 <script>
+function manualSettle(tipId) {
+  var pos = document.getElementById('pos-'+tipId).value.trim();
+  var sp = document.getElementById('sp-'+tipId).value.trim();
+  var fs = parseInt(document.getElementById('fs-'+tipId).value.trim()) || 0;
+  if(!pos || !sp) { alert('Enter position and SP'); return; }
+  fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'manual_settle', tip_id:tipId, position:pos, sp:sp, field_size:fs})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.error){alert('Error: '+d.error);return;}
+      alert('Settled: '+d.result_type+' ('+d.total_pts+'pts)');
+      settleFromRH();
+    });
+}
+
 function markNR(tipId) {
   fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'mark_nr', tip_id:tipId})})
     .then(function(r){return r.json();}).then(function(d){
@@ -278,7 +292,13 @@ function settleFromRH() {
       if(d.skipped&&d.skipped.length){
         var sh='<div class="panel" style="margin-top:1rem"><div class="panel-title">&#9203; Not Settled ('+d.skipped.length+')</div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Reason</th><th style="padding:5px 8px;text-align:left">Action</th></tr></thead><tbody>';
         d.skipped.forEach(function(s){
-          var action=s.can_nr?'<button onclick="markNR('+s.tip_id+')" style="padding:3px 10px;font-size:11px;cursor:pointer;border:0.5px solid #a32d2d;border-radius:4px;background:#fff;color:#a32d2d">Mark NR</button>':'—';
+          var action=s.can_nr ? (
+            '<button onclick="markNR('+s.tip_id+')" style="padding:3px 8px;font-size:11px;cursor:pointer;border:0.5px solid #a32d2d;border-radius:4px;background:#fff;color:#a32d2d;margin-right:4px">NR</button>' +
+            '<input id="pos-'+s.tip_id+'" placeholder="Pos" style="width:35px;padding:2px 4px;font-size:11px;border:0.5px solid #ccc;border-radius:3px" />' +
+            '<input id="sp-'+s.tip_id+'" placeholder="SP" style="width:45px;padding:2px 4px;font-size:11px;border:0.5px solid #ccc;border-radius:3px;margin:0 3px" />' +
+            '<input id="fs-'+s.tip_id+'" placeholder="Ran" style="width:35px;padding:2px 4px;font-size:11px;border:0.5px solid #ccc;border-radius:3px;margin-right:3px" />' +
+            '<button onclick="manualSettle('+s.tip_id+')" style="padding:3px 8px;font-size:11px;cursor:pointer;border:0.5px solid var(--brand);border-radius:4px;background:#fff;color:var(--brand)">Settle</button>'
+          ) : '—';
           sh+='<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+s.horse+'</td><td style="padding:5px 8px">'+s.date+'</td><td style="padding:5px 8px;color:var(--text2);font-size:11px">'+s.reason+'</td><td style="padding:5px 8px">'+action+'</td></tr>';
         });
         sh+='</tbody></table></div>';

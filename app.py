@@ -117,6 +117,55 @@ def tips_settle_from_rh():
         db.session.commit()
         return jsonify({'status': 'ok', 'tip_id': tip_id})
 
+    if action == 'manual_settle':
+        tip_id  = (request.json or {}).get('tip_id')
+        pos_str = str((request.json or {}).get('position', ''))
+        sp_str  = str((request.json or {}).get('sp', ''))
+        field_size = int((request.json or {}).get('field_size', 0))
+        tip = Tip.query.get(tip_id)
+        if not tip:
+            return jsonify({'error': 'Tip not found'}), 404
+        try:
+            pos = int(pos_str)
+        except ValueError:
+            return jsonify({'error': 'Invalid position'}), 400
+        # Parse SP to decimal
+        try:
+            if '/' in sp_str:
+                n, d = sp_str.split('/')
+                sp_dec = round(float(n)/float(d) + 1, 4)
+            else:
+                sp_dec = float(sp_str)
+        except Exception:
+            sp_dec = tip.odds_dec or 0
+        # Calculate places
+        places = 0 if field_size <= 4 else 2 if field_size <= 7 else 3 if field_size <= 11 else 4
+        stake = tip.stake_pts or 0.5
+        ew_frac = tip.each_way_fraction or 5
+        if tip.bet_type == 'win':
+            win_pts = round(stake * (sp_dec - 1), 4) if pos == 1 else -stake
+            place_pts = 0
+            result_type = 'win' if pos == 1 else 'loss'
+        else:
+            win_pts = round(stake * (sp_dec - 1), 4) if pos == 1 else -stake
+            if places > 0 and pos <= places:
+                place_pts = round(stake * ((sp_dec - 1) / ew_frac), 4)
+                result_type = 'win' if pos == 1 else 'place'
+            else:
+                place_pts = -stake
+                result_type = 'win' if pos == 1 else 'loss'
+        total_pts = round(win_pts + place_pts, 4)
+        if tip.result:
+            db.session.delete(tip.result)
+            db.session.flush()
+        tr = TipResult(tip_id=tip.id, position=pos_str, sp=sp_str, sp_dec=sp_dec,
+                       result_type=result_type, win_pts=win_pts, place_pts=place_pts, total_pts=total_pts)
+        db.session.add(tr)
+        tip.settled = True
+        tip.each_way_places = places
+        db.session.commit()
+        return jsonify({'status': 'ok', 'result_type': result_type, 'total_pts': total_pts})
+
     def _strip(name):
         return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
