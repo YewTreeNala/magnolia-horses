@@ -38,14 +38,6 @@ login_manager.login_view = 'login'
 
 from utils import UK_COURSES, is_uk_course, strip_country
 
-@app.route('/admin/tips-audit')
-@login_required
-def tips_audit_page():
-    if not is_admin():
-        return redirect(url_for('index'))
-    return render_template('admin_tips_audit.html', is_admin=True, page_id='admin', can_tipster=True)
-
-
 @app.route('/api/admin/tips-audit', methods=['POST'])
 @login_required
 def run_tips_audit():
@@ -179,6 +171,17 @@ def run_tips_audit():
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def is_admin():
+    return current_user.is_authenticated and current_user.email == ADMIN_EMAIL
+
+
+@app.route('/admin/tips-audit')
+@login_required
+def tips_audit_page():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_tips_audit.html', is_admin=True, page_id='admin', can_tipster=True)
 
 
 with app.app_context():
