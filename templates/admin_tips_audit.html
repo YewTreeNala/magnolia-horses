@@ -1,9 +1,250 @@
-{% extends "base.html" %}
-{% block title %}Tips Audit{% endblock %}
-{% block content %}
-<div style="max-width:1100px;margin:0 auto;padding:1.5rem">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Users &mdash; Magnolia Horses Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --brand: #8b3a3a; --brand-light: #f5ece8;
+      --text: #2a1f14; --text2: #6b5a48; --text3: #9c8a78;
+      --surface: #fff; --surface2: #f5f1eb;
+      --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+      --green: #3b6d11; --green-bg: #eaf3de;
+      --blue: #185fa5; --blue-bg: #e6f1fb;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--surface2); color: var(--text); font-size: 14px; padding: 0 1rem 3rem; }
+    .page { max-width: 1100px; margin: 0 auto; }
+    .brand-header { display: flex; align-items: center; gap: 12px; padding: 1rem 0 0.75rem; border-bottom: 0.5px solid rgba(139,58,58,0.2); margin-bottom: 1.5rem; }
+    .brand-name { font-family: Georgia, serif; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .admin-tag { font-size: 11px; background: var(--brand); color: #fff; padding: 2px 8px; border-radius: 20px; margin-left: 4px; }
+    .nav-links { margin-left: auto; display: flex; gap: 16px; font-size: 13px; }
+    .nav-links a { color: var(--brand); text-decoration: none; font-size:13px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .nav-links a.active { font-weight: 600; border-bottom: 2px solid var(--brand); padding-bottom: 1px; }
+    .nav-links a:hover { text-decoration: underline; }
+    .page-title { font-size: 20px; font-weight: 500; margin-bottom: 1.25rem; }
+    .stat-strip { display: flex; gap: 16px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 13px; color: var(--text2); }
+    .stat strong { display: block; font-size: 22px; font-weight: 600; color: var(--brand); }
+    .user-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    .user-header { display: flex; align-items: center; gap: 12px; margin-bottom: 0.5rem; flex-wrap: wrap; }
+    .user-name { font-size: 15px; font-weight: 500; }
+    .user-email { font-size: 13px; color: var(--text2); }
+    .user-meta { font-size: 12px; color: var(--text3); margin-left: auto; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; border: 0.5px solid; display: inline-block; }
+    .badge-green { background: var(--green-bg); color: var(--green); border-color: rgba(59,109,17,0.2); }
+    .badge-blue  { background: var(--blue-bg);  color: var(--blue);  border-color: rgba(24,95,165,0.2); }
+    .searches-list { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 6px; }
+    .search-row { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 6px 10px; background: var(--surface2); border-radius: var(--radius); }
+    .search-name { font-weight: 500; color: var(--text); min-width: 120px; }
+    .search-summary { color: var(--text2); flex: 1; }
+    .alert-on  { color: var(--green); font-size: 11px; white-space: nowrap; }
+    .alert-off { color: var(--text3); font-size: 11px; white-space: nowrap; }
+    .no-searches { font-size: 12px; color: var(--text3); font-style: italic; margin-top: 6px; }
+    .divider { border: none; border-top: 0.5px solid var(--border); margin: 0.75rem 0 0; }
+    .btn-sm { border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-family: inherit; border: 0.5px solid; }
+    .btn-edit { background: transparent; color: var(--brand); border-color: rgba(139,58,58,0.3); }
+    .btn-edit:hover { background: var(--brand-light); }
+    .btn-del { background: transparent; color: #a32d2d; border-color: #a32d2d; }
+    .btn-del:hover { background: #fcebeb; }
+      .banned-badge { font-size:11px; background:#fcebeb; color:#a32d2d; border:0.5px solid rgba(163,45,45,0.3); border-radius:20px; padding:2px 8px; font-weight:500; }
+    .user-card.banned { opacity:0.7; border-color:rgba(163,45,45,0.3); background:#fff8f8; }
+    .btn-ban { font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; border:0.5px solid rgba(163,45,45,0.4); background:transparent; color:#a32d2d; }
+    .btn-unban { font-size:12px; padding:4px 10px; border-radius:6px; cursor:pointer; font-family:inherit; border:0.5px solid rgba(59,109,17,0.4); background:transparent; color:#3b6d11; }
+    body::before { content: ""; position: fixed; inset: 0; background-image: url("/static/bg.jpg"); background-size: cover; background-position: center; opacity: 0.22; z-index: -1; }
+        body::after  { content: ""; position: fixed; inset: 0; background: linear-gradient(160deg, rgba(245,236,232,0.55) 0%, rgba(240,234,220,0.45) 100%); z-index: -1; }
+    </style>
+<div class="page">
+  <div class="brand-header">
+    <div class="brand-logo">
+      <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M13 3C10 3 7 5 6 8C5 11 6 13 8 15C9 16 9 17 9 18H17C17 17 17 16 18 15C20 13 21 11 20 8C19 5 16 3 13 3Z" fill="white" opacity="0.9"/>
+        <path d="M9 18H17V20C17 21.1 16.1 22 15 22H11C9.9 22 9 21.1 9 20V18Z" fill="white" opacity="0.7"/>
+        <line x1="11" y1="18" x2="11" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="13" y1="18" x2="13" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+        <line x1="15" y1="18" x2="15" y2="22" stroke="rgba(139,58,58,0.4)" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">Magnolia Horses</div>
+      <div class="brand-tagline">Horse Racing Runners Search Service</div>
+    </div>
+    <div class="nav-links">
+      <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
+      {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
+      <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
+      {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a>{% endif %}
+      <a href="/logout">Sign out</a>
+    </div>
+  </div>
+
+  <div class="page-title">Registered users</div>
+
+  <div class="stat-strip">
+    <div class="stat"><strong>{{ users|length }}</strong>Total users</div>
+    <div class="stat"><strong>{{ users|sum(attribute='tagged_count') }}</strong>Total tagged horses</div>
+    <div class="stat"><strong>{% set total_searches = namespace(n=0) %}{% for u in users %}{% set total_searches.n = total_searches.n + u.searches|length %}{% endfor %}{{ total_searches.n }}</strong>Total saved searches</div>
+    <div class="stat"><strong>{% set alert_count = namespace(n=0) %}{% for u in users %}{% for s in u.searches %}{% if s.alert %}{% set alert_count.n = alert_count.n + 1 %}{% endif %}{% endfor %}{% endfor %}{{ alert_count.n }}</strong>Alert searches</div>
+  </div>
+
+  {% for u in users %}
+  <div class="user-card{% if u.is_banned %} banned{% endif %}">
+    <div class="user-header">
+      <div>
+        <div class="user-name">{{ u.name }}
+          {% if u.is_banned %}<span class="banned-badge">&#128683; Banned</span>{% endif %}
+          {% if u.is_admin %}<span style="font-size:11px;background:#e6f1fb;color:#185fa5;border:0.5px solid rgba(24,95,165,0.3);border-radius:20px;padding:2px 8px;font-weight:500">Admin</span>{% endif %}
+        </div>
+        <div class="user-email">{{ u.email }}</div>
+        {% if u.is_banned %}<div style="font-size:11px;color:#a32d2d;margin-top:2px">Banned {{ u.banned_at }}</div>{% endif %}
+      </div>
+      <span class="badge badge-green">{{ u.tagged_count }} tagged</span>
+      <span class="badge badge-blue">{{ u.searches|length }} searches</span>
+      <div class="user-meta">Joined {{ u.created_at }}</div>
+      {% if not u.is_admin %}
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          {% if u.is_banned %}
+            <button class="btn-unban" onclick="unbanUser({{ u.id }}, this)">&#10003; Unban</button>
+          {% else %}
+            <button class="btn-ban" onclick="banUser({{ u.id }}, this)">&#128683; Ban</button>
+          {% endif %}
+          <button onclick="toggleTipster({{ u.id }}, this)" style="font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:inherit;border:0.5px solid rgba(24,95,165,0.4);background:transparent;color:{% if u.can_see_tipster %}#185fa5{% else %}var(--text3){% endif %}">
+            &#127922; Tipster {% if u.can_see_tipster %}ON{% else %}OFF{% endif %}
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    {% if u.searches %}
+    <hr class="divider"/>
+    <div class="searches-list">
+      {% for s in u.searches %}
+      <div class="search-row" id="admin-srow-{{ s.id }}">
+        <span class="search-name">{{ s.name }}</span>
+        <span class="search-summary">{{ s.summary }}</span>
+        {% if s.alert %}
+          <span class="alert-on">&#128276; Alert on</span>
+        {% else %}
+          <span class="alert-off">Alert off</span>
+        {% endif %}
+        <a class="btn-sm btn-edit" href="/?edit_search={{ s.id }}&admin=1" style="text-decoration:none">Edit</a>
+        <button class="btn-sm btn-del" onclick="adminDeleteSearch({{ s.id }}, 'admin-srow-{{ s.id }}')">Remove</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-searches">No saved searches</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+<script>
+function toggleTipster(userId, btn) {
+  fetch('/api/admin/user/' + userId + '/tipster', {method: 'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') {
+        btn.textContent = '🎲 Tipster ' + (d.can_see_tipster ? 'ON' : 'OFF');
+        btn.style.color = d.can_see_tipster ? '#185fa5' : 'var(--text3)';
+      } else { alert('Error: ' + (d.error||'unknown')); }
+    });
+}
+
+function banUser(userId, btn) {
+  if (!confirm('Ban this user? They will no longer be able to log in.')) return;
+  fetch('/api/admin/user/' + userId + '/ban', {method: 'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') { location.reload(); }
+      else { alert('Error: ' + (d.error||'unknown')); }
+    });
+}
+
+function unbanUser(userId, btn) {
+  if (!confirm('Unban this user?')) return;
+  fetch('/api/admin/user/' + userId + '/unban', {method: 'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      if (d.status === 'ok') { location.reload(); }
+      else { alert('Error: ' + (d.error||'unknown')); }
+    });
+}
+
+function adminDeleteSearch(searchId, rowId) {
+  if (!confirm('Remove this saved search for this user?')) return;
+  fetch('/api/admin/saved-searches/' + searchId, { method: 'DELETE' })
+    .then(function() {
+      var row = document.getElementById(rowId);
+      if (row) row.remove();
+    });
+}
+</script>
+
+<div class="panel" style="margin-top:2rem">
+  <div class="panel-title">&#128196; Database Console</div>
+  <div style="margin-bottom:0.75rem;font-size:12px;color:var(--text2)">SELECT and UPDATE only. DELETE, DROP, ALTER and TRUNCATE are blocked.</div>
+  <textarea id="db-sql" placeholder="Enter SQL query..." style="width:100%;height:120px;padding:10px;font-family:monospace;font-size:13px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--surface2);color:var(--text);resize:vertical;box-sizing:border-box"></textarea>
+  <div style="margin-top:0.5rem;display:flex;gap:8px;align-items:center">
+    <button class="btn-primary" onclick="runDbQuery()" id="db-run-btn">Run Query</button>
+    <button class="btn-secondary" onclick="document.getElementById('db-sql').value='';document.getElementById('db-results').innerHTML=''">Clear</button>
+    <span id="db-status" style="font-size:12px;color:var(--text2)"></span>
+  </div>
+  <div id="db-results" style="margin-top:1rem;overflow-x:auto;font-size:12px"></div>
+</div>
+
+<script>
+function runDbQuery(){
+  var sql=document.getElementById('db-sql').value.trim();
+  if(!sql) return;
+  var btn=document.getElementById('db-run-btn');
+  var status=document.getElementById('db-status');
+  btn.disabled=true; btn.textContent='Running...'; status.textContent='';
+  fetch('/admin/db-query',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({sql:sql})
+  }).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent='Run Query';
+    if(d.error){
+      status.style.color='#a32d2d'; status.textContent=d.error;
+      document.getElementById('db-results').innerHTML='';
+      return;
+    }
+    if(d.message){
+      status.style.color='#3b6d11'; status.textContent=d.message;
+      document.getElementById('db-results').innerHTML='';
+      return;
+    }
+    status.style.color='var(--text2)'; status.textContent=d.rowcount+' row'+(d.rowcount!==1?'s':'');
+    if(!d.columns.length){document.getElementById('db-results').innerHTML='';return;}
+    var t='<table style="border-collapse:collapse;width:100%"><thead><tr>';
+    d.columns.forEach(function(c){t+='<th style="padding:5px 10px;text-align:left;background:#f5f1eb;border:0.5px solid var(--border);white-space:nowrap">'+c+'</th>';});
+    t+='</tr></thead><tbody>';
+    d.rows.forEach(function(row,i){
+      t+='<tr style="background:'+(i%2?'var(--surface2)':'#fff')+'">';
+      row.forEach(function(v){t+='<td style="padding:5px 10px;border:0.5px solid var(--border);max-width:600px;word-break:break-word">'+v+'</td>';});
+      t+='</tr>';
+    });
+    t+='</tbody></table>';
+    document.getElementById('db-results').innerHTML=t;
+  }).catch(function(e){
+    btn.disabled=false; btn.textContent='Run Query';
+    status.style.color='#a32d2d'; status.textContent='Request failed: '+e.message;
+  });
+}
+document.getElementById('db-sql').addEventListener('keydown',function(e){
+  if(e.ctrlKey&&e.key==='Enter') runDbQuery();
+});
+</script>
+</body>
+</html>
+<div style="max-width:1100px;margin:1.5rem auto;padding:0 1rem">
   <h1 style="font-family:Georgia,serif;color:var(--brand);margin-bottom:0.25rem">Tips Audit</h1>
-  <p style="color:var(--text2);margin-bottom:1.5rem">Checks duplicates, settlement accuracy, E/W places and unsettled old tips.</p>
+  <p style="color:var(--text2);margin-bottom:1.5rem">Checks for duplicates, settlement accuracy, E/W places and old unsettled tips.</p>
 
   <div style="display:flex;gap:10px;margin-bottom:1.5rem;flex-wrap:wrap">
     <button class="btn-primary" onclick="runAudit('report')">&#128269; Run Audit</button>
@@ -36,16 +277,12 @@ function runAudit(action) {
     var dups = d.duplicates || [];
     status.push(dups.length + ' duplicate' + (dups.length !== 1 ? 's' : ''));
     if(d.duplicates_deleted) status.push(d.duplicates_deleted + ' duplicates deleted');
-    html += '<div class="panel" style="margin-bottom:1rem">';
-    html += '<div class="panel-title">&#128260; Duplicates (' + dups.length + ')</div>';
+    html += '<div class="panel" style="margin-bottom:1rem"><div class="panel-title">&#128260; Duplicates (' + dups.length + ')</div>';
     if(dups.length === 0) {
-      html += '<div style="color:var(--green);padding:0.5rem">&#10003; No duplicates found</div>';
+      html += '<div style="color:var(--green,#3b6d11);padding:0.5rem">&#10003; No duplicates found</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
-      html += '<th style="padding:5px 8px;text-align:left">Keep ID</th><th style="padding:5px 8px;text-align:left">Delete ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Course</th></tr></thead><tbody>';
-      dups.forEach(function(d) {
-        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + d.keep_id + '</td><td style="padding:5px 8px;color:#a32d2d">' + d.delete_id + '</td><td style="padding:5px 8px">' + d.horse_name + '</td><td style="padding:5px 8px">' + d.race_date + '</td><td style="padding:5px 8px">' + d.race_time + '</td><td style="padding:5px 8px">' + d.course + '</td></tr>';
-      });
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Keep ID</th><th style="padding:5px 8px;text-align:left">Delete ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Time</th><th style="padding:5px 8px;text-align:left">Course</th></tr></thead><tbody>';
+      dups.forEach(function(r) { html += '<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+r.keep_id+'</td><td style="padding:5px 8px;color:#a32d2d">'+r.delete_id+'</td><td style="padding:5px 8px">'+r.horse_name+'</td><td style="padding:5px 8px">'+r.race_date+'</td><td style="padding:5px 8px">'+r.race_time+'</td><td style="padding:5px 8px">'+r.course+'</td></tr>'; });
       html += '</tbody></table>';
       document.getElementById('btn-fix-dups').style.display = 'inline-block';
     }
@@ -54,34 +291,26 @@ function runAudit(action) {
     // Settlement mismatches
     var mm = d.settlement_mismatches || [];
     status.push(mm.length + ' settlement mismatch' + (mm.length !== 1 ? 'es' : ''));
-    html += '<div class="panel" style="margin-bottom:1rem">';
-    html += '<div class="panel-title">&#9878; Settlement Mismatches (' + mm.length + ')</div>';
+    html += '<div class="panel" style="margin-bottom:1rem"><div class="panel-title">&#9878; Settlement Mismatches (' + mm.length + ')</div>';
     if(mm.length === 0) {
-      html += '<div style="color:var(--green);padding:0.5rem">&#10003; All settlements match RunnerHistory</div>';
+      html += '<div style="color:var(--green,#3b6d11);padding:0.5rem">&#10003; All settlements match RunnerHistory</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
-      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Stored Pos</th><th style="padding:5px 8px;text-align:left">RH Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
-      mm.forEach(function(m) {
-        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + m.tip_id + '</td><td style="padding:5px 8px">' + m.horse_name + '</td><td style="padding:5px 8px">' + m.race_date + '</td><td style="padding:5px 8px">' + m.course + '</td><td style="padding:5px 8px;color:#a32d2d">' + m.tip_position + '</td><td style="padding:5px 8px;color:#3b6d11">' + m.rh_position + '</td><td style="padding:5px 8px">' + m.result_type + '</td></tr>';
-      });
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Stored Pos</th><th style="padding:5px 8px;text-align:left">RH Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
+      mm.forEach(function(m) { html += '<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+m.tip_id+'</td><td style="padding:5px 8px">'+m.horse_name+'</td><td style="padding:5px 8px">'+m.race_date+'</td><td style="padding:5px 8px">'+m.course+'</td><td style="padding:5px 8px;color:#a32d2d">'+m.tip_position+'</td><td style="padding:5px 8px;color:#3b6d11">'+m.rh_position+'</td><td style="padding:5px 8px">'+m.result_type+'</td></tr>'; });
       html += '</tbody></table>';
     }
     html += '</div>';
 
-    // E/W place issues
+    // EW issues
     var ew = d.ew_place_issues || [];
-    status.push(ew.length + ' E/W place issue' + (ew.length !== 1 ? 's' : ''));
+    status.push(ew.length + ' E/W issue' + (ew.length !== 1 ? 's' : ''));
     if(d.ew_places_fixed) status.push(d.ew_places_fixed + ' E/W places fixed');
-    html += '<div class="panel" style="margin-bottom:1rem">';
-    html += '<div class="panel-title">&#9812; E/W Place Issues (' + ew.length + ')</div>';
+    html += '<div class="panel" style="margin-bottom:1rem"><div class="panel-title">&#9812; E/W Place Issues (' + ew.length + ')</div>';
     if(ew.length === 0) {
-      html += '<div style="color:var(--green);padding:0.5rem">&#10003; All E/W places correct</div>';
+      html += '<div style="color:var(--green,#3b6d11);padding:0.5rem">&#10003; All E/W places correct</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
-      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Field</th><th style="padding:5px 8px;text-align:left">Stored Places</th><th style="padding:5px 8px;text-align:left">Correct Places</th><th style="padding:5px 8px;text-align:left">Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
-      ew.forEach(function(e) {
-        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + e.tip_id + '</td><td style="padding:5px 8px">' + e.horse_name + '</td><td style="padding:5px 8px">' + e.race_date + '</td><td style="padding:5px 8px">' + e.field_size + '</td><td style="padding:5px 8px;color:#a32d2d">' + e.stored_places + '</td><td style="padding:5px 8px;color:#3b6d11">' + e.correct_places + '</td><td style="padding:5px 8px">' + (e.position||'—') + '</td><td style="padding:5px 8px">' + (e.result_type||'—') + '</td></tr>';
-      });
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Field</th><th style="padding:5px 8px;text-align:left">Stored</th><th style="padding:5px 8px;text-align:left">Correct</th><th style="padding:5px 8px;text-align:left">Pos</th><th style="padding:5px 8px;text-align:left">Result</th></tr></thead><tbody>';
+      ew.forEach(function(e) { html += '<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+e.tip_id+'</td><td style="padding:5px 8px">'+e.horse_name+'</td><td style="padding:5px 8px">'+e.race_date+'</td><td style="padding:5px 8px">'+e.field_size+'</td><td style="padding:5px 8px;color:#a32d2d">'+e.stored_places+'</td><td style="padding:5px 8px;color:#3b6d11">'+e.correct_places+'</td><td style="padding:5px 8px">'+(e.position||'—')+'</td><td style="padding:5px 8px">'+(e.result_type||'—')+'</td></tr>'; });
       html += '</tbody></table>';
       document.getElementById('btn-fix-ew').style.display = 'inline-block';
     }
@@ -89,22 +318,18 @@ function runAudit(action) {
 
     // Old unsettled
     var ou = d.old_unsettled || [];
-    status.push(ou.length + ' old unsettled tip' + (ou.length !== 1 ? 's' : ''));
-    html += '<div class="panel" style="margin-bottom:1rem">';
-    html += '<div class="panel-title">&#9203; Unsettled Tips Older Than 2 Days (' + ou.length + ')</div>';
+    status.push(ou.length + ' old unsettled');
+    html += '<div class="panel" style="margin-bottom:1rem"><div class="panel-title">&#9203; Unsettled Tips Older Than 2 Days (' + ou.length + ')</div>';
     if(ou.length === 0) {
-      html += '<div style="color:var(--green);padding:0.5rem">&#10003; No old unsettled tips</div>';
+      html += '<div style="color:var(--green,#3b6d11);padding:0.5rem">&#10003; No old unsettled tips</div>';
     } else {
-      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb">';
-      html += '<th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Odds</th></tr></thead><tbody>';
-      ou.forEach(function(t) {
-        html += '<tr style="border-bottom:0.5px solid var(--border)"><td style="padding:5px 8px">' + t.tip_id + '</td><td style="padding:5px 8px">' + t.horse_name + '</td><td style="padding:5px 8px">' + t.race_date + '</td><td style="padding:5px 8px">' + t.course + '</td><td style="padding:5px 8px">' + t.odds + '</td></tr>';
-      });
+      html += '<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">ID</th><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Course</th><th style="padding:5px 8px;text-align:left">Odds</th></tr></thead><tbody>';
+      ou.forEach(function(t) { html += '<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+t.tip_id+'</td><td style="padding:5px 8px">'+t.horse_name+'</td><td style="padding:5px 8px">'+t.race_date+'</td><td style="padding:5px 8px">'+t.course+'</td><td style="padding:5px 8px">'+t.odds+'</td></tr>'; });
       html += '</tbody></table>';
     }
     html += '</div>';
 
-    document.getElementById('audit-status').textContent = 'Audit complete: ' + status.join(' | ');
+    document.getElementById('audit-status').textContent = 'Complete: ' + status.join(' | ');
     document.getElementById('audit-results').innerHTML = html;
 
   }).catch(function(e) {
@@ -112,4 +337,4 @@ function runAudit(action) {
   });
 }
 </script>
-{% endblock %}
+</div></body></html>
