@@ -258,15 +258,32 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
 </div>
 
 <script>
+function markNR(tipId) {
+  fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'mark_nr', tip_id:tipId})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.error){alert('Error: '+d.error);return;}
+      alert('Marked as NR');
+      settleFromRH();
+    });
+}
+
 function settleFromRH() {
   document.getElementById('audit-status').textContent = 'Settling from RunnerHistory...';
   fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})
     .then(function(r){return r.json();}).then(function(d){
       if(d.error){document.getElementById('audit-status').textContent='Error: '+d.error;return;}
       var msg = 'Settled: '+d.settled;
-      if(d.skipped&&d.skipped.length) msg += ' | Skipped: '+d.skipped.length+' ('+d.skipped.map(function(s){return s.horse+' - '+s.reason;}).join('; ')+')';
       if(d.errors&&d.errors.length) msg += ' | Errors: '+d.errors.length;
       document.getElementById('audit-status').textContent = msg;
+      if(d.skipped&&d.skipped.length){
+        var sh='<div class="panel" style="margin-top:1rem"><div class="panel-title">&#9203; Not Settled ('+d.skipped.length+')</div><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#f5f1eb"><th style="padding:5px 8px;text-align:left">Horse</th><th style="padding:5px 8px;text-align:left">Date</th><th style="padding:5px 8px;text-align:left">Reason</th><th style="padding:5px 8px;text-align:left">Action</th></tr></thead><tbody>';
+        d.skipped.forEach(function(s){
+          var action=s.can_nr?'<button onclick="markNR('+s.tip_id+')" style="padding:3px 10px;font-size:11px;cursor:pointer;border:0.5px solid #a32d2d;border-radius:4px;background:#fff;color:#a32d2d">Mark NR</button>':'—';
+          sh+='<tr style="border-bottom:0.5px solid #e8e0d5"><td style="padding:5px 8px">'+s.horse+'</td><td style="padding:5px 8px">'+s.date+'</td><td style="padding:5px 8px;color:var(--text2);font-size:11px">'+s.reason+'</td><td style="padding:5px 8px">'+action+'</td></tr>';
+        });
+        sh+='</tbody></table></div>';
+        document.getElementById('audit-results').innerHTML=sh;
+      }
     }).catch(function(e){document.getElementById('audit-status').textContent='Failed: '+e.message;});
 }
 

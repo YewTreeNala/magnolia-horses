@@ -101,6 +101,22 @@ def tips_settle_from_rh():
     import re as _re
     from tip_parser import settle_tip as _settle_tip
 
+    # Handle mark_nr action
+    action = (request.json or {}).get('action', 'settle')
+    if action == 'mark_nr':
+        tip_id = (request.json or {}).get('tip_id')
+        tip = Tip.query.get(tip_id)
+        if not tip:
+            return jsonify({'error': 'Tip not found'}), 404
+        if tip.result:
+            db.session.delete(tip.result)
+            db.session.flush()
+        tr = TipResult(tip_id=tip.id, position='NR', sp='', sp_dec=0, result_type='nr', win_pts=0, place_pts=0, total_pts=0)
+        db.session.add(tr)
+        tip.settled = True
+        db.session.commit()
+        return jsonify({'status': 'ok', 'tip_id': tip_id})
+
     def _strip(name):
         return _re.sub(r'\s*\([^)]+\)\s*$', '', name or '').strip().lower()
 
@@ -153,7 +169,22 @@ def tips_settle_from_rh():
                 break
 
         if not rh_match:
-            skipped.append({'horse': tip.horse_name, 'date': tip.race_date, 'reason': 'not in RunnerHistory or no position'})
+            # Check if horse IS in RunnerHistory but just has no position
+            rh_exists = None
+            for offset in [0, 1, -1, 2, -2, 3, -3, 4, -4]:
+                check_date = (base_dt + _td(days=offset)).strftime('%Y-%m-%d')
+                candidates = RunnerHistory.query.filter_by(race_date=check_date).all()
+                for rh in candidates:
+                    if _strip(rh.horse_name) == tip_name:
+                        rh_exists = rh
+                        break
+                if rh_exists:
+                    break
+            if rh_exists:
+                reason = 'in RunnerHistory but no position recorded - likely NR or result missing'
+            else:
+                reason = 'not found in RunnerHistory'
+            skipped.append({'horse': tip.horse_name, 'date': tip.race_date, 'reason': reason, 'tip_id': tip.id, 'can_nr': bool(rh_exists)})
             continue
 
         # Calculate result
