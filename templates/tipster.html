@@ -198,6 +198,7 @@
         <option value="">All</option>
         <option value="winplace">Won &amp; Placed</option>
         <option value="loss">Lost</option>
+        <option value="pending">Pending</option>
       </select>
       <select id="f-tagged" onchange="applyFilters()">
         <option value="">All horses</option>
@@ -390,6 +391,7 @@ function applyFilters(){
     if(fBet && t.bet_type !== fBet) return false;
     if(fResult==='winplace' && (!t.result||!(t.result.result_type==='win'||t.result.result_type==='place'))) return false;
     if(fResult==='loss' && (!t.result||t.result.result_type!=='loss')) return false;
+    if(fResult==='pending' && (t.result&&t.result.result_type)) return false;
     if(fResult==='pending' && (t.result&&t.result.result_type)) return false;
     if(fTagged === 'true'  && !t.tagged)  return false;
     if(fCourse && !(t.course||'').toLowerCase().includes(fCourse)) return false;
