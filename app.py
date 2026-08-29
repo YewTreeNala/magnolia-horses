@@ -1193,6 +1193,19 @@ def run_all_searches():
             match_reasons.setdefault(r.id, []).append('Search: ' + saved.name)
 
     matched = list(matched_ids.values())
+    # Deduplicate by horse_name+race_id in case of duplicate Runner records
+    seen = {}
+    deduped = []
+    for r in matched:
+        key = (r.horse_name.lower().strip(), r.race_id)
+        if key not in seen:
+            seen[key] = r.id
+            deduped.append(r)
+        else:
+            # Merge reasons from duplicate into kept runner
+            kept_id = seen[key]
+            match_reasons.setdefault(kept_id, []).extend(match_reasons.get(r.id, []))
+    matched = deduped
     if not matched:
         return jsonify([])
 
