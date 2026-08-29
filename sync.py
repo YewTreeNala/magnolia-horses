@@ -204,8 +204,10 @@ def sync_todays_races(app):
 
         # ── Existing meetings lookup ──────────────────────────────────────────
         existing_meetings = {}
-        for m in Meeting.query.all():
-            existing_meetings[f"{m.name.lower()}_{m.date}"] = m
+        for m in Meeting.query.order_by(Meeting.id).all():
+            key = f"{m.name.lower()}_{m.date}"
+            if key not in existing_meetings:  # keep lowest ID
+                existing_meetings[key] = m
 
         seen_keys     = set()
         result_writes = 0

@@ -251,6 +251,7 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
     <button class="btn-secondary" id="btn-fix-dups" style="display:none" onclick="runAudit('fix_duplicates')">&#128465; Fix Duplicates</button>
     <button class="btn-secondary" id="btn-fix-ew" style="display:none" onclick="runAudit('fix_ew_places')">&#9878; Fix E/W Places</button>
     <button class="btn-secondary" onclick="settleFromRH()">&#9654; Settle from RunnerHistory</button>
+    <button class="btn-secondary" onclick="fixDupeMeetings()">&#128260; Fix Duplicate Meetings</button>
   </div>
 
   <div id="audit-status" style="margin-bottom:1rem;font-size:13px;color:var(--text2)"></div>
@@ -258,6 +259,16 @@ document.getElementById('db-sql').addEventListener('keydown',function(e){
 </div>
 
 <script>
+function fixDupeMeetings() {
+  document.getElementById('audit-status').textContent = 'Fixing duplicate meetings...';
+  fetch('/api/admin/tips-settle-rh', {method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({action:'fix_duplicate_meetings'})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(d.error){document.getElementById('audit-status').textContent='Error: '+d.error;return;}
+      document.getElementById('audit-status').textContent='Deleted '+d.deleted+' duplicate meeting(s)';
+    }).catch(function(e){document.getElementById('audit-status').textContent='Failed: '+e.message;});
+}
+
 function manualSettle(tipId) {
   var pos = document.getElementById('pos-'+tipId).value.trim();
   var sp = document.getElementById('sp-'+tipId).value.trim();

@@ -103,6 +103,31 @@ def tips_settle_from_rh():
 
     # Handle mark_nr action
     action = (request.json or {}).get('action', 'settle')
+    if action == 'fix_duplicate_meetings':
+        # Find and delete duplicate meeting records, keeping the lowest ID
+        from sqlalchemy import func
+        dupes = db.session.query(
+            Meeting.name, Meeting.date,
+            func.min(Meeting.id).label('keep_id'),
+            func.count(Meeting.id).label('cnt')
+        ).group_by(Meeting.name, Meeting.date).having(func.count(Meeting.id) > 1).all()
+
+        deleted = 0
+        for dup in dupes:
+            # Delete all meetings with same name+date except the lowest ID
+            to_delete = Meeting.query.filter(
+                Meeting.name == dup.name,
+                Meeting.date == dup.date,
+                Meeting.id != dup.keep_id
+            ).all()
+            for m in to_delete:
+                # Reassign races to the kept meeting
+                Race.query.filter_by(meeting_id=m.id).update({'meeting_id': dup.keep_id})
+                db.session.delete(m)
+                deleted += 1
+        db.session.commit()
+        return jsonify({'status': 'ok', 'deleted': deleted})
+
     if action == 'mark_nr':
         tip_id = (request.json or {}).get('tip_id')
         tip = Tip.query.get(tip_id)
