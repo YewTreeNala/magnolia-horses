@@ -270,7 +270,8 @@ def _do_sync(app):
             result_key     = f"{strip_country(course).strip().lower()}_{off_time.strip()}"
             result_runners = results_by_key.get(result_key, {})
 
-            existing_runners = {r.horse_name.lower(): r for r in sorted(race.runners, key=lambda x: x.id)}
+            # Query DB directly to avoid stale in-memory state from concurrent syncs
+            existing_runners = {r.horse_name.lower(): r for r in Runner.query.filter_by(race_id=race.id).order_by(Runner.id).all()}
 
             for r in racecard.get("runners", []):
                 horse_name         = r.get("horse") or ""
