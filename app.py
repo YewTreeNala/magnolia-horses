@@ -141,8 +141,23 @@ def tips_settle_from_rh():
                 db.session.delete(race_to_delete)
                 deleted_races += 1
 
+        # Fix duplicate runners within races
+        dup_runners = db.session.query(
+            Runner.race_id, Runner.horse_name,
+            func.min(Runner.id).label('keep_id'),
+            func.max(Runner.id).label('delete_id'),
+            func.count(Runner.id).label('cnt')
+        ).group_by(Runner.race_id, Runner.horse_name).having(func.count(Runner.id) > 1).all()
+
+        deleted_runners = 0
+        for dr in dup_runners:
+            runner_to_delete = Runner.query.get(dr.delete_id)
+            if runner_to_delete:
+                db.session.delete(runner_to_delete)
+                deleted_runners += 1
+
         db.session.commit()
-        return jsonify({'status': 'ok', 'deleted_meetings': deleted_meetings, 'deleted_races': deleted_races})
+        return jsonify({'status': 'ok', 'deleted_meetings': deleted_meetings, 'deleted_races': deleted_races, 'deleted_runners': deleted_runners})
 
     if action == 'mark_nr':
         tip_id = (request.json or {}).get('tip_id')

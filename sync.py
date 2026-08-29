@@ -174,6 +174,16 @@ def update_horse_ids_from_runners(app):
 
 
 def sync_todays_races(app):
+    if not _sync_lock.acquire(blocking=False):
+        _log("INFO", "Sync already running - skipping")
+        return
+    try:
+        _do_sync(app)
+    finally:
+        _sync_lock.release()
+
+
+def _do_sync(app):
     with app.app_context():
 
         _log("INFO", "Sync started")
@@ -260,7 +270,7 @@ def sync_todays_races(app):
             result_key     = f"{strip_country(course).strip().lower()}_{off_time.strip()}"
             result_runners = results_by_key.get(result_key, {})
 
-            existing_runners = {r.horse_name.lower(): r for r in race.runners}
+            existing_runners = {r.horse_name.lower(): r for r in sorted(race.runners, key=lambda x: x.id)}
 
             for r in racecard.get("runners", []):
                 horse_name         = r.get("horse") or ""
