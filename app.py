@@ -1085,7 +1085,7 @@ def build_race_obj(r_data, tagged_map):
 def sort_by_meeting(runners, tagged_map):
     grouped = {}
     for r in runners:
-        m_key = r.race.meeting.name
+        m_key = r.race.meeting.id  # use ID not name to avoid duplicate meeting entries
         r_key = r.race.id
         if m_key not in grouped:
             grouped[m_key] = {'meeting': r.race.meeting, 'races': {}}
@@ -1094,7 +1094,7 @@ def sort_by_meeting(runners, tagged_map):
         grouped[m_key]['races'][r_key]['runners'].append(r)
     result = []
     for m_name, m_data in grouped.items():
-        meeting_obj = {'meeting': m_data['meeting'].name, 'date': m_data['meeting'].date, 'races': []}
+        meeting_obj = {'meeting': m_data['meeting'].name, 'date': m_data['meeting'].date, 'races': [], 'meeting_id': m_data['meeting'].id}
         for r_id, r_data in m_data['races'].items():
             meeting_obj['races'].append(build_race_obj(r_data, tagged_map))
         meeting_obj['races'].sort(key=lambda x: x['time'])
