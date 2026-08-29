@@ -1231,7 +1231,9 @@ def run_all_searches():
                 elif hf.lower() not in r.horse_name.lower():
                     continue
             matched_ids[r.id] = r
-            match_reasons.setdefault(r.id, []).append('Search: ' + saved.name)
+            reasons = match_reasons.setdefault(r.id, [])
+            reason_str = 'Search: ' + saved.name
+            if reason_str not in reasons: reasons.append(reason_str)
 
     matched = list(matched_ids.values())
     # Deduplicate by horse_name+race_id in case of duplicate Runner records
@@ -1258,7 +1260,7 @@ def run_all_searches():
         for race in meeting.get('races', []):
             for runner in race.get('runners', []):
                 rid = next((r.id for r in matched if r.horse_name == runner['name']), None)
-                runner['match_reason'] = ' & '.join(match_reasons.get(rid, [])) if rid else ''
+                runner['match_reason'] = ' & '.join(dict.fromkeys(match_reasons.get(rid, []))) if rid else ''
     return jsonify(result)
 
 
