@@ -232,9 +232,10 @@ def sync_todays_races(app):
             seen_keys.add(m_key)
 
             race = None
-            for er in meeting.races:
+            for er in sorted(meeting.races, key=lambda x: x.id):  # lowest ID first
                 if er.time == off_time and er.name == race_name:
                     race = er
+                    break  # use first match only
                     break
 
             if race is None:

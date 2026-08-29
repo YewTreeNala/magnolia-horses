@@ -265,7 +265,7 @@ function fixDupeMeetings() {
     body:JSON.stringify({action:'fix_duplicate_meetings'})})
     .then(function(r){return r.json();}).then(function(d){
       if(d.error){document.getElementById('audit-status').textContent='Error: '+d.error;return;}
-      document.getElementById('audit-status').textContent='Deleted '+d.deleted+' duplicate meeting(s)';
+      document.getElementById('audit-status').textContent='Deleted '+d.deleted_meetings+' duplicate meeting(s) and '+d.deleted_races+' duplicate race(s)';
     }).catch(function(e){document.getElementById('audit-status').textContent='Failed: '+e.message;});
 }
 

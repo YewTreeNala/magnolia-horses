@@ -112,21 +112,37 @@ def tips_settle_from_rh():
             func.count(Meeting.id).label('cnt')
         ).group_by(Meeting.name, Meeting.date).having(func.count(Meeting.id) > 1).all()
 
-        deleted = 0
+        deleted_meetings = 0
         for dup in dupes:
-            # Delete all meetings with same name+date except the lowest ID
             to_delete = Meeting.query.filter(
                 Meeting.name == dup.name,
                 Meeting.date == dup.date,
                 Meeting.id != dup.keep_id
             ).all()
             for m in to_delete:
-                # Reassign races to the kept meeting
                 Race.query.filter_by(meeting_id=m.id).update({'meeting_id': dup.keep_id})
                 db.session.delete(m)
-                deleted += 1
+                deleted_meetings += 1
+        db.session.flush()
+
+        # Fix duplicate races within meetings
+        dup_races = db.session.query(
+            Race.meeting_id, Race.time, Race.name,
+            func.min(Race.id).label('keep_id'),
+            func.max(Race.id).label('delete_id'),
+            func.count(Race.id).label('cnt')
+        ).group_by(Race.meeting_id, Race.time, Race.name).having(func.count(Race.id) > 1).all()
+
+        deleted_races = 0
+        for dr in dup_races:
+            Runner.query.filter_by(race_id=dr.delete_id).update({'race_id': dr.keep_id})
+            race_to_delete = Race.query.get(dr.delete_id)
+            if race_to_delete:
+                db.session.delete(race_to_delete)
+                deleted_races += 1
+
         db.session.commit()
-        return jsonify({'status': 'ok', 'deleted': deleted})
+        return jsonify({'status': 'ok', 'deleted_meetings': deleted_meetings, 'deleted_races': deleted_races})
 
     if action == 'mark_nr':
         tip_id = (request.json or {}).get('tip_id')
