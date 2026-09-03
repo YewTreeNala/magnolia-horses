@@ -174,16 +174,6 @@ def update_horse_ids_from_runners(app):
 
 
 def sync_todays_races(app):
-    if not _sync_lock.acquire(blocking=False):
-        _log("INFO", "Sync already running - skipping")
-        return
-    try:
-        _do_sync(app)
-    finally:
-        _sync_lock.release()
-
-
-def _do_sync(app):
     with app.app_context():
 
         _log("INFO", "Sync started")
