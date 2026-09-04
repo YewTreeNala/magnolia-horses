@@ -291,7 +291,7 @@ def send_morning_alerts(app):
     with app.app_context():
         today       = date.today().strftime('%Y-%m-%d')
         all_runners = db.session.query(Runner).join(Race).join(Meeting)\
-            .filter(Meeting.date == today).all()
+            .filter(Meeting.date == today).distinct(Runner.id).all()
 
         alerts_sent = 0
         for user in User.query.all():
@@ -322,7 +322,7 @@ def send_morning_alerts_for_user(user_id, app):
 
         today       = date.today().strftime('%Y-%m-%d')
         all_runners = db.session.query(Runner).join(Race).join(Meeting)\
-            .filter(Meeting.date == today).all()
+            .filter(Meeting.date == today).distinct(Runner.id).all()
 
         combined = _build_combined_for_user(user, all_runners)
         if not combined:
