@@ -553,8 +553,8 @@ function updateStatsFromFiltered(tips){
     } catch(e) { return key; }
   }
   var buckets={};
-  for(var bi=0;bi<filtered.length;bi++){
-    var bt=filtered[bi];
+  for(var bi=0;bi<tips.length;bi++){
+    var bt=tips[bi];
     if(!bt.result||!bt.result.result_type||bt.result.result_type==='pending'||bt.result.result_type==='nr') continue;
     var bk=bucketKey(bt.race_date||bt.tip_date||'');
     if(!bk) continue;
