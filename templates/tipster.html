@@ -523,14 +523,65 @@ function updateStatsFromFiltered(tips){
   setEl('s-roi-bog',(roibog2>=0?'+':'')+roibog2+'%',roibog2>=0?'pos':'neg');
   setEl('s-gbp-bog',(gbpbog2>=0?'+£':'-£')+Math.abs(gbpbog2).toFixed(0),gbpbog2>=0?'pos':'neg');
 
-  // Rebuild chart
-  var months=Object.keys(monthly).sort();
+  // Rebuild chart - bucket by day/week/month based on period
+  var fPeriodChart = document.getElementById('f-period').value;
+  function bucketKey(dateStr) {
+    var d = new Date(dateStr);
+    if(fPeriodChart === 'month' || fPeriodChart === 'last_month') {
+      // Daily: YYYY-MM-DD
+      return dateStr.slice(0,10);
+    } else if(fPeriodChart === '3months' || fPeriodChart === '6months') {
+      // Weekly: week starting Monday
+      var day = d.getDay() || 7;
+      var mon = new Date(d); mon.setDate(d.getDate() - day + 1);
+      return mon.toISOString().slice(0,10);
+    } else {
+      // Monthly: YYYY-MM
+      return dateStr.slice(0,7);
+    }
+  }
+  function bucketLabel(key) {
+    if(fPeriodChart === 'month' || fPeriodChart === 'last_month') {
+      var d = new Date(key); return d.getDate()+'/'+(d.getMonth()+1);
+    } else if(fPeriodChart === '3months' || fPeriodChart === '6months') {
+      var d = new Date(key); return d.getDate()+'/'+(d.getMonth()+1);
+    } else {
+      var parts = key.split('-');
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return months[parseInt(parts[1])-1]+' '+parts[0].slice(2);
+    }
+  }
+  var buckets={};
+  for(var bi=0;bi<filtered.length;bi++){
+    var bt=filtered[bi];
+    if(!bt.result||!bt.result.result_type||bt.result.result_type==='pending') continue;
+    var bk=bucketKey(bt.race_date||bt.tip_date||'');
+    if(!bk) continue;
+    if(!buckets[bk]) buckets[bk]={retTips:0,retSP:0,retBOG:0,staked:0};
+    var bs=bt.stake_pts||0.5, bew=bt.bet_type==='ew';
+    buckets[bk].staked+=bs*(bew?2:1);
+    var btD=bt.odds_dec||0, bpos=parseInt((bt.result&&bt.result.position)||'99')||99;
+    var bpl=bt.each_way_places||4, bfr=5;
+    if(btD>1){
+      var bwp=bpos===1?bs*(btD-1):-bs;
+      var bpp=bew?((bpos>=1&&bpos<=bpl)?bs*((btD-1)/bfr):-bs):0;
+      buckets[bk].retTips+=bs*(bew?2:1)+(bwp+(bew?bpp:0));
+    } else { buckets[bk].retTips+=bt.result.total_pts||0; }
+    var bspD=bt.result.sp_dec||0;
+    if(bspD>1){
+      var bwpSP=bpos===1?bs*(bspD-1):-bs;
+      var bppSP=bew?((bpos>=1&&bpos<=bpl)?bs*((bspD-1)/bfr):-bs):0;
+      buckets[bk].retSP+=bs*(bew?2:1)+(bwpSP+(bew?bppSP:0));
+    } else { buckets[bk].retSP+=bt.result.total_pts||0; }
+    buckets[bk].retBOG+=buckets[bk].retTips;
+  }
+  var bkeys=Object.keys(buckets).sort();
   var labels=[],cumT=[],cumS=[],cumB=[],runT=0,runS=0,runB=0;
-  for(var j=0;j<months.length;j++){
-    var md=monthly[months[j]];
+  for(var j=0;j<bkeys.length;j++){
+    var md=buckets[bkeys[j]];
     runT+=md.retTips-md.staked;
     runS+=md.retSP-md.staked;
-    labels.push(months[j]);
+    labels.push(bucketLabel(bkeys[j]));
     cumT.push(+(runT*PTS).toFixed(0));
     cumS.push(+(runS*PTS).toFixed(0));
     runB+=md.retBOG-md.staked;
