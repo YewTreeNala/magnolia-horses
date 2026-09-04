@@ -152,9 +152,13 @@ def extract_header(text):
         if clean.lower() in COURSE_ALIASES or clean.title() in COURSE_ALIASES.values():
             return normalise_course(clean), None
         # Match "Royal Ascot" style
-        if re.match(r'^[A-Z][A-Za-z\s]+$', clean) and 2 <= len(clean.split()) <= 4:
+        if re.match(r'^[A-Z][A-Za-z\s-]+$', clean) and 1 <= len(clean.split()) <= 4:
             normed = normalise_course(clean)
-            if normed != clean.title() or clean.lower() in COURSE_ALIASES:
+            # Accept if it's a known alias OR looks like a racecourse (not a common word)
+            non_course_words = {'morning', 'evening', 'good', 'thursday', 'friday', 'saturday',
+                                'sunday', 'monday', 'tuesday', 'wednesday', 'update', 'selections',
+                                'tomorrow', 'today', 'ladies', 'another', 'bear', 'hi', 'hello'}
+            if clean.lower() not in non_course_words:
                 return normed, None
     return None, None
 
