@@ -237,11 +237,11 @@ def _matches_filters(r, f):
 def _build_combined_for_user(user, all_runners):
     import json
     runner_reasons = {}
-    # Deduplicate runners by horse_name+race_id
+    # Deduplicate runners by horse_name+meeting+time
     seen_runners = {}
     deduped_runners = []
     for r in all_runners:
-        key = (r.horse_name.lower().strip(), r.race_id)
+        key = (r.horse_name.lower().strip(), r.race.meeting.name.lower(), r.race.time)
         if key not in seen_runners:
             seen_runners[key] = True
             deduped_runners.append(r)

@@ -231,12 +231,12 @@ def sync_todays_races(app):
                 existing_meetings[m_key] = meeting
             seen_keys.add(m_key)
 
-            race = None
-            for er in sorted(meeting.races, key=lambda x: x.id):  # lowest ID first
-                if er.time == off_time and er.name == race_name:
-                    race = er
-                    break  # use first match only
-                    break
+            # Query races directly from DB to avoid stale relationship cache
+            race = Race.query.filter_by(
+                meeting_id=meeting.id,
+                time=off_time,
+                name=race_name
+            ).order_by(Race.id).first()
 
             if race is None:
                 race = Race(
