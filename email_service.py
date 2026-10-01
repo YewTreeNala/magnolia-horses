@@ -3,7 +3,7 @@ import os
 import requests
 from datetime import datetime
 
-SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+BREVO_API_KEY = os.getenv('BREVO_API_KEY')
 FROM_EMAIL       = os.getenv('FROM_EMAIL', 'alerts@magnoliahorses.com')
 SITE_URL         = os.getenv('SITE_URL', 'https://magnoliahorses.com')
 
@@ -27,7 +27,7 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
     from datetime import datetime as _dt
     status = 'sent'
 
-    if not SENDGRID_API_KEY:
+    if not BREVO_API_KEY:
         print(f'[Email] No Brevo API key - would have sent to {to_email}: {subject}')
         status = 'no_api_key'
     else:
@@ -41,7 +41,7 @@ def send_email(to_email, to_name, subject, html_body, user_id=None):
             'https://api.brevo.com/v3/smtp/email',
             json=payload,
             headers={
-                'api-key': SENDGRID_API_KEY,
+                'api-key': BREVO_API_KEY,
                 'Content-Type': 'application/json'
             }
         )
@@ -341,4 +341,4 @@ def send_morning_alerts_for_user(user_id, app):
         )
         if ok:
             return {'status': 'sent', 'message': 'Test email sent to ' + user.email + ' with ' + str(n) + ' runners'}
-        return {'status': 'failed', 'message': 'Email send failed - check SendGrid API key'}
+        return {'status': 'failed', 'message': 'Email send failed - check Brevo API key'}
