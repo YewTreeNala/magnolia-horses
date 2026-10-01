@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult, MT5Event
 from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history, update_horse_ids_from_runners
 from email_service import send_morning_alerts
 from betfair_lookup import get_betfair_market_url
@@ -3881,6 +3881,116 @@ Power Blue jumps out at every touch point. A Group 1 winner over 6f at the track
     db.session.commit()
     _settle_pending_tips()
     return jsonify({'status': 'ok', 'created': created})
+
+
+# ── MT5 trading-system push/query ───────────────────────────────────────────────
+#
+# Replaces pulling trade data from the MT5Service VPS over a Cloudflare Tunnel.
+# The VPS instead pushes every signal/ticket/instruction event here as it
+# happens (outbound from the VPS, same shape as its Telegram connection — no
+# inbound exposure on the VPS to keep working), and Mark queries it from this
+# site instead of needing shell access to the VPS.
+#
+# Two separate secrets, same pattern as TIPSTER_WEBHOOK_SECRET above:
+#   MT5_PUSH_SECRET  - the VPS authenticates with this to push events in.
+#   MT5_QUERY_KEY    - used to authenticate read queries (dashboard + API).
+# Both must be set as Railway env vars, and MT5_PUSH_SECRET must also be set
+# in the VPS's config.ini under [push]. Neither has a default — if unset,
+# the corresponding endpoint refuses everything rather than silently running
+# open.
+
+MT5_PUSH_SECRET = os.getenv('MT5_PUSH_SECRET', '')
+MT5_QUERY_KEY   = os.getenv('MT5_QUERY_KEY', '')
+
+
+@app.route('/mt5/ingest', methods=['POST'])
+def mt5_ingest():
+    secret = request.headers.get('X-MT5-Secret', '')
+    if not MT5_PUSH_SECRET or not hmac.compare_digest(secret, MT5_PUSH_SECRET):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    body = request.get_json(silent=True) or {}
+    events = body.get('events')
+    if events is None and body.get('natural_key'):
+        events = [body]  # allow pushing a single event without wrapping it
+    if not events:
+        return jsonify({'error': 'no events'}), 400
+
+    created, updated, skipped = 0, 0, 0
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    for e in events:
+        natural_key = (e.get('natural_key') or '').strip()
+        if not natural_key:
+            skipped += 1
+            continue
+        row = MT5Event.query.filter_by(natural_key=natural_key).first()
+        if row is None:
+            row = MT5Event(natural_key=natural_key, data='{}')
+            db.session.add(row)
+            created += 1
+        else:
+            updated += 1
+        # Merge, don't overwrite: a ticket's lifecycle pushes in stages
+        # (opened -> breakeven -> closed), each with only the fields that
+        # stage knows. A plain overwrite would let a later close-only push
+        # erase the entry/SL fields from the original open push.
+        try:
+            existing_data = json.loads(row.data) if row.data else {}
+        except Exception:
+            existing_data = {}
+        existing_data.update(e.get('data', {}))
+        row.data = json.dumps(existing_data)
+        # Same reasoning for the indexed columns - keep the prior value
+        # unless this push actually supplies a new one.
+        if e.get('source'):     row.source = e['source']
+        if e.get('kind'):       row.kind = e['kind']
+        if e.get('symbol'):     row.symbol = e['symbol']
+        if e.get('event_time'): row.event_time = e['event_time']
+        row.received_at = now
+
+    db.session.commit()
+    return jsonify({'status': 'ok', 'created': created, 'updated': updated, 'skipped': skipped})
+
+
+@app.route('/mt5/api/trades')
+def mt5_api_trades():
+    key = request.args.get('key', '')
+    if not MT5_QUERY_KEY or not hmac.compare_digest(key, MT5_QUERY_KEY):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    symbol = request.args.get('symbol', '').strip()
+    source = request.args.get('source', 'all').strip().lower()
+    date_str = request.args.get('date', '').strip()
+
+    query = MT5Event.query
+    if symbol:
+        query = query.filter(MT5Event.symbol == symbol)
+    if source and source != 'all':
+        query = query.filter(MT5Event.source == source)
+    if date_str:
+        query = query.filter(MT5Event.event_time.like(f'{date_str}%'))
+
+    rows = query.order_by(MT5Event.event_time.desc()).limit(1000).all()
+    return jsonify([{
+        'id':          r.id,
+        'source':      r.source,
+        'kind':        r.kind,
+        'symbol':      r.symbol,
+        'event_time':  r.event_time,
+        'natural_key': r.natural_key,
+        'data':        json.loads(r.data) if r.data else {},
+        'received_at': r.received_at,
+    } for r in rows])
+
+
+@app.route('/mt5')
+@login_required
+def mt5_dashboard():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('admin_mt5.html', is_admin=True, page_id='admin',
+                           query_key=MT5_QUERY_KEY)
 
 
 if __name__ == '__main__':

@@ -293,3 +293,27 @@ class SyncLog(db.Model):
     created_at = db.Column(db.String(30))
     level      = db.Column(db.String(10))
     message    = db.Column(db.Text)
+
+
+class MT5Event(db.Model):
+    """
+    One row per trade-system event (signal received / ticket opened or
+    closed / instruction such as breakeven or manual close), pushed here
+    from the MT5Service VPS as it happens. Replaces pulling this data from
+    the VPS over a Cloudflare Tunnel: the VPS pushes outbound instead, the
+    same reliable connection shape it already uses for Telegram, so there
+    is nothing inbound on the VPS to keep working.
+
+    natural_key is how a retried push (e.g. after a network blip) never
+    creates a duplicate row for the same underlying trading.db row -
+    ingest is an upsert keyed on it, never a plain insert.
+    """
+    __tablename__ = 'mt5_event'
+    id          = db.Column(db.Integer, primary_key=True)
+    source      = db.Column(db.String(10), index=True)   # t1 | t2 | t3 | lewis
+    kind        = db.Column(db.String(20), index=True)   # signal | ticket | instruction
+    symbol      = db.Column(db.String(20), index=True)
+    event_time  = db.Column(db.String(30), index=True)   # UK-local 'YYYY-MM-DD HH:MM:SS'
+    natural_key = db.Column(db.String(120), unique=True, nullable=False)
+    data        = db.Column(db.Text)       # JSON - every field from the source trading.db row
+    received_at = db.Column(db.String(30))
