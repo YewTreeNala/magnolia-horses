@@ -214,11 +214,15 @@
     </div>
     <div class="nav-links">
       <a href="/" class="{% if page_id == 'search' %}active{% endif %}">Search</a>
+      {% if current_user.is_authenticated %}
       <a href="/my-horses" class="{% if page_id == 'my_horses' %}active{% endif %}">My horses</a>
       {% if can_tipster %}<a href="/tipster" class="{% if page_id == 'tipster' %}active{% endif %}">Tipster</a>{% endif %}
       <a href="/account" class="{% if page_id == 'account' %}active{% endif %}">Account</a>
       {% if is_admin %}<a href="/admin/users" class="{% if page_id == 'admin' %}active{% endif %}">Admin</a><a href="/admin/history">History</a>{% endif %}
       <a href="/logout">Sign out</a>
+      {% else %}
+      <a href="/login">Sign in</a>
+      {% endif %}
     </div>
   </div>
 
