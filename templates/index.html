@@ -1638,7 +1638,7 @@ function openHistoryModal(horseId, horseName, coRunners, horseInfo) {
   fetch('/api/horse-history/' + (horseId || 'unknown')
         + '?name=' + encodeURIComponent(horseName || ''))
     .then(function(r) { return r.json(); })
-    .then(function(runs) { renderHistoryRuns(runs, coRunners, horseInfo); })
+    .then(function(runs) { renderHistoryRuns(runs, coRunners, horseInfo, horseId); })
     .catch(function() {
       document.getElementById('history-body').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--red)">Could not load history.</div>';
     });
@@ -1828,8 +1828,10 @@ function _buildHeadToHead(runs, rivals, thisHorse) {
     + '</div>';
 }
 
-function renderHistoryRuns(runs, coRunners, horseInfo) {
+function renderHistoryRuns(runs, coRunners, horseInfo, thisHorseId) {
   coRunners = coRunners || [];
+  // Exclude the horse itself from its own co-runners list
+  if (thisHorseId) coRunners = coRunners.filter(function(id) { return id !== thisHorseId; });
   var body = document.getElementById('history-body');
 
   if (!runs || !runs.length) {
