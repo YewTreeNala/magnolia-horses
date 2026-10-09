@@ -2236,7 +2236,7 @@ def get_tipped_horses():
 
         result[key]['tips'].append({
             'tip_id':     t.id,
-            'race_date':  t.tip_date or t.race_date or '',
+            'race_date':  t.race_date or t.tip_date or '',
             'race_time':  t.race_time or '',
             'course':     t.course or '',
             'odds':       t.odds or '',
