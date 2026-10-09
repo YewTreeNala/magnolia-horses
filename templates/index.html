@@ -976,7 +976,8 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
         // match_reason comes from run-all-searches — use it directly
         var _reasons = r.match_reason.split(' & ');
         for (var m = 0; m < _reasons.length; m++) {
-          if (_reasons[m].toLowerCase().indexOf('tof') !== -1 || _reasons[m].toLowerCase().indexOf('tipster') !== -1) continue; // skip — gold badge already shown
+          // If gold badge already shown for today's tip, skip duplicating a TOF-named saved search badge
+          if (_isTippedToday && (_reasons[m].toLowerCase().indexOf('tof') !== -1 || _reasons[m].toLowerCase().indexOf('tipster') !== -1)) continue;
           matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(_reasons[m]) + '</span>';
         }
       } else if (savedSearches.length) {
@@ -2276,7 +2277,7 @@ function openRacePopup(raceKey, highlightHorse) {
     if (_reason) {
       var _rParts = _reason.split(' & ');
       for (var _rp = 0; _rp < _rParts.length; _rp++) {
-        if (_rParts[_rp].toLowerCase().indexOf('tof') !== -1 || _rParts[_rp].toLowerCase().indexOf('tipster') !== -1) continue;
+        if (_popupTippedToday && (_rParts[_rp].toLowerCase().indexOf('tof') !== -1 || _rParts[_rp].toLowerCase().indexOf('tipster') !== -1)) continue;
         _badgeCells += '<span class="search-match-badge">&#128269; ' + escHtml(_rParts[_rp]) + '</span>';
       }
     }
