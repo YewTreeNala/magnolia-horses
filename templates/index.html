@@ -121,6 +121,7 @@
     .tag-btn.tagged { color: var(--brand); border-color: var(--brand); background: var(--brand-light); }
     .tag-notes-dot { font-size: 7px; color: var(--brand); vertical-align: super; margin-left: 1px; }
     .search-match-badge { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: var(--blue-bg); color: var(--blue); border: 0.5px solid rgba(24,95,165,0.25); white-space: nowrap; font-weight: 500; }
+    .tof-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: linear-gradient(135deg, #b8860b, #d4a017); color: #fff; border: 0.5px solid #a07800; white-space: nowrap; font-weight: 700; letter-spacing: 0.02em; box-shadow: 0 1px 4px rgba(180,130,0,0.35); }
 
     .spotlight-wrap { position: relative; display: inline-flex; }
     .spotlight-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; line-height: 1; border-radius: 3px; color: var(--text3); display: inline-flex; align-items: center; gap: 2px; }
@@ -329,7 +330,7 @@
       <div class="filter-group">
         <label>Country</label>
         <button type="button" id="uk-btn" style="width:100%;padding:7px 10px;font-size:11px;font-family:inherit;border-radius:var(--radius);cursor:pointer;min-height:38px;white-space:nowrap;transition:background 0.15s,color 0.15s;background:var(--slug);color:#fff;border:0.5px solid var(--slug);font-weight:500">&#127468;&#127463; UK only</button>
-        <input type="checkbox" id="f-uk-only" checked style="display:none"/>
+        <input type="checkbox" id="f-uk-only" style="display:none"/>
       </div>
     </div>
 
@@ -968,11 +969,16 @@ function buildRaceBlock(race, meetingLabel, meetingNameOverride) {
     var _tf=(document.getElementById('f-tipster')||{value:''}).value;
     if(_tf){var _rk=(rName||'').toLowerCase().trim();var _it=!!tippedHorses[_rk];if(_tf==='tof'&&!_it)continue;}
     var matchBadges = '';
+    var _isTippedToday = tippedHorses[(rName||'').toLowerCase().trim()] && tippedHorses[(rName||'').toLowerCase().trim()].tipped_today;
+    if (_isTippedToday) matchBadges += '<span class="tof-badge">&#11088; TOF tip</span>';
     if (IS_LOGGED_IN) {
       if (r.match_reason) {
         // match_reason comes from run-all-searches — use it directly
         var _reasons = r.match_reason.split(' & ');
-        for (var m = 0; m < _reasons.length; m++) matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(_reasons[m]) + '</span>';
+        for (var m = 0; m < _reasons.length; m++) {
+          if (_reasons[m].toLowerCase().indexOf('tof') !== -1 || _reasons[m].toLowerCase().indexOf('tipster') !== -1) continue; // skip — gold badge already shown
+          matchBadges += '<span class="search-match-badge">&#128269; ' + escHtml(_reasons[m]) + '</span>';
+        }
       } else if (savedSearches.length) {
         // fall back to client-side matching for regular searches
         var matches = getMatchingSearches(r, mName);
@@ -1234,7 +1240,7 @@ function clearFilters() {
   document.getElementById('f-type').value      = '';
   document.getElementById('f-class').value     = '';
   document.getElementById('f-sort').value      = 'meeting';
-  document.getElementById('f-uk-only').checked = true;
+  document.getElementById('f-uk-only').checked = false;
   var _ftc=document.getElementById('f-tipster');if(_ftc)_ftc.value='';
 
   document.getElementById('f-meeting').value   = '';
@@ -2264,11 +2270,17 @@ function openRacePopup(raceKey, highlightHorse) {
       }
     }
     var _reason = _reasonMap[(r.name || '').toLowerCase()] || '';
+    var _popupTippedToday = tippedHorses[(r.name||'').toLowerCase().trim()] && tippedHorses[(r.name||'').toLowerCase().trim()].tipped_today;
+    var _badgeCells = '';
+    if (_popupTippedToday) _badgeCells += '<span class="tof-badge">&#11088; TOF tip</span>';
     if (_reason) {
-      rows += '<td style="padding:7px 10px">' + '<span class="search-match-badge">&#128269; ' + escHtml(_reason) + '</span></td>';
-    } else {
-      rows += '<td></td>';
+      var _rParts = _reason.split(' & ');
+      for (var _rp = 0; _rp < _rParts.length; _rp++) {
+        if (_rParts[_rp].toLowerCase().indexOf('tof') !== -1 || _rParts[_rp].toLowerCase().indexOf('tipster') !== -1) continue;
+        _badgeCells += '<span class="search-match-badge">&#128269; ' + escHtml(_rParts[_rp]) + '</span>';
+      }
     }
+    rows += '<td style="padding:7px 10px">' + (_badgeCells || '') + '</td>';
     rows += '</tr>';
   }
 
