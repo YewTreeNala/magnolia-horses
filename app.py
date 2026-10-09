@@ -3235,6 +3235,7 @@ def get_tips():
             'id':              t.id,
             'horse_name':      t.horse_name,
             'tip_date':        t.tip_date,
+            'race_date':       t.race_date,
             'course':          t.course,
             'race_time':       t.race_time,
             'bet_type':        t.bet_type,
