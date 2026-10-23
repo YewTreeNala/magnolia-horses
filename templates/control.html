@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Control — Magnolia Horses</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root { --bg:#f5f1eb; --surface:#fff; --surface2:#f1f0ec; --border:rgba(0,0,0,.1); --border2:rgba(0,0,0,.18);
+  --text:#2a1f14; --text2:#6b5a48; --text3:#9c8a78; --brand:#8b3a3a; --red:#a32d2d; --red-bg:#fcebeb;
+  --amber:#8a5a00; --amber-bg:#fdf3dc; --blue:#1f4e79; --blue-bg:#e6eff8; --radius:8px; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1b1713; --surface:#26211b; --surface2:#2f2922; --border:rgba(255,255,255,.1);
+  --border2:rgba(255,255,255,.2); --text:#f0e9df; --text2:#bfb2a2; --text3:#8f8374; --brand:#e0908a; --red:#ff9a9a; --red-bg:#4a2323;
+  --amber:#f0c36a; --amber-bg:#46361a; --blue:#8ec1f0; --blue-bg:#1f3347; } }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.5; }
+.page { max-width:900px; margin:0 auto; padding:1rem 16px 3rem; }
+header { display:flex; align-items:baseline; gap:12px; padding:.75rem 0; border-bottom:.5px solid var(--border2); margin-bottom:1rem; flex-wrap:wrap; }
+h1 { font-size:20px; font-family:Georgia,serif; color:var(--brand); }
+header a { margin-left:auto; font-size:13px; color:var(--brand); text-decoration:none; }
+.tabs { display:flex; gap:6px; margin-bottom:1rem; }
+.tab { padding:6px 14px; border-radius:var(--radius); font-size:14px; background:var(--surface2); color:var(--text2); }
+.tab.on { background:var(--brand); color:#fff; }
+.filters { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:.75rem; }
+.filters .wide { grid-column:1 / -1; }
+.filters input, .filters select { width:100%; padding:9px 10px; font-size:16px; font-family:inherit; background:var(--surface); color:var(--text);
+  border:.5px solid var(--border2); border-radius:var(--radius); }
+.meta { font-size:13px; color:var(--text2); margin-bottom:.75rem; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.meta button { font-size:13px; padding:3px 10px; background:var(--surface2); color:var(--text); border:.5px solid var(--border2); border-radius:var(--radius); cursor:pointer; }
+.day { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--text3); margin:1.1rem 0 .4rem; }
+.msg { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); padding:9px 12px; margin-bottom:6px; }
+.msg.out { border-left:3px solid var(--blue); }
+.msg.warn { border-left:3px solid var(--amber); }
+.msg.error { border-left:3px solid var(--red); }
+.top { display:flex; gap:8px; align-items:center; font-size:12px; color:var(--text2); margin-bottom:3px; flex-wrap:wrap; }
+.chip { padding:1px 8px; border-radius:99px; background:var(--surface2); font-size:11px; font-weight:600; text-transform:uppercase; }
+.chip.out { background:var(--blue-bg); color:var(--blue); }
+.chip.file { background:var(--amber-bg); color:var(--amber); }
+.body { white-space:pre-wrap; word-break:break-word; font-size:14px; }
+.body.clamped { max-height:7.5em; overflow:hidden; -webkit-mask-image:linear-gradient(#000 70%,transparent); mask-image:linear-gradient(#000 70%,transparent); }
+.more { font-size:12px; color:var(--brand); cursor:pointer; margin-top:2px; background:none; border:none; padding:0; }
+mark { background:var(--amber-bg); color:var(--text); border-radius:2px; padding:0 1px; }
+.panel { background:var(--surface); border:.5px solid var(--border); border-radius:var(--radius); padding:12px; margin-bottom:10px; }
+.panel h3 { font-size:15px; margin-bottom:6px; color:var(--brand); }
+.panel p.hint { font-size:12px; color:var(--text2); margin-bottom:8px; }
+.row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+.row input, .row select, .panel textarea { padding:9px 10px; font-size:16px; font-family:inherit; background:var(--surface2); color:var(--text); border:.5px solid var(--border2); border-radius:var(--radius); }
+.row input[type=date] { min-width:150px; }
+.btn { padding:9px 16px; font-size:14px; font-family:inherit; border:none; border-radius:var(--radius); background:var(--brand); color:#fff; cursor:pointer; }
+.btn.danger { background:var(--red); } .btn.ghost { background:var(--surface2); color:var(--text); border:.5px solid var(--border2); }
+.btn[disabled] { opacity:.5; cursor:default; }
+.status { font-size:12px; padding:1px 8px; border-radius:99px; background:var(--surface2); }
+.status.done { background:var(--blue-bg); color:var(--blue); } .status.failed, .status.expired { background:var(--red-bg); color:var(--red); }
+.status.pending, .status.running { background:var(--amber-bg); color:var(--amber); }
+pre.out { white-space:pre-wrap; word-break:break-word; font-size:12.5px; background:var(--surface2); border-radius:var(--radius); padding:10px; max-height:60vh; overflow:auto; margin-top:8px; }
+.shots { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:8px; }
+.shots a { display:block; border:.5px solid var(--border2); border-radius:var(--radius); overflow:hidden; font-size:11px; color:var(--text2); text-decoration:none; }
+.shots img { width:100%; display:block; } .shots span { display:block; padding:3px 6px; word-break:break-all; }
+.err { color:var(--red); font-size:13px; margin-top:6px; }
+.confirm { font-size:13px; display:flex; gap:6px; align-items:center; margin-top:8px; }
+.pane { display:none; } .pane.on { display:block; }
+button.tab { border:none; cursor:pointer; font-family:inherit; }
+.verdict { font-weight:600; }
+.cmdlist .msg { cursor:pointer; }
+.rule { display:flex; gap:8px; align-items:flex-start; justify-content:space-between; }
+.empty { text-align:center; color:var(--text3); padding:2rem 0; }
+.loadmore { display:block; margin:1rem auto; padding:9px 22px; font-size:14px; background:var(--brand); color:#fff; border:none; border-radius:var(--radius); cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header><h1>Control</h1><span style="font-size:13px;color:var(--text2)">Message history</span><a href="/">Back to site</a></header>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-pane="messages" type="button">Messages</button>
+    <button class="tab" data-pane="logs" type="button">Logs</button>
+    <button class="tab" data-pane="trading" type="button">Trading</button>
+    <button class="tab" data-pane="ai" type="button">AI review</button>
+  </div>
+
+  <div class="pane on" id="pane-messages">
+  <div class="filters">
+    <input class="wide" id="q" type="search" placeholder="Search messages (all words must match)" autocomplete="off"/>
+    <select id="source"><option value="">All sources</option></select>
+    <select id="direction"><option value="">Both directions</option><option value="in">From the system</option><option value="out">My commands</option></select>
+    <input id="from" type="date" aria-label="From date"/>
+    <input id="to" type="date" aria-label="To date"/>
+  </div>
+
+  <div class="meta"><span id="count"></span><button id="reset" type="button">Clear filters</button></div>
+  <div id="list"></div>
+  <button id="more" class="loadmore" style="display:none" type="button">Load older</button>
+  </div>
+
+  <div class="pane" id="pane-logs">
+    <div class="panel">
+      <h3>Logs</h3><p class="hint">Pick a service and a date. The VPS reads that day's log entries (and any screenshots or saved pages) and sends them here, which takes a few seconds.</p>
+      <div class="row"><select id="lg-service"></select><input id="lg-date" type="date"/><input id="lg-q" type="search" placeholder="Only lines containing..." style="flex:1;min-width:140px"/><button class="btn" id="lg-go" type="button">Show</button></div>
+      <div class="err" id="lg-err"></div><div id="lg-out"></div>
+    </div>
+    <div class="meta"><span>Recent log requests</span></div><div class="cmdlist" id="lg-recent"></div>
+  </div>
+
+  <div class="pane" id="pane-trading">
+    <div class="panel"><h3>Reports</h3><p class="hint">Read-only. Results appear below and any file can be downloaded.</p>
+      <div class="row"><input id="rp-date" type="date" aria-label="Report date"/><button class="btn" data-cmd="report" type="button">Daily report</button></div>
+      <div class="row"><input id="pr-sym" type="text" placeholder="XAUUSD" style="width:120px" autocapitalize="characters"/><button class="btn" data-cmd="prices" type="button">Price history (CSV)</button></div>
+    </div>
+    <div class="panel"><h3>Actions</h3><p class="hint">These affect the live system. Each needs the confirmation box ticked and your password.</p>
+      <div class="row"><select id="fl-trader"><option>T1</option><option>T2</option><option>T3</option><option>T4</option><option>T5</option></select><input id="fl-entry" type="text" inputmode="decimal" placeholder="entry price (optional)" style="width:190px"/><button class="btn danger" data-cmd="fill" type="button">Fill limits now</button></div>
+      <div class="row"><button class="btn danger" data-cmd="close" type="button">Close all positions</button><button class="btn ghost" data-cmd="restart" type="button">Restart monitor</button></div>
+      <div class="confirm"><input type="checkbox" id="tr-confirm"/><label for="tr-confirm">I confirm this action</label></div>
+      <div class="row"><input id="tr-pw" type="password" placeholder="Your password" autocomplete="current-password" style="flex:1;min-width:160px"/></div>
+    </div>
+    <div class="panel"><h3>Type a command</h3><p class="hint">Allowed: /report [date], /prices [symbol], /restart, /close, /fill T1-T5 [entry]</p>
+      <div class="row"><input id="cmd-box" type="text" placeholder="/report 2026-10-22" style="flex:1;min-width:160px" autocapitalize="off"/><button class="btn" id="cmd-go" type="button">Run</button></div>
+    </div>
+    <div class="err" id="tr-err"></div><div id="tr-out"></div>
+    <div class="meta"><span>Recent commands</span></div><div class="cmdlist" id="tr-recent"></div>
+  </div>
+
+  <div class="pane" id="pane-ai">
+    <div class="filters">
+      <select id="ai-state"><option value="open">Open questions</option><option value="taught">Taught</option><option value="all">Everything the AI saw</option></select>
+      <select id="ai-trader"><option value="">All traders</option></select>
+      <input class="wide" id="ai-q" type="search" placeholder="Search message text" autocomplete="off"/>
+    </div>
+    <div class="meta"><span id="ai-count"></span><button id="ai-rules-btn" type="button">Taught rules</button></div>
+    <div id="ai-rules" style="display:none"></div>
+    <div id="ai-list"></div>
+    <button id="ai-more" class="loadmore" style="display:none" type="button">Load more</button>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let offset = 0, timer = null, loading = false, lastDay = null;
+
+function highlight(text, q) {
+  let out = esc(text);
+  q.split(/\s+/).filter(Boolean).forEach(w => {
+    const re = new RegExp('(' + esc(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    out = out.replace(re, '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function params() {
+  const p = new URLSearchParams();
+  [['q','q'],['source','source'],['direction','direction'],['from','from'],['to','to']].forEach(([id,k]) => { const v = $(id).value.trim(); if (v) p.set(k, v); });
+  p.set('offset', offset);
+  return p;
+}
+
+function render(m, q) {
+  const day = (m.msg_time || '').slice(0, 10);
+  let html = '';
+  if (day !== lastDay) { lastDay = day; html += '<div class="day">' + esc(day) + '</div>'; }
+  const long = (m.text || '').length > 400;
+  html += '<div class="msg ' + (m.direction === 'out' ? 'out ' : '') + esc(m.level || '') + '">' +
+    '<div class="top"><span>' + esc((m.msg_time || '').slice(11, 19)) + '</span><span class="chip">' + esc(m.source || 'other') + '</span>' +
+    (m.direction === 'out' ? '<span class="chip out">my command</span>' : '') +
+    (m.has_file ? '<span class="chip file">file' + (m.file_name ? ': ' + esc(m.file_name) : '') + '</span>' : '') + '</div>' +
+    '<div class="body' + (long ? ' clamped' : '') + '">' + highlight(m.text || '', q) + '</div>' +
+    (long ? '<button class="more" type="button">Show all</button>' : '') + '</div>';
+  return html;
+}
+
+async function load(reset) {
+  if (loading) return; loading = true;
+  if (reset) { offset = 0; lastDay = null; $('list').innerHTML = ''; }
+  try {
+    const r = await fetch('/control/api/messages?' + params());
+    if (r.status === 401 || r.redirected) { location.href = '/login?next=/control'; return; }
+    const d = await r.json();
+    const q = $('q').value.trim();
+    if (reset) {
+      const cur = $('source').value;
+      $('source').innerHTML = '<option value="">All sources</option>' + d.sources.map(s => '<option value="' + esc(s) + '"' + (s === cur ? ' selected' : '') + '>' + esc(s) + '</option>').join('');
+      $('count').textContent = d.total.toLocaleString() + ' message' + (d.total === 1 ? '' : 's');
+    }
+    $('list').insertAdjacentHTML('beforeend', d.messages.map(m => render(m, q)).join(''));
+    if (reset && !d.messages.length) $('list').innerHTML = '<div class="empty">Nothing found.</div>';
+    offset += d.messages.length;
+    $('more').style.display = d.has_more ? 'block' : 'none';
+  } finally { loading = false; }
+}
+
+$('list').addEventListener('click', e => {
+  if (!e.target.classList.contains('more')) return;
+  const body = e.target.previousElementSibling; body.classList.toggle('clamped');
+  e.target.textContent = body.classList.contains('clamped') ? 'Show all' : 'Show less';
+});
+['source','direction','from','to'].forEach(id => $(id).addEventListener('change', () => load(true)));
+$('q').addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => load(true), 300); });
+$('more').addEventListener('click', () => load(false));
+$('reset').addEventListener('click', () => { ['q','source','direction','from','to'].forEach(id => $(id).value = ''); load(true); });
+load(true);
+
+// ───────────── shared helpers ─────────────
+async function api(url, method, body) {
+  const opt = { method: method || 'GET', headers: { 'X-Requested-With': 'control-page' } };
+  if (body !== undefined) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+  const r = await fetch(url, opt);
+  if (r.redirected && r.url.includes('/login')) { location.href = '/login?next=/control'; throw new Error('login'); }
+  let d = {}; try { d = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(d.error || ('Request failed (' + r.status + ')'));
+  return d;
+}
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const fmtSize = n => n > 1048576 ? (n/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB';
+
+function renderResult(c) {
+  let h = '<div class="panel"><div class="top"><span class="chip">#' + c.id + '</span><span class="status ' + esc(c.status) + '">' + esc(c.status) + '</span><span>' + esc(c.command) + '</span></div>';
+  const files = c.files || [];
+  const imgs = files.filter(f => (f.mime || '').startsWith('image/'));
+  const others = files.filter(f => !(f.mime || '').startsWith('image/'));
+  if (c.result_text) h += '<pre class="out" data-full="1">' + esc(c.result_text) + '</pre>';
+  else if (c.status === 'pending' || c.status === 'running') h += '<div class="body">Waiting for the VPS' + (c.status === 'pending' ? ' to pick this up (up to 15 seconds)' : '') + '...</div>';
+  if (others.length) h += '<div class="row">' + others.map(f => '<a class="btn ghost" style="text-decoration:none" href="/control/file/' + f.id + '?dl=1">Download ' + esc(f.name) + ' (' + fmtSize(f.size) + ')</a>').join('') + '</div>';
+  if (imgs.length) h += '<div class="shots">' + imgs.map(f => '<a href="/control/file/' + f.id + '" target="_blank" rel="noopener"><img loading="lazy" src="/control/file/' + f.id + '" alt=""><span>' + esc(f.name) + '</span></a>').join('') + '</div>';
+  return h + '</div>';
+}
+
+async function watch(id, outEl, onDone) {
+  for (let i = 0; i < 120; i++) {
+    let c;
+    try { c = await api('/control/api/command/' + id); } catch (e) { outEl.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
+    outEl.innerHTML = renderResult(c);
+    if (!['pending', 'running'].includes(c.status)) { if (onDone) onDone(c); return; }
+    await new Promise(r => setTimeout(r, i < 10 ? 1500 : 3000));
+  }
+}
+
+async function loadRecent(kind, el, outEl) {
+  const d = await api('/control/api/commands?kind=' + kind);
+  el.innerHTML = d.commands.length ? d.commands.map(c =>
+    '<div class="msg" data-id="' + c.id + '"><div class="top"><span>' + esc((c.created_at || '').slice(5, 16)) + '</span><span class="status ' + esc(c.status) + '">' + esc(c.status) + '</span><span>' + esc(c.command) + '</span></div></div>').join('') : '<div class="empty">Nothing yet.</div>';
+  el.onclick = e => { const m = e.target.closest('.msg'); if (m) watch(m.dataset.id, outEl); };
+  return d;
+}
+
+// ───────────── tabs ─────────────
+const inited = {};
+function showPane(name) {
+  document.querySelectorAll('#tabs .tab').forEach(b => b.classList.toggle('on', b.dataset.pane === name));
+  document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.id === 'pane-' + name));
+  try { localStorage.setItem('controlTab', name); } catch (e) {}
+  if (!inited[name]) { inited[name] = true; ({ logs: initLogs, trading: initTrading, ai: initAI }[name] || (() => {}))(); }
+}
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('.tab'); if (b) showPane(b.dataset.pane); });
+
+// ───────────── logs ─────────────
+async function initLogs() {
+  $('lg-date').value = today();
+  const d = await loadRecent('logs', $('lg-recent'), $('lg-out'));
+  $('lg-service').innerHTML = d.services.map(s => '<option value="' + esc(s.key) + '">' + esc(s.label) + '</option>').join('');
+  $('lg-go').addEventListener('click', async () => {
+    $('lg-err').textContent = ''; $('lg-go').disabled = true;
+    try {
+      const r = await api('/control/api/logs', 'POST', { service: $('lg-service').value, date: $('lg-date').value, q: $('lg-q').value });
+      await watch(r.id, $('lg-out'), () => loadRecent('logs', $('lg-recent'), $('lg-out')));
+    } catch (e) { $('lg-err').textContent = e.message; }
+    $('lg-go').disabled = false;
+  });
+}
+
+// ───────────── trading ─────────────
+function buildCommand(kind) {
+  if (kind === 'report') return '/report' + ($('rp-date').value ? ' ' + $('rp-date').value : '');
+  if (kind === 'prices') return '/prices' + ($('pr-sym').value.trim() ? ' ' + $('pr-sym').value.trim() : '');
+  if (kind === 'fill') return '/fill ' + $('fl-trader').value + ($('fl-entry').value.trim() ? ' ' + $('fl-entry').value.trim() : '');
+  return '/' + kind;
+}
+async function runCommand(command) {
+  $('tr-err').textContent = '';
+  try {
+    const r = await api('/control/api/command', 'POST', { command, confirm: $('tr-confirm').checked, password: $('tr-pw').value });
+    $('tr-pw').value = ''; $('tr-confirm').checked = false;
+    await watch(r.id, $('tr-out'), () => loadRecent('command', $('tr-recent'), $('tr-out')));
+  } catch (e) { $('tr-err').textContent = e.message; }
+}
+async function initTrading() {
+  $('rp-date').value = '';
+  loadRecent('command', $('tr-recent'), $('tr-out'));
+  document.querySelectorAll('#pane-trading [data-cmd]').forEach(b => b.addEventListener('click', () => runCommand(buildCommand(b.dataset.cmd))));
+  $('cmd-go').addEventListener('click', () => runCommand($('cmd-box').value));
+}
+
+// ───────────── AI review ─────────────
+let aiOffset = 0, aiTimer = null;
+const VERDICT_LABEL = { full_close: 'Close', breakeven: 'Breakeven', unclear: 'Unclear', statement: 'Just commentary' };
+function aiCard(r) {
+  const taught = r.taught_verdict ? '<div class="top"><span class="chip file">Taught: ' + esc(VERDICT_LABEL[r.taught_verdict]) + '</span>' + (r.taught_note ? '<span>' + esc(r.taught_note) + '</span>' : '') + '</div>' : '';
+  const acted = r.auto_executed ? '<span class="chip out">acted</span>' : '';
+  return '<div class="msg ' + (r.verdict === 'unclear' ? 'warn' : '') + '" data-id="' + r.id + '"><div class="top"><span>' + esc((r.flagged_at || '').slice(0, 16)) + '</span><span class="chip">' + esc(r.trader || '') + '</span>' +
+    '<span class="verdict">AI said: ' + esc(VERDICT_LABEL[r.verdict] || r.verdict) + ' (' + esc(r.confidence || '?') + ')</span>' + acted + (r.source === 'rule' ? '<span class="chip">your rule #' + r.rule_id + '</span>' : '') + '</div>' +
+    '<div class="body">' + esc(r.raw_text || '') + '</div>' +
+    '<div class="top" style="margin-top:4px"><span>' + esc(r.reasoning || '') + '</span></div>' + (r.action_result ? '<div class="top"><span>' + esc(r.action_result) + '</span></div>' : '') + taught +
+    '<div class="row"><select class="ai-v"><option value="">Right answer...</option><option value="full_close">Close the trade</option><option value="breakeven">Move to breakeven</option><option value="unclear">Unclear - leave for me</option><option value="statement">Just commentary</option></select>' +
+    '<input class="ai-note" type="text" placeholder="Why (optional)" style="flex:1;min-width:120px"/><button class="btn ai-teach" type="button">Save answer</button></div><div class="err ai-err"></div></div>';
+}
+async function loadAI(reset) {
+  if (reset) { aiOffset = 0; $('ai-list').innerHTML = ''; }
+  const p = new URLSearchParams({ state: $('ai-state').value, trader: $('ai-trader').value, q: $('ai-q').value.trim(), offset: aiOffset });
+  const d = await api('/control/api/ai?' + p);
+  if (reset) {
+    const cur = $('ai-trader').value;
+    $('ai-trader').innerHTML = '<option value="">All traders</option>' + d.traders.map(t => '<option' + (t === cur ? ' selected' : '') + '>' + esc(t) + '</option>').join('');
+    $('ai-count').textContent = d.total + ' message' + (d.total === 1 ? '' : 's');
+  }
+  $('ai-list').insertAdjacentHTML('beforeend', d.reviews.map(aiCard).join(''));
+  if (reset && !d.reviews.length) $('ai-list').innerHTML = '<div class="empty">Nothing here.</div>';
+  aiOffset += d.reviews.length; $('ai-more').style.display = d.has_more ? 'block' : 'none';
+}
+async function loadRules() {
+  const d = await api('/control/api/ai/rules');
+  $('ai-rules').innerHTML = (d.rules.length ? d.rules.map(r =>
+    '<div class="msg rule" data-id="' + r.id + '"><div><div class="top"><span class="chip">' + esc(r.trader || 'any') + '</span><span class="verdict">' + esc(VERDICT_LABEL[r.verdict]) + '</span><span>used ' + r.use_count + 'x</span>' + (r.enabled ? '' : '<span class="chip file">off</span>') + '</div><div class="body">' + esc(r.text_raw) + '</div>' + (r.note ? '<div class="top"><span>' + esc(r.note) + '</span></div>' : '') + '</div>' +
+    '<div><button class="btn ghost rule-toggle" data-on="' + (r.enabled ? 0 : 1) + '" data-v="' + esc(r.verdict) + '" type="button">' + (r.enabled ? 'Turn off' : 'Turn on') + '</button> <button class="btn ghost rule-del" type="button">Delete</button></div></div>').join('') : '<div class="empty">No taught rules yet.</div>');
+}
+function initAI() {
+  loadAI(true);
+  ['ai-state', 'ai-trader'].forEach(id => $(id).addEventListener('change', () => loadAI(true)));
+  $('ai-q').addEventListener('input', () => { clearTimeout(aiTimer); aiTimer = setTimeout(() => loadAI(true), 300); });
+  $('ai-more').addEventListener('click', () => loadAI(false));
+  $('ai-rules-btn').addEventListener('click', async () => { const el = $('ai-rules'); el.style.display = el.style.display === 'none' ? 'block' : 'none'; if (el.style.display === 'block') loadRules(); });
+  $('ai-list').addEventListener('click', async e => {
+    if (!e.target.classList.contains('ai-teach')) return;
+    const card = e.target.closest('.msg'); const v = card.querySelector('.ai-v').value; const err = card.querySelector('.ai-err'); err.textContent = '';
+    if (!v) { err.textContent = 'Choose the right answer first.'; return; }
+    let password = '';
+    if (v === 'full_close' || v === 'breakeven') {
+      password = prompt('This answer will act automatically on live trades when the same message arrives again. Re-enter your password to confirm:') || '';
+      if (!password) return;
+    }
+    try { await api('/control/api/ai/teach', 'POST', { review_id: +card.dataset.id, verdict: v, note: card.querySelector('.ai-note').value, password }); loadAI(true); }
+    catch (ex) { err.textContent = ex.message; }
+  });
+  $('ai-rules').addEventListener('click', async e => {
+    const row = e.target.closest('.rule'); if (!row) return; const id = row.dataset.id;
+    try {
+      if (e.target.classList.contains('rule-del')) { if (confirm('Delete this taught rule?')) { await api('/control/api/ai/rules/' + id, 'DELETE'); loadRules(); } }
+      if (e.target.classList.contains('rule-toggle')) {
+        const on = e.target.dataset.on === '1'; let password = '';
+        if (on && (e.target.dataset.v === 'full_close' || e.target.dataset.v === 'breakeven')) { password = prompt('Re-enter your password to turn this live-trade rule back on:') || ''; if (!password) return; }
+        await api('/control/api/ai/rules/' + id, 'POST', { enabled: on, password }); loadRules();
+      }
+    } catch (ex) { alert(ex.message); }
+  });
+}
+
+try { const t = localStorage.getItem('controlTab'); if (t && t !== 'messages') showPane(t); } catch (e) {}
+</script>
+</body>
+</html>

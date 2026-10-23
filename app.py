@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult, MT5Event, ControlMessage
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult, MT5Event, ControlMessage, ControlCommand, ControlFile, AIReview, AITaughtRule
 from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history, update_horse_ids_from_runners
 from email_service import send_morning_alerts
 from betfair_lookup import get_betfair_market_url
@@ -4110,8 +4110,11 @@ def control_api_messages():
 def control_home():
     if not is_admin():
         return redirect(url_for('index'))
-    return render_template('control_messages.html', is_admin=True, page_id='admin')
+    return render_template('control.html', is_admin=True, page_id='admin')
 
+
+from control_routes import init_control
+init_control(app, is_admin, CONTROL_PUSH_SECRET)
 
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

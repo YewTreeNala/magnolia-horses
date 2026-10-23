@@ -342,3 +342,77 @@ class ControlMessage(db.Model):
     has_file    = db.Column(db.Boolean, default=False)
     file_name   = db.Column(db.String(200))
     received_at = db.Column(db.String(30))
+
+
+class ControlCommand(db.Model):
+    """
+    A request made on the /control page that the MT5 VPS carries out. The page
+    queues it here; the VPS polls (outbound) for pending rows, runs them, and
+    posts the result back. Same no-inbound-exposure shape as the message push.
+    kind: 'command' (a whitelisted slash command) or 'logs' (a log view).
+    """
+    __tablename__ = 'control_command'
+    id          = db.Column(db.Integer, primary_key=True)
+    kind        = db.Column(db.String(10), default='command')
+    command     = db.Column(db.String(300))      # e.g. '/report 2026-10-22' or 'logs'
+    params      = db.Column(db.Text)             # JSON, e.g. {"service": "phyllis", "date": "2026-10-23"}
+    risk        = db.Column(db.String(10))       # read | control | trade
+    status      = db.Column(db.String(12), index=True, default='pending')  # pending|running|done|failed|expired
+    created_at  = db.Column(db.String(30), index=True)
+    started_at  = db.Column(db.String(30))
+    finished_at = db.Column(db.String(30))
+    result_text = db.Column(db.Text)
+
+
+class ControlFile(db.Model):
+    """A file produced by a command (CSV, text, screenshot), downloadable on the page."""
+    __tablename__ = 'control_file'
+    id          = db.Column(db.Integer, primary_key=True)
+    command_id  = db.Column(db.Integer, db.ForeignKey('control_command.id'), index=True)
+    name        = db.Column(db.String(200))
+    mime        = db.Column(db.String(80))
+    size        = db.Column(db.Integer)
+    data        = db.Column(db.LargeBinary)
+    created_at  = db.Column(db.String(30))
+
+
+class AIReview(db.Model):
+    """One message the AI fallback looked at (including ones it called statements)."""
+    __tablename__ = 'ai_review'
+    id            = db.Column(db.Integer, primary_key=True)
+    natural_key   = db.Column(db.String(120), unique=True, nullable=False)  # 'ai:<flag id>' or 'ai:s:<hash>'
+    flagged_at    = db.Column(db.String(30), index=True)
+    trader        = db.Column(db.String(30), index=True)
+    symbol        = db.Column(db.String(20))
+    raw_text      = db.Column(db.Text)
+    verdict       = db.Column(db.String(12), index=True)
+    confidence    = db.Column(db.String(8))
+    reasoning     = db.Column(db.Text)
+    auto_executed = db.Column(db.Boolean, default=False)
+    action_result = db.Column(db.Text)
+    source        = db.Column(db.String(12), default='ai')    # ai | rule (answered by a taught rule)
+    rule_id       = db.Column(db.Integer)
+    resolved      = db.Column(db.Boolean, default=False)
+    taught_verdict = db.Column(db.String(12))
+    taught_note    = db.Column(db.Text)
+    taught_at      = db.Column(db.String(30))
+
+
+class AITaughtRule(db.Model):
+    """
+    An answer Mark has taught for a message. Used two ways on the VPS: an
+    exact (normalised) text match for the same trader gets this verdict
+    without calling the AI, and every enabled rule is shown to the AI as a
+    worked example so similar phrasings follow it.
+    """
+    __tablename__ = 'ai_taught_rule'
+    id         = db.Column(db.Integer, primary_key=True)
+    trader     = db.Column(db.String(30), index=True)
+    text_raw   = db.Column(db.Text)
+    text_norm  = db.Column(db.Text, index=True)
+    verdict    = db.Column(db.String(12))     # full_close | breakeven | unclear | statement
+    note       = db.Column(db.Text)
+    enabled    = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.String(30))
+    use_count  = db.Column(db.Integer, default=0)
+    last_used_at = db.Column(db.String(30))
