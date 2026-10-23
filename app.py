@@ -4110,7 +4110,8 @@ def control_api_messages():
 def control_home():
     if not is_admin():
         return redirect(url_for('index'))
-    return render_template('control.html', is_admin=True, page_id='admin')
+    from control_routes import PAGE_VERSION
+    return render_template('control.html', is_admin=True, page_id='admin', page_version=PAGE_VERSION)
 
 
 from control_routes import init_control

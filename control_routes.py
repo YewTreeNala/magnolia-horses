@@ -11,6 +11,7 @@ polls this app and posts results back.
 import base64
 import hmac
 import json
+import os
 import re
 import time
 from datetime import datetime, timedelta
@@ -47,6 +48,9 @@ def norm_text(t):
     """Normalisation used for exact-match taught rules (must match the VPS)."""
     t = (t or '').replace('’', "'").replace('‘', "'").replace(' ', ' ')
     return ' '.join(t.lower().split())
+
+
+PAGE_VERSION = 'v2026.10.23-5' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
 
 
 def parse_web_command(text):
