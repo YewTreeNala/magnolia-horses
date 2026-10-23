@@ -317,3 +317,28 @@ class MT5Event(db.Model):
     natural_key = db.Column(db.String(120), unique=True, nullable=False)
     data        = db.Column(db.Text)       # JSON - every field from the source trading.db row
     received_at = db.Column(db.String(30))
+
+
+class ControlMessage(db.Model):
+    """
+    One row per message that used to go only to Telegram Saved Messages
+    (alerts from the MT5 services and the PC booking bot, plus Mark's own
+    typed commands). Pushed here by the VPS/VS, and bulk-backfilled from the
+    Saved Messages history, so it can be searched and filtered on /control.
+
+    natural_key makes ingest idempotent (retries and re-running the backfill
+    never create duplicates). For Telegram-originated rows it is
+    'tg:<telegram message id>'; for rows pushed directly it is chosen by the
+    sender.
+    """
+    __tablename__ = 'control_message'
+    id          = db.Column(db.Integer, primary_key=True)
+    natural_key = db.Column(db.String(120), unique=True, nullable=False)
+    msg_time    = db.Column(db.String(30), index=True)   # UK-local 'YYYY-MM-DD HH:MM:SS'
+    source      = db.Column(db.String(30), index=True)   # t1|t2|t3|t4|lewis|pc|mt5|me|other
+    direction   = db.Column(db.String(3), index=True)    # 'in' = system->Mark, 'out' = Mark's command
+    level       = db.Column(db.String(10), index=True)   # info|warn|error (optional)
+    text        = db.Column(db.Text)
+    has_file    = db.Column(db.Boolean, default=False)
+    file_name   = db.Column(db.String(200))
+    received_at = db.Column(db.String(30))

@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
-from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult, MT5Event
+from models import db, User, TaggedHorse, SavedSearch, EmailLog, Meeting, Race, Runner, RunnerHistory, ColourOverride, SyncLog, HorseProfile, HorseRun, HorseRunField, Tipster, Tip, TipResult, MT5Event, ControlMessage
 from sync import sync_todays_races, sync_horse_history, backfill_horse_history, archive_to_runner_history, update_horse_ids_from_runners
 from email_service import send_morning_alerts
 from betfair_lookup import get_betfair_market_url
@@ -3992,6 +3992,125 @@ def mt5_dashboard():
         return redirect(url_for('index'))
     return render_template('admin_mt5.html', is_admin=True, page_id='admin',
                            query_key=MT5_QUERY_KEY)
+
+
+# ── Control centre: message history ─────────────────────────────────────────────
+#
+# Phase 1 of the web replacement for Telegram Saved Messages. Every message
+# that is sent to Saved Messages (and Mark's own typed commands) is also
+# pushed here, stored, and searchable at /control. Telegram is unchanged and
+# keeps working in parallel.
+#
+#   CONTROL_PUSH_SECRET - senders (VPS monitor, VS tray, backfill script)
+#                         authenticate with this in the X-Control-Secret
+#                         header. No default: if unset, ingest refuses
+#                         everything rather than running open.
+# The search page/API use the normal admin login (no key in the URL).
+
+CONTROL_PUSH_SECRET = os.getenv('CONTROL_PUSH_SECRET', '')
+CONTROL_PAGE_SIZE   = 100
+
+
+@app.route('/control/ingest', methods=['POST'])
+def control_ingest():
+    secret = request.headers.get('X-Control-Secret', '')
+    if not CONTROL_PUSH_SECRET or not hmac.compare_digest(secret, CONTROL_PUSH_SECRET):
+        return jsonify({'error': 'Forbidden'}), 403
+
+    body = request.get_json(silent=True) or {}
+    messages = body.get('messages')
+    if messages is None and body.get('natural_key'):
+        messages = [body]
+    if not messages:
+        return jsonify({'error': 'no messages'}), 400
+    if len(messages) > 1000:
+        return jsonify({'error': 'max 1000 messages per request'}), 400
+
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    keys = [(m.get('natural_key') or '').strip() for m in messages]
+    existing = set()
+    valid_keys = [k for k in keys if k]
+    # chunked IN query to find which keys we already hold
+    for i in range(0, len(valid_keys), 500):
+        chunk = valid_keys[i:i + 500]
+        existing.update(r[0] for r in db.session.query(ControlMessage.natural_key)
+                        .filter(ControlMessage.natural_key.in_(chunk)).all())
+
+    created, skipped = 0, 0
+    seen = set()
+    for m, key in zip(messages, keys):
+        if not key or key in existing or key in seen:
+            skipped += 1
+            continue
+        seen.add(key)
+        direction = m.get('direction') if m.get('direction') in ('in', 'out') else 'in'
+        db.session.add(ControlMessage(
+            natural_key = key,
+            msg_time    = (m.get('msg_time') or now)[:30],
+            source      = (m.get('source') or 'other')[:30],
+            direction   = direction,
+            level       = (m.get('level') or '')[:10] or None,
+            text        = m.get('text') or '',
+            has_file    = bool(m.get('has_file')),
+            file_name   = (m.get('file_name') or '')[:200] or None,
+            received_at = now,
+        ))
+        created += 1
+    db.session.commit()
+    return jsonify({'status': 'ok', 'created': created, 'skipped': skipped})
+
+
+@app.route('/control/api/messages')
+@login_required
+def control_api_messages():
+    if not is_admin():
+        return jsonify({'error': 'Forbidden'}), 403
+
+    q         = request.args.get('q', '').strip()
+    source    = request.args.get('source', '').strip().lower()
+    direction = request.args.get('direction', '').strip().lower()
+    date_from = request.args.get('from', '').strip()
+    date_to   = request.args.get('to', '').strip()
+    offset    = max(request.args.get('offset', 0, type=int), 0)
+
+    query = ControlMessage.query
+    if q:
+        # every word must appear (case-insensitive), in any order
+        for word in q.split():
+            like = '%' + word.replace('\\', '\\\\').replace('%', r'\%').replace('_', r'\_') + '%'
+            query = query.filter(ControlMessage.text.ilike(like, escape='\\'))
+    if source:
+        query = query.filter(ControlMessage.source == source)
+    if direction in ('in', 'out'):
+        query = query.filter(ControlMessage.direction == direction)
+    if date_from:
+        query = query.filter(ControlMessage.msg_time >= date_from)
+    if date_to:
+        query = query.filter(ControlMessage.msg_time < date_to + ' 99')  # inclusive of the whole day
+    total = query.count()
+
+    rows = (query.order_by(ControlMessage.msg_time.desc(), ControlMessage.id.desc())
+                 .offset(offset).limit(CONTROL_PAGE_SIZE + 1).all())
+    has_more = len(rows) > CONTROL_PAGE_SIZE
+    rows = rows[:CONTROL_PAGE_SIZE]
+    return jsonify({
+        'total': total,
+        'has_more': has_more,
+        'messages': [{
+            'id': r.id, 'msg_time': r.msg_time, 'source': r.source,
+            'direction': r.direction, 'level': r.level, 'text': r.text,
+            'has_file': r.has_file, 'file_name': r.file_name,
+        } for r in rows],
+        'sources': [s[0] for s in db.session.query(ControlMessage.source).distinct().order_by(ControlMessage.source).all() if s[0]],
+    })
+
+
+@app.route('/control')
+@login_required
+def control_home():
+    if not is_admin():
+        return redirect(url_for('index'))
+    return render_template('control_messages.html', is_admin=True, page_id='admin')
 
 
 if __name__ == '__main__':
