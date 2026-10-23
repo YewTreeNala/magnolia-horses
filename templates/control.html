@@ -102,6 +102,7 @@ button.tab { border:none; cursor:pointer; font-family:inherit; }
   <div class="pane" id="pane-trading">
     <div class="panel"><h3>Reports</h3><p class="hint">Read-only. Results appear below and any file can be downloaded.</p>
       <div class="row"><input id="rp-date" type="date" aria-label="Report date"/><button class="btn" data-cmd="report" type="button">Daily report</button></div>
+      <div class="row"><input id="st-date" type="date" aria-label="Status date"/><button class="btn" data-cmd="status" type="button">Status: followed vs ours</button></div>
       <div class="row"><input id="pr-sym" type="text" placeholder="XAUUSD" style="width:120px" autocapitalize="characters"/><button class="btn" data-cmd="prices" type="button">Price history (CSV)</button></div>
     </div>
     <div class="panel"><h3>Actions</h3><p class="hint">These affect the live system. Each needs the confirmation box ticked and your password.</p>
@@ -110,7 +111,7 @@ button.tab { border:none; cursor:pointer; font-family:inherit; }
       <div class="confirm"><input type="checkbox" id="tr-confirm"/><label for="tr-confirm">I confirm this action</label></div>
       <div class="row"><input id="tr-pw" type="password" placeholder="Your password" autocomplete="current-password" style="flex:1;min-width:160px"/></div>
     </div>
-    <div class="panel"><h3>Type a command</h3><p class="hint">Allowed: /report [date], /prices [symbol], /restart, /close, /fill T1-T5 [entry]</p>
+    <div class="panel"><h3>Type a command</h3><p class="hint">Allowed: /report [date], /status [date], /prices [symbol], /restart, /close, /fill T1-T5 [entry]</p>
       <div class="row"><input id="cmd-box" type="text" placeholder="/report 2026-10-22" style="flex:1;min-width:160px" autocapitalize="off"/><button class="btn" id="cmd-go" type="button">Run</button></div>
     </div>
     <div class="err" id="tr-err"></div><div id="tr-out"></div>
@@ -267,6 +268,7 @@ async function initLogs() {
 // ───────────── trading ─────────────
 function buildCommand(kind) {
   if (kind === 'report') return '/report' + ($('rp-date').value ? ' ' + $('rp-date').value : '');
+  if (kind === 'status') return '/status' + ($('st-date').value ? ' ' + $('st-date').value : '');
   if (kind === 'prices') return '/prices' + ($('pr-sym').value.trim() ? ' ' + $('pr-sym').value.trim() : '');
   if (kind === 'fill') return '/fill ' + $('fl-trader').value + ($('fl-entry').value.trim() ? ' ' + $('fl-entry').value.trim() : '');
   return '/' + kind;

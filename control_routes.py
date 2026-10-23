@@ -57,6 +57,8 @@ def parse_web_command(text):
     low = t.lower()
     if re.fullmatch(r'/report(\s+\d{4}-\d{2}-\d{2})?', low):
         return ' '.join(low.split()), 'read'
+    if re.fullmatch(r'/status(\s+\d{4}-\d{2}-\d{2})?', low):
+        return ' '.join(low.split()), 'read'
     m = re.fullmatch(r'/prices(\s+([a-z0-9._]{3,12}))?', low)
     if m:
         return '/prices' + (' ' + m.group(2).upper() if m.group(2) else ''), 'read'
@@ -67,7 +69,7 @@ def parse_web_command(text):
     m = re.fullmatch(r'/fill[\s_]*t?([1-5])\s*(\d+(?:\.\d+)?)?', low)
     if m:
         return '/fill T%s%s' % (m.group(1), (' ' + m.group(2)) if m.group(2) else ''), 'trade'
-    raise ValueError('Command not allowed here. Available: /report [YYYY-MM-DD], /prices [SYMBOL], '
+    raise ValueError('Command not allowed here. Available: /report [YYYY-MM-DD], /status [YYYY-MM-DD], /prices [SYMBOL], '
                      '/restart, /close, /fill T1-T5 [entry price]')
 
 
