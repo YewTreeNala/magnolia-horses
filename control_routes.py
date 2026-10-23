@@ -224,8 +224,19 @@ def init_control(app, is_admin, push_secret):
         db.session.commit()
         recent = ControlCommand.query.filter(ControlCommand.created_at >= (datetime.now() - timedelta(minutes=3)).strftime('%Y-%m-%d %H:%M:%S')).count()
         rules = AITaughtRule.query.filter_by(enabled=True).order_by(AITaughtRule.id).limit(300).all()
+        # AI flags already answered on the page, so the VPS can mark them resolved
+        # there too (idempotent on the VPS) and stop listing them in /unresolved
+        # and the daily digest.
+        answered = [r.natural_key for r in AIReview.query.filter(
+            AIReview.resolved.is_(True), AIReview.natural_key.like('ai:%'),
+            ~AIReview.natural_key.like('ai:s:%')).order_by(AIReview.id.desc()).limit(200).all()]
+        resolved_ids = []
+        for k in answered:
+            try: resolved_ids.append(int(k.split(':', 1)[1]))
+            except ValueError: pass
         return jsonify({
             'commands': out,
+            'ai_resolved_ids': resolved_ids,
             'next_poll_seconds': 3 if (recent or out) else 15,
             'rules': [{'id': r.id, 'trader': r.trader, 'text_raw': r.text_raw, 'text_norm': r.text_norm,
                        'verdict': r.verdict, 'note': r.note or ''} for r in rules],
