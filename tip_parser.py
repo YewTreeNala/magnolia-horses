@@ -245,6 +245,19 @@ def parse_tip_line(line, current_course=None):
 
 # ── Full message parser ───────────────────────────────────────────────────────
 
+# Telegram/phone keyboards turn ' into a typographic apostrophe, so names such
+# as "Ronnie's Rascal" arrive with U+2019 and failed to match the horse-name
+# pattern (23 Oct 2026). Map every apostrophe lookalike to a plain ' - which is
+# also how the name is stored/matched everywhere else - and non-breaking
+# spaces to normal spaces.
+_APOSTROPHES = dict.fromkeys(map(ord, '\u2018\u2019\u201b\u02bc\u2032\u00b4\u0060\uff07'), "'")
+_APOSTROPHES[0x00a0] = ' '
+
+
+def normalise_apostrophes(text):
+    return text.translate(_APOSTROPHES) if text else text
+
+
 def parse_message(text, msg_datetime=None):
     """
     Parse a full Telegram message into a list of tip dicts.
@@ -255,7 +268,7 @@ def parse_message(text, msg_datetime=None):
     if not text:
         return []
 
-    text = text.strip()
+    text = normalise_apostrophes(text).strip()
 
     if is_non_tip(text):
         return []
