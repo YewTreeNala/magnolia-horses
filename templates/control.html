@@ -8,10 +8,10 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root { --bg:#f5f1eb; --surface:#fff; --surface2:#f1f0ec; --border:rgba(0,0,0,.1); --border2:rgba(0,0,0,.18);
   --text:#2a1f14; --text2:#6b5a48; --text3:#9c8a78; --brand:#8b3a3a; --red:#a32d2d; --red-bg:#fcebeb;
-  --amber:#8a5a00; --amber-bg:#fdf3dc; --blue:#1f4e79; --blue-bg:#e6eff8; --radius:8px; }
+  --amber:#8a5a00; --amber-bg:#fdf3dc; --blue:#1f4e79; --blue-bg:#e6eff8; --pos:#1d7a3a; --radius:8px; }
 @media (prefers-color-scheme: dark) { :root { --bg:#1b1713; --surface:#26211b; --surface2:#2f2922; --border:rgba(255,255,255,.1);
   --border2:rgba(255,255,255,.2); --text:#f0e9df; --text2:#bfb2a2; --text3:#8f8374; --brand:#e0908a; --red:#ff9a9a; --red-bg:#4a2323;
-  --amber:#f0c36a; --amber-bg:#46361a; --blue:#8ec1f0; --blue-bg:#1f3347; } }
+  --amber:#f0c36a; --amber-bg:#46361a; --blue:#8ec1f0; --blue-bg:#1f3347; --pos:#7fd49a; } }
 body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); font-size:15px; line-height:1.5; }
 .page { max-width:900px; margin:0 auto; padding:1rem 16px 3rem; }
 header { display:flex; align-items:baseline; gap:12px; padding:.75rem 0; border-bottom:.5px solid var(--border2); margin-bottom:1rem; flex-wrap:wrap; }
@@ -51,6 +51,21 @@ mark { background:var(--amber-bg); color:var(--text); border-radius:2px; padding
 .status { font-size:12px; padding:1px 8px; border-radius:99px; background:var(--surface2); }
 .status.done { background:var(--blue-bg); color:var(--blue); } .status.failed, .status.expired { background:var(--red-bg); color:var(--red); }
 .status.pending, .status.running { background:var(--amber-bg); color:var(--amber); }
+
+.st { width:100%; border-collapse:collapse; font-size:14px; margin:.4rem 0; font-variant-numeric:tabular-nums; }
+.st th, .st td { padding:7px 8px; text-align:right; border-bottom:.5px solid var(--border); white-space:nowrap; }
+.st th:first-child, .st td:first-child { text-align:left; font-weight:600; }
+.st thead th { font-size:12px; color:var(--text2); font-weight:600; }
+.st thead tr:first-child th { text-align:center; border-bottom:1px solid var(--border2); letter-spacing:.04em; text-transform:uppercase; }
+.st .grp { border-left:1px solid var(--border2); }
+.st tfoot td { font-weight:700; border-top:1px solid var(--border2); border-bottom:none; }
+.st .pos { color:var(--pos); } .st .neg { color:var(--red); } .st .na { color:var(--text3); }
+.stwrap { overflow-x:auto; }
+.sigs details { background:var(--surface2); border-radius:var(--radius); margin:6px 0; padding:6px 10px; }
+.sigs summary { cursor:pointer; font-weight:600; font-size:14px; }
+.sig { padding:7px 0; border-top:.5px solid var(--border); font-size:13px; line-height:1.45; }
+.sig .h { font-weight:600; } .sig .l { color:var(--text2); }
+.sig .pos { color:var(--pos); font-weight:600; } .sig .neg { color:var(--red); font-weight:600; }
 pre.out { white-space:pre; overflow-x:auto; font-size:11.5px; background:var(--surface2); border-radius:var(--radius); padding:10px; max-height:60vh; overflow:auto; margin-top:8px; }
 .shots { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; margin-top:8px; }
 .shots a { display:block; border:.5px solid var(--border2); border-radius:var(--radius); overflow:hidden; font-size:11px; color:var(--text2); text-decoration:none; }
@@ -210,13 +225,49 @@ async function api(url, method, body) {
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 const fmtSize = n => n > 1048576 ? (n/1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n/1024)) + ' KB';
 
+
+const STATUS_MARK = '@@STATUSDATA@@';
+function gbp(v) { if (v === null || v === undefined) return '<span class="na">–</span>'; const c = v > 0 ? 'pos' : (v < 0 ? 'neg' : ''); return '<span class="' + c + '">' + (v >= 0 ? '+' : '−') + '£' + Math.abs(v).toFixed(2) + '</span>'; }
+function statusHtml(d) {
+  const cell = a => a ? '<td class="grp">' + a[0] + '</td><td>' + a[1].toFixed(2) + '</td><td>' + gbp(a[2]) + '</td>' : '<td class="grp na">–</td><td class="na">–</td><td class="na">–</td>';
+  let h = '<div class="meta"><span>Status ' + esc(d.date) + ' (UK) as at ' + esc(d.generated) + '</span></div><div class="stwrap"><table class="st"><thead>' +
+    '<tr><th></th><th colspan="3" class="grp">Exact copy</th><th colspan="3" class="grp">New rules</th></tr>' +
+    '<tr><th>Trader</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">In</th><th>Lots</th><th>Profit</th></tr></thead><tbody>';
+  d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + cell(r.ex) + cell(r.nw) + '</tr>'; });
+  h += '</tbody><tfoot><tr><td>All</td>' + cell(d.total.ex) + cell(d.total.nw) + '</tr></tfoot></table></div>' +
+    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + ').</p>';
+  const by = {}; d.signals.forEach(s => { (by[s.trader] = by[s.trader] || []).push(s); });
+  h += '<div class="sigs">';
+  d.rows.forEach(r => {
+    const L = by[r.trader] || [];
+    h += '<details><summary>' + esc(r.trader) + ' signals (' + L.length + ')</summary>' + L.map(s =>
+      '<div class="sig"><div class="h">' + esc(s.time) + ' ' + esc(s.dir) + ' ' + esc(s.level) + (s.sl !== null ? ' · SL ' + esc(s.sl) : '') + ' · TP ' + esc(s.tps.join(' / ')) + '</div>' +
+      '<div><span class="l">Exact copy:</span> ' + esc(s.f_text) + (s.f_gbp !== null ? ' → ' + gbp(s.f_gbp) : '') + '</div>' +
+      '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div></div>').join('') + '</details>';
+  });
+  h += '</div>';
+  (d.notes || []).forEach(n => { h += '<p class="hint">⚠️ ' + esc(n) + '</p>'; });
+  return h;
+}
+function splitStatus(text) {
+  const i = (text || '').indexOf(STATUS_MARK);
+  if (i < 0) return { text: text, data: null };
+  let data = null; try { data = JSON.parse(text.slice(i + STATUS_MARK.length)); } catch (e) {}
+  let rest = text.slice(0, i);
+  if (data) { const k = rest.indexOf('📊 STATUS'); if (k >= 0) rest = rest.slice(0, k).replace(/\[[^\]\n]*\]\s*$/, ''); }
+  return { text: rest.trim(), data: data };
+}
+
 function renderResult(c) {
   let h = '<div class="panel"><div class="top"><span class="chip">#' + c.id + '</span><span class="status ' + esc(c.status) + '">' + esc(c.status) + '</span><span>' + esc(c.command) + '</span></div>';
   const files = c.files || [];
   const imgs = files.filter(f => (f.mime || '').startsWith('image/'));
   const others = files.filter(f => !(f.mime || '').startsWith('image/'));
-  if (c.result_text) h += '<pre class="out" data-full="1">' + esc(c.result_text.replace(/^```.*$/gm, '')) + '</pre>';
-  else if (c.status === 'pending' || c.status === 'running') h += '<div class="body">Waiting for the VPS' + (c.status === 'pending' ? ' to pick this up (up to 15 seconds)' : '') + '...</div>';
+  const sp = splitStatus(c.result_text || '');
+  if (sp.text) h += '<pre class="out" data-full="1">' + esc(sp.text.replace(/^```.*$/gm, '')) + '</pre>';
+  if (sp.data) h += statusHtml(sp.data);
+  if (!sp.text && !sp.data && c.result_text) h += '<pre class="out" data-full="1">' + esc(c.result_text) + '</pre>';
+  if (!c.result_text && (c.status === 'pending' || c.status === 'running')) h += '<div class="body">Waiting for the VPS' + (c.status === 'pending' ? ' to pick this up (up to 15 seconds)' : '') + '...</div>';
   if (others.length) h += '<div class="row">' + others.map(f => '<a class="btn ghost" style="text-decoration:none" href="/control/file/' + f.id + '?dl=1">Download ' + esc(f.name) + ' (' + fmtSize(f.size) + ')</a>').join('') + '</div>';
   if (imgs.length) h += '<div class="shots">' + imgs.map(f => '<a href="/control/file/' + f.id + '" target="_blank" rel="noopener"><img loading="lazy" src="/control/file/' + f.id + '" alt=""><span>' + esc(f.name) + '</span></a>').join('') + '</div>';
   return h + '</div>';
