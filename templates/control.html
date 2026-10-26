@@ -117,7 +117,7 @@ button.tab { border:none; cursor:pointer; font-family:inherit; }
   <div class="pane" id="pane-trading">
     <div class="panel"><h3>Reports</h3><p class="hint">Read-only. Results appear below and any file can be downloaded.</p>
       <div class="row"><input id="rp-date" type="date" aria-label="Report date"/><button class="btn" data-cmd="report" type="button">Daily report</button></div>
-      <div class="row"><input id="st-date" type="date" aria-label="Status date"/><button class="btn" data-cmd="status" type="button">Status: followed vs ours</button></div>
+      <div class="row"><input id="st-date" type="date" aria-label="Status date"/><button class="btn" data-cmd="status" type="button">Status: day</button><button class="btn" data-cmd="statusweek" type="button">Status: Mon&ndash;Fri week</button></div>
       <div class="row"><input id="pr-sym" type="text" placeholder="XAUUSD" style="width:120px" autocapitalize="characters"/><button class="btn" data-cmd="prices" type="button">Price history (CSV)</button></div>
     </div>
     <div class="panel"><h3>Actions</h3><p class="hint">These affect the live system. Each needs the confirmation box ticked and your password.</p>
@@ -229,13 +229,15 @@ const fmtSize = n => n > 1048576 ? (n/1048576).toFixed(1) + ' MB' : Math.max(1, 
 const STATUS_MARK = '@@STATUSDATA@@';
 function gbp(v) { if (v === null || v === undefined) return '<span class="na">–</span>'; const c = v > 0 ? 'pos' : (v < 0 ? 'neg' : ''); return '<span class="' + c + '">' + (v >= 0 ? '+' : '−') + '£' + Math.abs(v).toFixed(2) + '</span>'; }
 function statusHtml(d) {
+  if (d.kind === 'week') return weekHtml(d);
   const cell = a => a ? '<td class="grp">' + a[0] + '</td><td>' + a[1].toFixed(2) + '</td><td>' + gbp(a[2]) + '</td>' : '<td class="grp na">–</td><td class="na">–</td><td class="na">–</td>';
+  const says = a => '<td class="grp">' + (a ? gbp(a[1]) : '<span class="na">–</span>') + '</td>';
   let h = '<div class="meta"><span>Status ' + esc(d.date) + ' (UK) as at ' + esc(d.generated) + ' · VPS ' + esc(d.version || '?') + '</span></div><div class="stwrap"><table class="st"><thead>' +
-    '<tr><th></th><th colspan="3" class="grp">Exact copy</th><th colspan="3" class="grp">New rules</th></tr>' +
-    '<tr><th>Trader</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">In</th><th>Lots</th><th>Profit</th></tr></thead><tbody>';
-  d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + cell(r.ex) + cell(r.nw) + '</tr>'; });
-  h += '</tbody><tfoot><tr><td>All</td>' + cell(d.total.ex) + cell(d.total.nw) + '</tr></tfoot></table></div>' +
-    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + ').</p>';
+    '<tr><th></th><th colspan="3" class="grp">Exact copy</th><th colspan="3" class="grp">New rules</th><th class="grp">Trader says</th></tr>' +
+    '<tr><th>Trader</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">Profit</th></tr></thead><tbody>';
+  d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + cell(r.ex) + cell(r.nw) + says(r.says) + '</tr>'; });
+  h += '</tbody><tfoot><tr><td>All</td>' + cell(d.total.ex) + cell(d.total.nw) + says(d.total.says) + '</tr></tfoot></table></div>' +
+    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + '). Trader says: the last pips result they posted (gold 1 pip = 0.1), at 0.02 lots per TP leg &ndash; approximate.</p>';
   const by = {}; d.signals.forEach(s => { (by[s.trader] = by[s.trader] || []).push(s); });
   h += '<div class="sigs">';
   d.rows.forEach(r => {
@@ -243,9 +245,23 @@ function statusHtml(d) {
     h += '<details><summary>' + esc(r.trader) + ' signals (' + L.length + ')</summary>' + L.map(s =>
       '<div class="sig"><div class="h">' + esc(s.time) + ' ' + esc(s.dir) + ' ' + esc(s.level) + (s.sl !== null ? ' · SL ' + esc(s.sl) : '') + ' · TP ' + esc(s.tps.join(' / ')) + '</div>' +
       '<div><span class="l">Exact copy:</span> ' + esc(s.f_text) + (s.f_gbp !== null ? ' → ' + gbp(s.f_gbp) : '') + '</div>' +
-      '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div></div>').join('') + '</details>';
+      '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div>' +
+      (s.says ? '<div><span class="l">Trader says:</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + esc((s.says_pts >= 0 ? '+' : '') + s.says_pts) + ' pts ' + gbp(s.says_gbp) : '') + '</div>' : '') +
+      '</div>').join('') + '</details>';
   });
   h += '</div>';
+  (d.notes || []).forEach(n => { h += '<p class="hint">⚠️ ' + esc(n) + '</p>'; });
+  return h;
+}
+function weekHtml(d) {
+  const names = d.days.map(x => new Date(x + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' }));
+  const day = v => '<td>' + (v === null || v === undefined ? '<span class="na">–</span>' : gbp(v)) + '</td>';
+  let h = '<div class="meta"><span>Week ' + esc(d.days[0]) + ' to ' + esc(d.days[4]) + ' · VPS ' + esc(d.version || '?') + '</span></div><div class="stwrap"><table class="st"><thead>' +
+    '<tr><th></th><th colspan="5">Exact copy, profit per day</th><th class="grp">Week</th><th class="grp">New rules</th><th class="grp">Trader says</th></tr>' +
+    '<tr><th>Trader</th>' + names.map(n => '<th>' + esc(n) + '</th>').join('') + '<th class="grp">Exact copy</th><th class="grp">Profit</th><th class="grp">Profit</th></tr></thead><tbody>';
+  d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + r.days.map(day).join('') + '<td class="grp">' + gbp(r.ex[2]) + '</td><td class="grp">' + (r.nw ? gbp(r.nw[2]) : '<span class="na">–</span>') + '</td><td class="grp">' + (r.says ? gbp(r.says[1]) : '<span class="na">–</span>') + '</td></tr>'; });
+  h += '</tbody><tfoot><tr><td>All</td>' + d.total_days.map(day).join('') + '<td class="grp">' + gbp(d.total.ex[2]) + '</td><td class="grp">' + gbp(d.total.nw[2]) + '</td><td class="grp">' + gbp(d.total.says[1]) + '</td></tr></tfoot></table></div>' +
+    '<p class="hint">Exact copy: 0.02 lots per take-profit leg at the live price when each message was posted. New rules: T2 and T4 only, at current lots (T2 ' + esc((d.lots || {}).T2) + ', T4 ' + esc((d.lots || {}).T4) + '); the bot&rsquo;s own T2/T4 log only starts on 22 Oct. Trader says: their own pips results, approximate.</p>';
   (d.notes || []).forEach(n => { h += '<p class="hint">⚠️ ' + esc(n) + '</p>'; });
   return h;
 }
@@ -274,7 +290,7 @@ function renderResult(c) {
 }
 
 async function watch(id, outEl, onDone) {
-  for (let i = 0; i < 120; i++) {
+  for (let i = 0; i < 500; i++) {
     let c;
     try { c = await api('/control/api/command/' + id); } catch (e) { outEl.innerHTML = '<div class="err">' + esc(e.message) + '</div>'; return; }
     outEl.innerHTML = renderResult(c);
@@ -319,6 +335,7 @@ async function initLogs() {
 // ───────────── trading ─────────────
 function buildCommand(kind) {
   if (kind === 'report') return '/report' + ($('rp-date').value ? ' ' + $('rp-date').value : '');
+  if (kind === 'statusweek') return '/status week' + ($('st-date').value ? ' ' + $('st-date').value : '');
   if (kind === 'status') return '/status' + ($('st-date').value ? ' ' + $('st-date').value : '');
   if (kind === 'prices') return '/prices' + ($('pr-sym').value.trim() ? ' ' + $('pr-sym').value.trim() : '');
   if (kind === 'fill') return '/fill ' + $('fl-trader').value + ($('fl-entry').value.trim() ? ' ' + $('fl-entry').value.trim() : '');

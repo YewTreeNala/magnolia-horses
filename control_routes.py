@@ -24,7 +24,7 @@ from models import db, ControlCommand, ControlFile, AIReview, AITaughtRule
 MAX_FILE_BYTES = 12 * 1024 * 1024
 MAX_FILES_PER_COMMAND = 12
 PENDING_EXPIRY_MIN = 10
-RUNNING_EXPIRY_MIN = 15
+RUNNING_EXPIRY_MIN = 20
 SAFE_MIMES = {'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain', 'text/csv'}
 VALID_VERDICTS = ('full_close', 'breakeven', 'unclear', 'statement')
 
@@ -50,7 +50,7 @@ def norm_text(t):
     return ' '.join(t.lower().split())
 
 
-PAGE_VERSION = 'v2026.10.23-5' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
+PAGE_VERSION = 'v2026.10.26-1' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
 
 
 def parse_web_command(text):
@@ -61,7 +61,7 @@ def parse_web_command(text):
     low = t.lower()
     if re.fullmatch(r'/report(\s+\d{4}-\d{2}-\d{2})?', low):
         return ' '.join(low.split()), 'read'
-    if re.fullmatch(r'/status(\s+\d{4}-\d{2}-\d{2})?', low):
+    if re.fullmatch(r'/status(\s+week)?(\s+\d{4}-\d{2}-\d{2})?', low):
         return ' '.join(low.split()), 'read'
     m = re.fullmatch(r'/prices(\s+([a-z0-9._]{3,12}))?', low)
     if m:
@@ -73,7 +73,7 @@ def parse_web_command(text):
     m = re.fullmatch(r'/fill[\s_]*t?([1-5])\s*(\d+(?:\.\d+)?)?', low)
     if m:
         return '/fill T%s%s' % (m.group(1), (' ' + m.group(2)) if m.group(2) else ''), 'trade'
-    raise ValueError('Command not allowed here. Available: /report [YYYY-MM-DD], /status [YYYY-MM-DD], /prices [SYMBOL], '
+    raise ValueError('Command not allowed here. Available: /report [YYYY-MM-DD], /status [week] [YYYY-MM-DD], /prices [SYMBOL], '
                      '/restart, /close, /fill T1-T5 [entry price]')
 
 
