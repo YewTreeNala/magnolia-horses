@@ -248,7 +248,7 @@ function statusHtml(d) {
       '<div><span class="l">Exact copy:</span> ' + esc(s.f_text) + (s.f_gbp !== null ? ' → ' + gbp(s.f_gbp) : '') + '</div>' +
       '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div>' +
       (s.says ? '<div><span class="l">Trader says:</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + esc((s.says_pips >= 0 ? '+' : '') + Math.round(s.says_pips)) + ' pips (' + esc(s.says_mode || '') + ') ' + gbp(s.says_gbp) : '') + '</div>' : '') +
-      (s.why ? '<div class="why"><span class="l">Why different?</span> ' + esc(s.why) + '</div>' : '') +
+      (s.why ? '<div class="why"><b>Why different?</b><br>' + s.why.map(esc).join('<br>') + '</div>' : '') +
       '</div>').join('') + '</details>';
   });
   h += '</div>';

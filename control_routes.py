@@ -50,7 +50,7 @@ def norm_text(t):
     return ' '.join(t.lower().split())
 
 
-PAGE_VERSION = 'v2026.10.27-1' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
+PAGE_VERSION = 'v2026.10.27-2' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
 
 
 def parse_web_command(text):
