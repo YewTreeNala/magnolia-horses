@@ -64,6 +64,7 @@ mark { background:var(--amber-bg); color:var(--text); border-radius:2px; padding
 .sigs details { background:var(--surface2); border-radius:var(--radius); margin:6px 0; padding:6px 10px; }
 .sigs summary { cursor:pointer; font-weight:600; font-size:14px; }
 .sig { padding:7px 0; border-top:.5px solid var(--border); font-size:13px; line-height:1.45; }
+.sig .why { background:var(--amber-bg); color:var(--amber); border-radius:6px; padding:5px 8px; margin-top:4px; font-size:12.5px; }
 .sig .h { font-weight:600; } .sig .l { color:var(--text2); }
 .sig .pos { color:var(--pos); font-weight:600; } .sig .neg { color:var(--red); font-weight:600; }
 pre.out { white-space:pre; overflow-x:auto; font-size:11.5px; background:var(--surface2); border-radius:var(--radius); padding:10px; max-height:60vh; overflow:auto; margin-top:8px; }
@@ -237,7 +238,7 @@ function statusHtml(d) {
     '<tr><th>Trader</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">Profit</th></tr></thead><tbody>';
   d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + cell(r.ex) + cell(r.nw) + says(r.says) + '</tr>'; });
   h += '</tbody><tfoot><tr><td>All</td>' + cell(d.total.ex) + cell(d.total.nw) + says(d.total.says) + '</tr></tfoot></table></div>' +
-    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + '). Trader says: the last pips result they posted (gold 1 pip = 0.1), at 0.02 lots per TP leg &ndash; approximate.</p>';
+    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + '). Trader says: their own pips results (gold 1 pip = 0.1) at 0.02 lots per TP leg. Where they number the TP hits (&ldquo;HIT TP2 +125&rdquo;) each leg uses its own figure, legs not reported count as breakeven; otherwise their last figure is applied to every leg &ndash; approximate.</p>';
   const by = {}; d.signals.forEach(s => { (by[s.trader] = by[s.trader] || []).push(s); });
   h += '<div class="sigs">';
   d.rows.forEach(r => {
@@ -246,7 +247,8 @@ function statusHtml(d) {
       '<div class="sig"><div class="h">' + esc(s.time) + ' ' + esc(s.dir) + ' ' + esc(s.level) + (s.sl !== null ? ' · SL ' + esc(s.sl) : '') + ' · TP ' + esc(s.tps.join(' / ')) + '</div>' +
       '<div><span class="l">Exact copy:</span> ' + esc(s.f_text) + (s.f_gbp !== null ? ' → ' + gbp(s.f_gbp) : '') + '</div>' +
       '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div>' +
-      (s.says ? '<div><span class="l">Trader says:</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + esc((s.says_pts >= 0 ? '+' : '') + s.says_pts) + ' pts ' + gbp(s.says_gbp) : '') + '</div>' : '') +
+      (s.says ? '<div><span class="l">Trader says:</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + esc((s.says_pips >= 0 ? '+' : '') + Math.round(s.says_pips)) + ' pips (' + esc(s.says_mode || '') + ') ' + gbp(s.says_gbp) : '') + '</div>' : '') +
+      (s.why ? '<div class="why"><span class="l">Why different?</span> ' + esc(s.why) + '</div>' : '') +
       '</div>').join('') + '</details>';
   });
   h += '</div>';
