@@ -238,7 +238,7 @@ function statusHtml(d) {
     '<tr><th>Trader</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">In</th><th>Lots</th><th>Profit</th><th class="grp">Profit</th></tr></thead><tbody>';
   d.rows.forEach(r => { h += '<tr><td>' + esc(r.trader) + '</td>' + cell(r.ex) + cell(r.nw) + says(r.says) + '</tr>'; });
   h += '</tbody><tfoot><tr><td>All</td>' + cell(d.total.ex) + cell(d.total.nw) + says(d.total.says) + '</tr></tfoot></table></div>' +
-    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + '). Trader says: their own pips results (gold 1 pip = 0.1) at 0.02 lots per TP leg. Where they number the TP hits (&ldquo;HIT TP2 +125&rdquo;) each leg uses its own figure, legs not reported count as breakeven; otherwise their last figure is applied to every leg &ndash; approximate.</p>';
+    '<p class="hint">Exact copy: 0.02 lots per take-profit leg, entered at the live price when the message was posted, trader\'s own SL, TPs and instructions. New rules: T2 and T4 only, as placed by the bot, rescaled to current lots (T2 ' + esc(d.lots.T2) + ', T4 ' + esc(d.lots.T4) + '). Trader says: their own pips results (gold 1 pip = 0.1) at 0.02 lots per TP leg; where they posted none, the bot&rsquo;s own result if it traded, else the replay&rsquo;s calculated entry/exit (the signal line says which). Where they number the TP hits (&ldquo;HIT TP2 +125&rdquo;) each leg uses its own figure, legs not reported count as breakeven; otherwise their last figure is applied to every leg &ndash; approximate.</p>';
   const by = {}; d.signals.forEach(s => { (by[s.trader] = by[s.trader] || []).push(s); });
   h += '<div class="sigs">';
   d.rows.forEach(r => {
@@ -247,7 +247,7 @@ function statusHtml(d) {
       '<div class="sig"><div class="h">' + esc(s.time) + ' ' + esc(s.dir) + ' ' + esc(s.level) + (s.sl !== null ? ' · SL ' + esc(s.sl) : '') + ' · TP ' + esc(s.tps.join(' / ')) + '</div>' +
       '<div><span class="l">Exact copy:</span> ' + esc(s.f_text) + (s.f_gbp !== null ? ' → ' + gbp(s.f_gbp) : '') + '</div>' +
       '<div><span class="l">Bot:</span> ' + esc(s.o_text) + (s.o_gbp !== null ? ' → ' + gbp(s.o_gbp) : '') + '</div>' +
-      (s.says ? '<div><span class="l">Trader says:</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + esc((s.says_pips >= 0 ? '+' : '') + Math.round(s.says_pips)) + ' pips (' + esc(s.says_mode || '') + ') ' + gbp(s.says_gbp) : '') + '</div>' : '') +
+      (s.says ? '<div><span class="l">' + (s.says_source && s.says_source !== 'trader' ? 'Result used (' + esc(s.says_source) + '):' : 'Trader says:') + '</span> ' + esc(s.says.join(' / ')) + (s.says_gbp !== null && s.says_gbp !== undefined ? ' → ' + (s.says_pips !== null && s.says_pips !== undefined ? esc((s.says_pips >= 0 ? '+' : '') + Math.round(s.says_pips)) + ' pips (' + esc(s.says_mode || '') + ') ' : '') + gbp(s.says_gbp) : '') + '</div>' : '') +
       (s.why ? '<div class="why"><b>Why different?</b><br>' + s.why.map(esc).join('<br>') + '</div>' : '') +
       '</div>').join('') + '</details>';
   });

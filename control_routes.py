@@ -22,7 +22,7 @@ from flask_login import login_required, current_user
 from models import db, ControlCommand, ControlFile, AIReview, AITaughtRule
 
 MAX_FILE_BYTES = 12 * 1024 * 1024
-MAX_FILES_PER_COMMAND = 12
+MAX_FILES_PER_COMMAND = 30
 PENDING_EXPIRY_MIN = 10
 RUNNING_EXPIRY_MIN = 20
 SAFE_MIMES = {'image/png', 'image/jpeg', 'image/gif', 'image/webp', 'text/plain', 'text/csv'}
@@ -34,6 +34,7 @@ LOG_SERVICES = [
     ('tray',     'MT5 tray'),
     ('tof',      'Tipster / TOF'),
     ('phyllis',  'Phyllis Court booking bot'),
+    ('ascot',    'Ascot table booking'),
     ('deploy',   'Auto-deploy'),
     ('poller',   'Run Now poller'),
 ]
@@ -50,7 +51,7 @@ def norm_text(t):
     return ' '.join(t.lower().split())
 
 
-PAGE_VERSION = 'v2026.10.27-2' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
+PAGE_VERSION = 'v2026.10.28-1' + (' · ' + os.environ['RAILWAY_GIT_COMMIT_SHA'][:7] if os.environ.get('RAILWAY_GIT_COMMIT_SHA') else '')
 
 
 def parse_web_command(text):
