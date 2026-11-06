@@ -15,7 +15,7 @@ UK_COURSES = {
     'ripon', 'salisbury', 'sandown', 'sedgefield', 'southwell', 'stratford',
     'taunton', 'thirsk', 'uttoxeter', 'warwick', 'wetherby', 'wincanton',
     'windsor', 'wolverhampton', 'worcester', 'yarmouth', 'york',
-    'bangor', 'kelso',
+    'aintree', 'bangor', 'cartmel', 'fakenham', 'kelso', 'towcester',
 }
 
 def is_uk_course(name):
