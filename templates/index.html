@@ -512,7 +512,20 @@ var COLOUR_META = {
 };
 
 var UK_COURSES_SET = new Set([
-  'ascot','ayr','bangor','bath','beverley','brighton','carlisle','catterick','chelmsford','cheltenham','chepstow','chester','doncaster','epsom','exeter','ffos las','fontwell','goodwood','hamilton','haydock','hereford','hexham','huntingdon','kelso','kempton','leicester','lingfield','ludlow','market rasen','musselburgh','newbury','newcastle','newmarket','nottingham','perth','plumpton','pontefract','redcar','ripon','salisbury','sandown','sedgefield','southwell','stratford','taunton','thirsk','uttoxeter','warwick','wetherby','wincanton','windsor','wolverhampton','worcester','yarmouth','york'
+  // Great Britain
+  'aintree','ascot','ayr','bangor','bath','beverley','brighton','carlisle','cartmel',
+  'catterick','chelmsford','cheltenham','chepstow','chester','doncaster','epsom',
+  'exeter','fakenham','ffos las','fontwell','goodwood','hamilton','haydock','hereford',
+  'hexham','huntingdon','kelso','kempton','leicester','lingfield','ludlow','market rasen',
+  'musselburgh','newbury','newcastle','newmarket','nottingham','perth','plumpton',
+  'pontefract','redcar','ripon','salisbury','sandown','sedgefield','southwell','stratford',
+  'taunton','thirsk','towcester','uttoxeter','warwick','wetherby','wincanton','windsor',
+  'wolverhampton','worcester','yarmouth','york',
+  // Ireland
+  'ballinrobe','bellewstown','clonmel','cork','curragh','downpatrick','dundalk',
+  'fairyhouse','galway','gowran park','kilbeggan','killarney','laytown','leopardstown',
+  'limerick','listowel','naas','navan','punchestown','roscommon','sligo','thurles',
+  'tipperary','tralee','tramore','wexford'
 ]);;
 
 function isUKCourse(name) { var clean=(name||'').toLowerCase().trim().replace(/\s*\([^)]+\)\s*$/,''); return UK_COURSES_SET.has(clean); }
@@ -586,7 +599,7 @@ function syncUKToggle() {
   var btn = document.getElementById('uk-btn');
   if (cb.checked) {
     btn.style.background = 'var(--slug)'; btn.style.borderColor = 'var(--slug)'; btn.style.color = '#fff';
-    btn.innerHTML = '&#127468;&#127463; UK only';
+    btn.innerHTML = '&#127468;&#127463; GB &amp; Ireland';
   } else {
     btn.style.background = 'var(--surface2)'; btn.style.borderColor = 'var(--border2)'; btn.style.color = 'var(--text2)';
     btn.innerHTML = '&#127458; All countries';

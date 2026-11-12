@@ -5,17 +5,25 @@ Import from here rather than duplicating across modules.
 import re as _re
 
 # ── UK Racecourses ──────────────────────────────────────────────────────────
+# GB & Ireland racecourses — used for the "UK only" / "GB & Ireland" filter
 UK_COURSES = {
-    'ascot', 'ayr', 'bath', 'beverley', 'brighton', 'carlisle', 'catterick',
-    'chelmsford', 'cheltenham', 'chepstow', 'chester', 'doncaster', 'epsom',
-    'exeter', 'ffos las', 'fontwell', 'goodwood', 'hamilton', 'haydock',
-    'hereford', 'hexham', 'huntingdon', 'kempton', 'leicester', 'lingfield',
-    'ludlow', 'market rasen', 'musselburgh', 'newbury', 'newcastle',
-    'newmarket', 'nottingham', 'perth', 'plumpton', 'pontefract', 'redcar',
-    'ripon', 'salisbury', 'sandown', 'sedgefield', 'southwell', 'stratford',
-    'taunton', 'thirsk', 'uttoxeter', 'warwick', 'wetherby', 'wincanton',
+    # Great Britain
+    'aintree', 'ascot', 'ayr', 'bangor', 'bath', 'beverley', 'brighton',
+    'carlisle', 'cartmel', 'catterick', 'chelmsford', 'cheltenham', 'chepstow',
+    'chester', 'doncaster', 'epsom', 'exeter', 'fakenham', 'ffos las',
+    'fontwell', 'goodwood', 'hamilton', 'haydock', 'hereford', 'hexham',
+    'huntingdon', 'kelso', 'kempton', 'leicester', 'lingfield', 'ludlow',
+    'market rasen', 'musselburgh', 'newbury', 'newcastle', 'newmarket',
+    'nottingham', 'perth', 'plumpton', 'pontefract', 'redcar', 'ripon',
+    'salisbury', 'sandown', 'sedgefield', 'southwell', 'stratford', 'taunton',
+    'thirsk', 'towcester', 'uttoxeter', 'warwick', 'wetherby', 'wincanton',
     'windsor', 'wolverhampton', 'worcester', 'yarmouth', 'york',
-    'aintree', 'bangor', 'cartmel', 'fakenham', 'kelso', 'towcester',
+    # Ireland
+    'ballinrobe', 'bellewstown', 'clonmel', 'cork', 'curragh', 'downpatrick',
+    'dundalk', 'fairyhouse', 'galway', 'gowran park', 'kilbeggan', 'killarney',
+    'laytown', 'leopardstown', 'limerick', 'listowel', 'naas', 'navan',
+    'punchestown', 'roscommon', 'sligo', 'thurles', 'tipperary', 'tralee',
+    'tramore', 'wexford',
 }
 
 def is_uk_course(name):
